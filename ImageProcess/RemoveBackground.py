@@ -25,6 +25,6 @@ src = cv2.imread(input_image, cv2.IMREAD_GRAYSCALE)
 
 th, dst = cv2.threshold(src, int(float(thresh)), 255, cv2.THRESH_TOZERO)
 
-cv2.imshow("Result", dst)
+#cv2.imshow("Result", dst)
 cv2.imwrite(outfile_path, dst)
-cv2.waitKey(0)
+#cv2.waitKey(0)

@@ -3,8 +3,6 @@
 
 # import the necessary packages
 from Panorama.Panorama import Stitcher
-from PythonMultipleImageStitching.code.pano import Stitch
-from PythonMultipleImageStitching.code.matchers import matchers
 import argparse
 import imutils
 import cv2
