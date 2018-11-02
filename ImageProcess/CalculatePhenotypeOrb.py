@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeSurf.py --image_paths /folder/mypic1.png,/folder/mypic2.png --outfile_paths /export/mychoppedimages/outimage2.png,/export/mychoppedimages/outimage2.png
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeOrb.py --image_paths /folder/mypic1.png,/folder/mypic2.png --outfile_paths /export/mychoppedimages/outimage2.png,/export/mychoppedimages/outimage2.png
 
 # import the necessary packages
 import argparse
@@ -26,7 +26,7 @@ for image in images:
     img = cv2.imread(image)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    orb = cv2.xfeatures2d.SURF_create()
+    orb = cv2.ORB_create()
     kp, des = orb.detectAndCompute(img, None)
     print(kp)
     #print(des)

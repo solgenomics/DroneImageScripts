@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeSurf.py --image_paths /folder/mypic1.png,/folder/mypic2.png --outfile_paths /export/mychoppedimages/outimage2.png,/export/mychoppedimages/outimage2.png
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeSift.py --image_paths /folder/mypic1.png,/folder/mypic2.png --outfile_paths /export/mychoppedimages/outimage2.png,/export/mychoppedimages/outimage2.png
 
 # import the necessary packages
 import argparse
@@ -24,14 +24,10 @@ outfiles = outfile_paths.split(",")
 count = 0
 for image in images:
     img = cv2.imread(image)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
-    orb = cv2.xfeatures2d.SURF_create()
-    kp, des = orb.detectAndCompute(img, None)
-    print(kp)
-    #print(des)
+    descriptor = cv2.xfeatures2d.SIFT_create()
+    (kps, features) = descriptor.detectAndCompute(img, None)
 
-    kpsimage = cv2.drawKeypoints(img, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    kpsimage = cv2.drawKeypoints(img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     #cv2.imshow('image'+str(count),kpsimage)
     cv2.imwrite(outfiles[count], kpsimage)
     
