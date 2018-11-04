@@ -12,12 +12,14 @@ from matplotlib import pyplot as plt
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image_paths", required=True, help="image path")
-ap.add_argument("-o", "--outfile_paths", required=True, help="file path directory where the output will be saved")
+ap.add_argument("-i", "--image_paths", required=True, help="image paths comma separated")
+ap.add_argument("-o", "--outfile_paths", required=True, help="file path directory where the output images will be saved")
+ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
 args = vars(ap.parse_args())
 
 input_images = args["image_paths"]
 outfile_paths = args["outfile_paths"]
+results_ourfile = args["results_outfile_path"]
 images = input_images.split(",")
 outfiles = outfile_paths.split(",")
 
@@ -26,6 +28,7 @@ for image in images:
     img = cv2.imread(image)
     descriptor = cv2.xfeatures2d.SIFT_create()
     (kps, features) = descriptor.detectAndCompute(img, None)
+    print(features)
 
     kpsimage = cv2.drawKeypoints(img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     #cv2.imshow('image'+str(count),kpsimage)
