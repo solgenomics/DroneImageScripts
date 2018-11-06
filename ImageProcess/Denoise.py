@@ -20,22 +20,11 @@ input_image = args["image_path"]
 outfile_path = args["outfile_path"]
 
 img = cv2.imread(input_image)
-b,g,r = cv2.split(img)           # get b,g,r
-rgb_img = cv2.merge([r,g,b])     # switch it to rgb
 
 # Denoising
 dst = cv2.fastNlMeansDenoising(img,None,7,7,21)
 #dst = cv2.fastNlMeansDenoisingColored(img,None,10,10,7,21)
 
-#cv2.imshow("Result", dst)
 cv2.imwrite(outfile_path, dst)
-
-# b,g,r = cv2.split(dst)           # get b,g,r
-# rgb_dst = cv2.merge([r,g,b])     # switch it to rgb
-# 
-# plt.subplot(211),plt.imshow(rgb_img)
-# plt.subplot(212),plt.imshow(rgb_dst)
-# plt.show()
-
-cv2.waitKey(0)
-
+#cv2.imshow("Result", dst)
+#cv2.waitKey(0)

@@ -19,8 +19,8 @@ input_image = args["image_path"]
 outfile_path = args["outfile_path"]
 angle = float(args["angle"])
 
-img = cv2.imread(input_image, 0)
-rows,cols = img.shape
+img = cv2.imread(input_image)
+rows,cols,d = img.shape
 
 M = cv2.getRotationMatrix2D((cols/2,rows/2),angle,1)
 dst = cv2.warpAffine(img,M,(cols,rows))

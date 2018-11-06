@@ -22,11 +22,11 @@ polygon_json = args["polygon_json"]
 polygons = json.loads(polygon_json)
 print(polygons)
 
-input_image = cv2.imread(inputfile_path, cv2.IMREAD_COLOR)
+input_image = cv2.imread(inputfile_path)
 
 sd = CropPolygonsToSingleImage()
 finalImage = sd.crop(input_image, polygons)
 
-#cv2.imshow("Result", finalImage)
 cv2.imwrite(outputfile_path, finalImage)
-cv2.waitKey(0)
+#cv2.imshow("Result", finalImage)
+#cv2.waitKey(0)
