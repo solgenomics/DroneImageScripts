@@ -6,9 +6,7 @@ import argparse
 import imutils
 import cv2
 import numpy as np
-import urllib.request
 import math
-from matplotlib import pyplot as plt
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
