@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0
 
 # import the necessary packages
 import argparse
@@ -16,10 +16,12 @@ import csv
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image_paths", required=True, help="image paths comma separated")
 ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
+ap.add_argument("-j", "--image_band_index", required=True, help="file path where results will be saved")
 args = vars(ap.parse_args())
 
 input_images = args["image_paths"]
 results_outfile = args["results_outfile_path"]
+image_band_index = int(args["image_band_index"])
 images = input_images.split(",")
 
 result_file_lines = [
@@ -28,7 +30,18 @@ result_file_lines = [
 
 count = 0
 for image in images:
-    img = cv2.imread(image, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(image, cv2.IMREAD_UNCHANGED)
+    img_shape = img.shape
+    
+    if len(img_shape) == 3:
+        if img_shape[2] == 3:
+            b,g,r = cv2.split(img)
+            if image_band_index == 0:
+                img = b
+            if image_band_index == 1:
+                img = g
+            if image_band_index == 2:
+                img = r
 
     non_zero = cv2.countNonZero(img)
     #print("Nonzero: %s" % non_zero)

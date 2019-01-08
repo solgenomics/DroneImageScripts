@@ -31,7 +31,6 @@ def align_images(moving, fixed):
 
     print("GET MATCH")
     flann = cv2.FlannBasedMatcher(index_params, search_params)
-
     matches = flann.knnMatch(des1, des2, k=2)
 
     # store all the good matches following Lowe's ratio test.
