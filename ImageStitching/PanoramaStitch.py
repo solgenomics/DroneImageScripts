@@ -27,7 +27,8 @@ for i in image_urls:
         #image = cv2.resize(image,(480, 320))
         images.append(image)
 
-stitcher = cv2.createStitcher(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
+stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 stitch_result = stitcher.stitch(images)
 result = stitch_result[1]
 
