@@ -8,12 +8,16 @@ import cv2
 import numpy as np
 import math
 
-def align_images(moving, fixed):
+def align_images(moving, fixed_im):
     print("ALIGN IMAGES")
     MIN_MATCH_COUNT = 10
 
-    moving_im = cv2.imread(moving, 0)  # image to be distorted
-    fixed_im = cv2.imread(fixed, 0)  # image to be matched
+    moving_im = cv2.imread(moving, cv2.IMREAD_UNCHANGED)  # image to be distorted
+    moving_im_shape = band1.shape
+    if len(moving_im_shape) == 3:
+        if moving_im_shape[2] == 3:
+            b,g,r = cv2.split(moving_im)
+            moving_im = b
 
     # Initiate SIFT detector
     sift = cv2.xfeatures2d.SIFT_create()
@@ -70,9 +74,15 @@ input_image_band_2 = args["image_path_band_2"]
 input_image_band_3 = args["image_path_band_3"]
 outfile_path = args["outfile_path"]
 
-band1 = cv2.imread(input_image_band_1, 0)
-band2 = align_images(input_image_band_2, input_image_band_1)
-band3 = align_images(input_image_band_3, input_image_band_1)
+band1 = cv2.imread(input_image_band_1, cv2.IMREAD_UNCHANGED)
+band_1_shape = band1.shape
+if len(band_1_shape) == 3:
+    if band_1_shape[2] == 3:
+        b,g,r = cv2.split(band1)
+        band1 = b
+        
+band2 = align_images(input_image_band_2, band1)
+band3 = align_images(input_image_band_3, band1)
 
 print("MERGE IMAGES")
 merged = cv2.merge((band1, band2, band3))
