@@ -13,7 +13,7 @@ def align_images(moving, fixed_im):
     MIN_MATCH_COUNT = 10
 
     moving_im = cv2.imread(moving, cv2.IMREAD_UNCHANGED)  # image to be distorted
-    moving_im_shape = band1.shape
+    moving_im_shape = moving_im.shape
     if len(moving_im_shape) == 3:
         if moving_im_shape[2] == 3:
             b,g,r = cv2.split(moving_im)
@@ -50,7 +50,7 @@ def align_images(moving, fixed_im):
         print("GET HOMOGRAPHY")
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
-        h, w = moving_im.shape  # shape of input images, needs to remain the same for output
+        h, w = fixed_im.shape  # shape of input images, needs to remain the same for output
 
         print("WARP PERSPECTIVE")
         outimg = cv2.warpPerspective(moving_im, M, (w, h))
@@ -85,6 +85,14 @@ band2 = align_images(input_image_band_2, band1)
 band3 = align_images(input_image_band_3, band1)
 
 print("MERGE IMAGES")
+print(band1.shape)
+print(band2.shape)
+print(band3.shape)
+#cv2.imshow("Band1", band1)
+#cv2.imshow("Band2", band2)
+#cv2.imshow("Band3", band3)
+#cv2.waitKey(0)
+
 merged = cv2.merge((band1, band2, band3))
 
 #cv2.imshow("Result", dst)
