@@ -96,5 +96,5 @@ for i in range(len(contours)):
 #cv2.imshow("Image", drawing)
 
 cv2.imwrite(outfile_path, dilated)
-cv2.waitKey(0)
+#cv2.waitKey(0)
 
