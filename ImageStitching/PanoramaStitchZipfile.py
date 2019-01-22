@@ -35,6 +35,10 @@ stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create
 stitch_result = stitcher.stitch(images)
 status = stitch_result[0]
 print(status)
+# OK = 0
+# ERR_NEED_MORE_IMGS = 1
+# ERR_HOMOGRAPHY_EST_FAIL = 2
+# ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 result = stitch_result[1]
 
 cv2.imwrite(outfile_path, result)

@@ -14,6 +14,7 @@ def align_images(moving, fixed_im):
 
     moving_im = cv2.imread(moving, cv2.IMREAD_UNCHANGED)  # image to be distorted
     moving_im_shape = moving_im.shape
+    print(moving_im_shape)
     if len(moving_im_shape) == 3:
         if moving_im_shape[2] == 3:
             b,g,r = cv2.split(moving_im)
@@ -76,6 +77,7 @@ outfile_path = args["outfile_path"]
 
 band1 = cv2.imread(input_image_band_1, cv2.IMREAD_UNCHANGED)
 band_1_shape = band1.shape
+print(band_1_shape)
 if len(band_1_shape) == 3:
     if band_1_shape[2] == 3:
         b,g,r = cv2.split(band1)
