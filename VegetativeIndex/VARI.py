@@ -18,27 +18,28 @@ input_image = args["image_path"]
 outfile_path = args["outfile_path"]
 
 img = cv2.imread(input_image)
-cv2.imshow("img", img)
+#cv2.imshow("img", img)
 b,g,r = cv2.split(img)
 
 numerator = g - r
 denominator = g + r - b
-cv2.imshow("numerator", numerator)
-cv2.imshow("denominator", denominator)
-tgi = np.divide(numerator, denominator)
-tgi[np.isnan(tgi)] = 0
-#tgi = tgi.astype(int)
-cv2.imshow("tgi_o", tgi)
-cv2.imshow("tgi0inv", cv2.bitwise_not(tgi))
-max_arr = np.ones_like(tgi) * 255
-cv2.imshow("255", max_arr)
-print(max_arr)
-print(tgi)
-cv2.imshow("tgi1inv", cv2.bitwise_not(tgi))
-tgi = max_arr - tgi
-print(tgi)
-cv2.imshow("numinv", cv2.bitwise_not(numerator))
-cv2.imshow("tgi2inv", cv2.bitwise_not(tgi))
-cv2.imshow("Result", tgi)
-cv2.imwrite(outfile_path, tgi)
-cv2.waitKey(0)
+print(img.dtype)
+print(numerator.dtype)
+print(denominator.dtype)
+#cv2.imshow("numerator", numerator)
+#cv2.imshow("denominator", denominator)
+vari = np.divide(numerator, denominator)
+vari[np.isnan(vari)] = 0
+
+print(vari.shape)
+print(vari.dtype)
+
+vari = (vari + 1)*255/2
+vari = vari.astype(np.uint8)
+
+print(vari.shape)
+print(vari.dtype)
+#cv2.imshow("Result", vari)
+
+cv2.imwrite(outfile_path, vari)
+#cv2.waitKey(0)
