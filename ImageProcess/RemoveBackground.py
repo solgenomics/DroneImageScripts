@@ -12,16 +12,18 @@ import math
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image_path", required=True, help="image path")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path directory where the output will be saved")
-ap.add_argument("-t", "--threshold", required=True, help="threshold value to remove from image")
+ap.add_argument("-t", "--lower_threshold", required=True, help="lower threshold value to remove from image")
+ap.add_argument("-l", "--upper_threshold", required=True, help="upper threshold value to remove from image")
 args = vars(ap.parse_args())
 
 input_image = args["image_path"]
 outfile_path = args["outfile_path"]
-thresh = args["threshold"]
+upper_thresh = args["upper_threshold"]
+lower_thresh = args["lower_threshold"]
 
 src = cv2.imread(input_image, cv2.IMREAD_GRAYSCALE)
 
-th, dst = cv2.threshold(src, int(float(thresh)), 255, cv2.THRESH_TOZERO)
+th, dst = cv2.threshold(src, int(float(lower_thresh)), int(float(upper_thresh)), cv2.THRESH_TOZERO)
 
 #cv2.imshow("Result", dst)
 cv2.imwrite(outfile_path, dst)
