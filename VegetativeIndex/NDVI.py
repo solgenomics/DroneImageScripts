@@ -32,6 +32,16 @@ else:
 
 numerator = nir - r
 denominator = nir + r
-ndvi = cv2.divide(numerator, denominator)
+ndvi = np.divide(numerator, denominator)
+ndvi[np.isnan(ndvi)] = 0
+
+print(ndvi.shape)
+print(ndvi.dtype)
+
+ndvi = (ndvi + 1)*255/2
+ndvi = ndvi.astype(np.uint8)
+
+print(ndvi.shape)
+print(ndvi.dtype)
 
 cv2.imwrite(outfile_path, ndvi)
