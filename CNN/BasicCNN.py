@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/CNN/BasicCNN.py --input_image_path_string /folder/mypic1.png,/folder/mypic2.png --input_label_file /folder/mylabels.csv --outfile_path /export/myresults.csv
+# python /home/nmorales/cxgn/DroneImageScripts/CNN/BasicCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --outfile_path /export/myresults.csv
 
 # import the necessary packages
 import argparse
@@ -22,30 +22,30 @@ from PIL import Image
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input_image_path_string", required=True, help="comma separated image paths string")
-ap.add_argument("-l", "--input_label_file", required=True, help="file path for file holding labels to be trained")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 args = vars(ap.parse_args())
 
-input_image_string = args["input_image_path_string"]
-input_label_file = args["input_label_file"]
+input_file = args["input_image_label_file"]
 outfile_path = args["outfile_path"]
-images = input_image_string.split(",")
 
 labels = [];
-with open(input_label_file) as csv_file:
+data = []
+
+print("[INFO] reading labels and image data...")
+with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
-        labels.append(row[0])
-
-data = []
-for image_path in images:
-    image = Image.open(image_path)
-    image = np.array(image.resize((32,32))) / 255.0
-    data.append(image)
+        image = Image.open(row[0])
+        image = np.array(image.resize((32,32))) / 255.0
+        data.append(image)
+        labels.append(row[1])
 
 lb = LabelBinarizer()
 labels = lb.fit_transform(labels)
+
+print("[INFO] number of labels: %d" % (len(labels)))
+print("[INFO] number of images: %d" % (len(data)))
 
 print("[INFO] splitting training set...")
 (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
