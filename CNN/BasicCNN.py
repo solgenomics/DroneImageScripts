@@ -18,6 +18,9 @@ from keras.optimizers import Adam
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from keras import regularizers
+from keras.layers.normalization import BatchNormalization
+from keras.layers.core import Dropout
 from PIL import Image
 
 # construct the argument parse and parse the arguments
@@ -38,11 +41,20 @@ with open(input_file) as csv_file:
     for row in csv_reader:
         image = Image.open(row[0])
         image = np.array(image.resize((32,32))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        #print(image.shape)
         data.append(image)
-        labels.append(row[1])
+
+        value = str(int(float(row[1])))
+        labels.append(value)
 
 lb = LabelBinarizer()
 labels = lb.fit_transform(labels)
+print(len(lb.classes_))
 
 print("[INFO] number of labels: %d" % (len(labels)))
 print("[INFO] number of images: %d" % (len(data)))
@@ -50,19 +62,65 @@ print("[INFO] number of images: %d" % (len(data)))
 print("[INFO] splitting training set...")
 (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
 
+init = "he_normal"
+reg = regularizers.l2(0.01)
+chanDim = -1
+
 model = Sequential()
-model.add(Conv2D(8, (3,3), padding="same", input_shape=(32,32,3)))
+model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(32, 32, 3)))
+model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
 model.add(Activation("relu"))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
-model.add(Conv2D(16, (3,3), padding="same"))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
 model.add(Activation("relu"))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
-model.add(Conv2D(32, (3,3), padding="same"))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Dropout(0.25))
+
+# stack two more CONV layers, keeping the size of each filter
+# as 3x3 but increasing to 64 total learned filters
+model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
 model.add(Activation("relu"))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+model.add(Activation("relu"))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Dropout(0.25))
+
+# increase the number of filters again, this time to 128
+model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+model.add(Activation("relu"))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+model.add(Activation("relu"))
+model.add(BatchNormalization(axis=chanDim))
+model.add(Dropout(0.25))
+
+# fully-connected layer
 model.add(Flatten())
-model.add(Dense(3))
+model.add(Dense(512, kernel_initializer=init))
+model.add(Activation("relu"))
+model.add(BatchNormalization())
+model.add(Dropout(0.5))
+
+# softmax classifier
+model.add(Dense(len(lb.classes_)))
 model.add(Activation("softmax"))
+
+# model.add(Conv2D(8, (3, 3), padding="same", input_shape=(32, 32, 3)))
+# model.add(Activation("relu"))
+# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+# model.add(Conv2D(16, (3, 3), padding="same"))
+# model.add(Activation("relu"))
+# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+# model.add(Conv2D(32, (3, 3), padding="same"))
+# model.add(Activation("relu"))
+# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+# model.add(Flatten())
+# model.add(Dense(3))
+# model.add(Activation("softmax"))
+
+for layer in model.layers:
+    print(layer.output_shape)
 
 print("[INFO] training network...")
 opt = Adam(lr=1e-3, decay=1e-3 / 50)
