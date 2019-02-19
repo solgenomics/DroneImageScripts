@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/CNN/BasicCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --outfile_path /export/myresults.csv
+# python /home/nmorales/cxgn/DroneImageScripts/CNN/BasicCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --output_model_file_path /folder/mymodel.h5 --outfile_path /export/myresults.csv
 
 # import the necessary packages
 import argparse
@@ -22,14 +22,17 @@ from keras import regularizers
 from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Dropout
 from PIL import Image
+from keras.models import load_model
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained")
+ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 args = vars(ap.parse_args())
 
 input_file = args["input_image_label_file"]
+output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 
 labels = [];
@@ -49,7 +52,8 @@ with open(input_file) as csv_file:
         #print(image.shape)
         data.append(image)
 
-        value = str(int(float(row[1])))
+        #value = str(int(float(row[1])))
+        value = str(math.ceil(float(row[1]) / 2.)*2)
         labels.append(value)
 
 lb = LabelBinarizer()
@@ -129,6 +133,22 @@ H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_s
 
 print("[INFO] evaluating network...")
 predictions = model.predict(testX, batch_size=32)
-print(classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_))
+report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
+print(report)
 
-#cv2.imwrite(outfile_path, vari)
+def classification_report_csv(report):
+    report_data = []
+    lines = report.split('\n')
+    for line in lines[2:-3]:
+        row = {}
+        row_data = line.split('      ')
+        row['class'] = row_data[0]
+        row['precision'] = float(row_data[1])
+        row['recall'] = float(row_data[2])
+        row['f1_score'] = float(row_data[3])
+        row['support'] = float(row_data[4])
+        report_data.append(row)
+    dataframe = pd.DataFrame.from_dict(report_data)
+    dataframe.to_csv(outfile_path, index = False)
+
+classification_report_csv(report)
