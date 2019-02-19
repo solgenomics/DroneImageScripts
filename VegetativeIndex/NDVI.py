@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/NDVI.py --nir_image_path /folder/myNIRpic.png --red_image_path /folder/myRGBpic.png --input_image_type RGB --outfile_path /export/mychoppedimages/tgi.png
+# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/NDVI.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/ndvi.png
 
 # import the necessary packages
 import argparse
@@ -11,24 +11,16 @@ import math
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-n", "--nir_image_path", required=True, help="image path for NIR image")
-ap.add_argument("-i", "--red_image_path", required=True, help="image path for Red image. Can be a single red image band or an RGB image, but make sure the input_image_type matches the correct one.")
-ap.add_argument("-t", "--input_image_type", required=True, help="image type for input of red image. can be either RGB or Red depending on what kind of image goes into red_image_path.")
+ap.add_argument("-i", "--image_path", required=True, help="image path for image with NIR as first channel and Red as second channel.")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 args = vars(ap.parse_args())
 
-nir_input_image = args["nir_image_path"]
-red_input_image = args["red_image_path"]
-input_image_type = args["input_image_type"]
+image_path = args["image_path"]
 outfile_path = args["outfile_path"]
 
-nir = cv2.imread(nir_input_image, 0)
-r
-if input_image_type == 'RGB':
-    red_img = cv2.imread(red_input_image)
-    b,g,r = cv2.split(red_img)
-else:
-    r = cv2.imread(red_input_image, 0)
+input_image = cv2.imread(image_path)
+#cv2.imshow("img", input_image)
+nir,r,x = cv2.split(input_image)
 
 numerator = nir - r
 denominator = nir + r
@@ -45,3 +37,4 @@ print(ndvi.shape)
 print(ndvi.dtype)
 
 cv2.imwrite(outfile_path, ndvi)
+#cv2.waitKey(0)
