@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/CNN/BasicCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --output_model_file_path /folder/mymodel.h5 --outfile_path /export/myresults.csv
+# python /home/nmorales/cxgn/DroneImageScripts/CNN/TransferLearningCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --output_model_file_path /folder/mymodel.h5 --outfile_path /export/myresults.csv
 
 # import the necessary packages
 import argparse
@@ -14,6 +14,7 @@ from keras.layers.convolutional import MaxPooling2D
 from keras.layers.core import Activation
 from keras.layers.core import Flatten
 from keras.layers.core import Dense
+from keras.layers import Input
 from keras.optimizers import Adam
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
@@ -23,6 +24,8 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Dropout
 from PIL import Image
 from keras.models import load_model
+from keras.models import Model
+from keras.applications.inception_resnet_v2 import InceptionResNetV2
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -37,13 +40,36 @@ outfile_path = args["outfile_path"]
 
 labels = [];
 data = []
+image_size = 75
+
+def build_model(number_labels):
+    input_tensor = Input(shape=(image_size,image_size,3))
+    base_model = InceptionResNetV2(
+        include_top = False,
+        weights = 'imagenet',
+        #input_tensor = None,
+        input_tensor = input_tensor,
+        #input_shape = None,
+        input_shape = (image_size,image_size,3),
+        pooling = 'avg'
+        #classes = 1000
+    )
+    for layer in base_model.layers:
+        layer.trainable = True
+    
+    op = Dense(256, activation='relu')(base_model.output)
+    op = Dropout(0.25)(op)
+    output_tensor = Dense(number_labels, activation='softmax')(op)
+    
+    model = Model(inputs=input_tensor, outputs=output_tensor)
+    return model
 
 print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         image = Image.open(row[0])
-        image = np.array(image.resize((32,32))) / 255.0
+        image = 2*(np.array(image.resize((image_size,image_size))) / 255.0) - 1.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -71,58 +97,8 @@ init = "he_normal"
 reg = regularizers.l2(0.01)
 chanDim = -1
 
-model = Sequential()
-model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(32, 32, 3)))
-model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# stack two more CONV layers, keeping the size of each filter
-# as 3x3 but increasing to 64 total learned filters
-model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# increase the number of filters again, this time to 128
-model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# fully-connected layer
-model.add(Flatten())
-model.add(Dense(512, kernel_initializer=init))
-model.add(Activation("relu"))
-model.add(BatchNormalization())
-model.add(Dropout(0.5))
-
-# softmax classifier
-model.add(Dense(len(lb.classes_)))
-model.add(Activation("softmax"))
-
-# model.add(Conv2D(8, (3, 3), padding="same", input_shape=(32, 32, 3)))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Conv2D(16, (3, 3), padding="same"))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Conv2D(32, (3, 3), padding="same"))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Flatten())
-# model.add(Dense(3))
-# model.add(Activation("softmax"))
+print("[INFO] building model...")
+model = build_model(len(lb.classes_))
 
 for layer in model.layers:
     print(layer.output_shape)
