@@ -10,7 +10,7 @@ import math
 
 def align_images(moving, fixed_im):
     print("ALIGN IMAGES")
-    MIN_MATCH_COUNT = 3
+    MIN_MATCH_COUNT = 10
 
     moving_im = cv2.imread(moving, cv2.IMREAD_UNCHANGED)  # image to be distorted
     moving_im_shape = moving_im.shape
@@ -84,7 +84,12 @@ if len(band_1_shape) == 3:
         band1 = b
         
 band2 = align_images(input_image_band_2, band1)
+if band2 is None:
+    band2 = cv2.imread(input_image_band_2, cv2.IMREAD_UNCHANGED)
+
 band3 = align_images(input_image_band_3, band1)
+if band3 is None:
+    band3 = cv2.imread(input_image_band_3, cv2.IMREAD_UNCHANGED)
 
 print("MERGE IMAGES")
 print(band1.shape)
