@@ -35,7 +35,7 @@ input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 
-labels = [];
+labels = []
 data = []
 
 print("[INFO] reading labels and image data...")

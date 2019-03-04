@@ -10,7 +10,7 @@ import math
 
 def align_images(moving, fixed_im):
     print("ALIGN IMAGES")
-    MIN_MATCH_COUNT = 10
+    MIN_MATCH_COUNT = 7
 
     moving_im = cv2.imread(moving, cv2.IMREAD_UNCHANGED)  # image to be distorted
     moving_im_shape = moving_im.shape
