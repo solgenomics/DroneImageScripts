@@ -68,12 +68,14 @@ ap.add_argument("-a", "--image_path_band_1", required=True, help="image path ban
 ap.add_argument("-b", "--image_path_band_2", required=True, help="image path band 2")
 ap.add_argument("-c", "--image_path_band_3", required=True, help="image path band 3")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path directory where the output will be saved")
+ap.add_argument("-d", "--alignment_needed", default=False, help="if alignment is needed")
 args = vars(ap.parse_args())
 
 input_image_band_1 = args["image_path_band_1"]
 input_image_band_2 = args["image_path_band_2"]
 input_image_band_3 = args["image_path_band_3"]
 outfile_path = args["outfile_path"]
+alignment_needed = args["alignment_needed"]
 
 band1 = cv2.imread(input_image_band_1, cv2.IMREAD_UNCHANGED)
 band_1_shape = band1.shape
@@ -82,13 +84,17 @@ if len(band_1_shape) == 3:
     if band_1_shape[2] == 3:
         b,g,r = cv2.split(band1)
         band1 = b
-        
-band2 = align_images(input_image_band_2, band1)
-if band2 is None:
-    band2 = cv2.imread(input_image_band_2, cv2.IMREAD_UNCHANGED)
 
-band3 = align_images(input_image_band_3, band1)
-if band3 is None:
+if alignment_needed is True:
+    band2 = align_images(input_image_band_2, band1)
+    if band2 is None:
+        band2 = cv2.imread(input_image_band_2, cv2.IMREAD_UNCHANGED)
+
+    band3 = align_images(input_image_band_3, band1)
+    if band3 is None:
+        band3 = cv2.imread(input_image_band_3, cv2.IMREAD_UNCHANGED)
+else:
+    band2 = cv2.imread(input_image_band_2, cv2.IMREAD_UNCHANGED)
     band3 = cv2.imread(input_image_band_3, cv2.IMREAD_UNCHANGED)
 
 print("MERGE IMAGES")

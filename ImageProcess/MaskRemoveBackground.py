@@ -22,6 +22,9 @@ outfile_path = args["outfile_path"]
 src = cv2.imread(input_image)
 mask = cv2.imread(mask_input_image, 0)
 
+print(mask.shape)
+print(src.shape)
+
 #cv2.imshow("src", src)
 #cv2.imshow("Mask", mask)
 
