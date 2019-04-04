@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/VARI.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/tgi.png
+# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/VARI.py --image_path /folder/mypic.png --outfile_path /export/myimages/tgi.png
 
 # import the necessary packages
 import argparse

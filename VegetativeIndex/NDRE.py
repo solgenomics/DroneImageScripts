@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/NDVI.py --image_path /folder/mypic.png --outfile_path /export/myimages/ndvi.png
+# python /home/nmorales/cxgn/DroneImageScripts/VegetativeIndex/NDRE.py --image_path /folder/mypic.png --outfile_path /export/myimages/ndre.png
 
 # import the necessary packages
 import argparse
@@ -20,21 +20,21 @@ outfile_path = args["outfile_path"]
 
 input_image = cv2.imread(image_path)
 #cv2.imshow("img", input_image)
-nir,r,x = cv2.split(input_image)
+nir,re,x = cv2.split(input_image)
 
-numerator = nir - r
-denominator = nir + r
-ndvi = np.divide(numerator, denominator)
-ndvi[np.isnan(ndvi)] = 0
+numerator = nir - re
+denominator = nir + re
+ndvre = np.divide(numerator, denominator)
+ndre[np.isnan(ndre)] = 0
 
-print(ndvi.shape)
-print(ndvi.dtype)
+print(ndre.shape)
+print(ndre.dtype)
 
-ndvi = (ndvi + 1)*255/2
-ndvi = ndvi.astype(np.uint8)
+ndre = (ndre + 1)*255/2
+ndre = ndre.astype(np.uint8)
 
-print(ndvi.shape)
-print(ndvi.dtype)
+print(ndre.shape)
+print(ndre.dtype)
 
-cv2.imwrite(outfile_path, ndvi)
+cv2.imwrite(outfile_path, ndre)
 #cv2.waitKey(0)
