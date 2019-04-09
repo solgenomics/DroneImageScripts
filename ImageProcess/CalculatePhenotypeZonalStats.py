@@ -11,7 +11,6 @@ from matplotlib import pyplot as plt
 import statistics
 from collections import defaultdict
 import csv
-from ImageCropping.CropPolygons.CropPolygonsToSingleImage import CropPolygonsToSingleImage
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -26,14 +25,12 @@ input_images = args["image_paths"]
 results_outfile = args["results_outfile_path"]
 image_band_index = int(args["image_band_index"])
 plot_polygon_type = args["plot_polygon_type"]
-margin_percent = int(args["margin_percent"])
+margin_percent = int(args["margin_percent"])/100
 images = input_images.split(",")
 
 result_file_lines = [
     ['nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
 ]
-
-sd = CropPolygonsToSingleImage()
 
 count = 0
 for image in images:
@@ -57,7 +54,7 @@ for image in images:
     width_margin = margin_percent * original_width
     height_margin = margin_percent * original_height
 
-    #img = sd.crop(img, [[{'x':width_margin, 'y':height_margin},{'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin},{'x':width_margin, 'y':original_height-height_margin}]])
+    #img = crop(img, [[{'x':width_margin, 'y':height_margin},{'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin},{'x':width_margin, 'y':original_height-height_margin}]])
 
     height, width = img.shape
 
@@ -143,3 +140,52 @@ writeFile.close()
 
 #cv2.waitKey(0)
 
+def crop(input_image, polygons):
+    input_image_size = input_image.shape
+    original_y = input_image_size[0]
+    original_x = input_image_size[1]
+    minY = original_y
+    minX = original_x
+    maxX = -1
+    maxY = -1
+
+    for polygon in polygons:
+        for point in polygon:
+            x = point['x']
+            y = point['y']
+
+            x = int(round(x))
+            y = int(round(y))
+            point['x'] = x
+            point['y'] = y
+
+            if x < minX:
+                minX = x
+            if x > maxX:
+                maxX = x
+            if y < minY:
+                minY = y
+            if y > maxY:
+                maxY = y
+
+    cropedImage = np.zeros_like(input_image)
+    for y in range(0,original_y):
+        for x in range(0, original_x):
+
+            if x < minX or x > maxX or y < minY or y > maxY:
+                continue
+
+            for polygon in polygons:
+                polygon_mat = []
+                for p in polygon:
+                    polygon_mat.append([p['x'], p['y']])
+
+                if cv2.pointPolygonTest(np.asarray([polygon_mat]),(x,y),False) >= 0:
+                    cropedImage[y, x, 0] = input_image[y, x, 0]
+                    cropedImage[y, x, 1] = input_image[y, x, 1]
+                    cropedImage[y, x, 2] = input_image[y, x, 2]
+
+    # Now we can crop again just the envloping rectangle
+    finalImage = cropedImage[minY:maxY,minX:maxX]
+
+    return finalImage
