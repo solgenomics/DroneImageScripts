@@ -24,7 +24,7 @@ nir,re,x = cv2.split(input_image)
 
 numerator = nir - re
 denominator = nir + re
-ndvre = np.divide(numerator, denominator)
+ndre = np.divide(numerator, denominator)
 ndre[np.isnan(ndre)] = 0
 
 print(ndre.shape)

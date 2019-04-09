@@ -11,22 +11,29 @@ from matplotlib import pyplot as plt
 import statistics
 from collections import defaultdict
 import csv
+from ImageCropping.CropPolygons.CropPolygonsToSingleImage import CropPolygonsToSingleImage
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image_paths", required=True, help="image paths comma separated")
 ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
 ap.add_argument("-j", "--image_band_index", required=True, help="file path where results will be saved")
+ap.add_argument("-t", "--plot_polygon_type", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
+ap.add_argument("-m", "--margin_percent", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
 args = vars(ap.parse_args())
 
 input_images = args["image_paths"]
 results_outfile = args["results_outfile_path"]
 image_band_index = int(args["image_band_index"])
+plot_polygon_type = args["plot_polygon_type"]
+margin_percent = int(args["margin_percent"])
 images = input_images.split(",")
 
 result_file_lines = [
     ['nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
 ]
+
+sd = CropPolygonsToSingleImage()
 
 count = 0
 for image in images:
@@ -45,6 +52,12 @@ for image in images:
 
     non_zero = cv2.countNonZero(img)
     #print("Nonzero: %s" % non_zero)
+
+    original_height, original_width = img.shape
+    width_margin = margin_percent * original_width
+    height_margin = margin_percent * original_height
+
+    #img = sd.crop(img, [[{'x':width_margin, 'y':height_margin},{'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin},{'x':width_margin, 'y':original_height-height_margin}]])
 
     height, width = img.shape
 
@@ -103,6 +116,19 @@ for image in images:
 
     #cv2.imshow('image'+str(count),kpsimage)
     #cv2.imwrite(outfiles[count], kpsimage)
+
+    if plot_polygon_type == 'observation_unit_polygon_tgi_imagery' or plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_tgi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
+        total_pixel_sum = (2 * total_pixel_sum / 255) - 1
+        mean_pixel_value = (2 * mean_pixel_value / 255) - 1
+        harmonic_mean_pixel_value = (2 * harmonic_mean_pixel_value / 255) - 1
+        pixel_median_value = (2 * pixel_median_value / 255) - 1
+        pixel_variance = (2 * pixel_variance / 255) - 1
+        pixel_standard_dev = (2 * pixel_standard_dev / 255) - 1
+        pixel_pstandard_dev = (2 * pixel_pstandard_dev / 255) - 1
+        min_pixel = (2 * min_pixel / 255) - 1
+        max_pixel = (2 * max_pixel / 255) - 1
+        minority_pixel_value = (2 * minority_pixel_value / 255) - 1
+        majority_pixel_value = (2 * majority_pixel_value / 255) - 1
 
     result_file_lines.append([non_zero, total_pixel_sum, mean_pixel_value, harmonic_mean_pixel_value, pixel_median_value, pixel_variance, pixel_standard_dev, pixel_pstandard_dev, min_pixel, max_pixel, minority_pixel_value, minority_pixel_count, majority_pixel_value, majority_pixel_count, pixel_group_count])
 
