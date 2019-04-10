@@ -20,7 +20,7 @@ outfile_path = args["outfile_path"]
 img = cv2.imread(input_image)
 
 # Denoising
-dst = cv2.fastNlMeansDenoising(img,None,7,7,21)
+dst = cv2.fastNlMeansDenoising(img,None,1,7,21)
 #dst = cv2.fastNlMeansDenoisingColored(img,None,10,10,7,21)
 
 cv2.imwrite(outfile_path, dst)
