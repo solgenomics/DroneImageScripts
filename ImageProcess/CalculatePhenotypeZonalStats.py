@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0 --plot_polygon_type observation_unit_polygon_vari_imagery --margin_percent 5
 
 # import the necessary packages
 import argparse
@@ -16,9 +16,9 @@ import csv
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image_paths", required=True, help="image paths comma separated")
 ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
-ap.add_argument("-j", "--image_band_index", required=True, help="file path where results will be saved")
+ap.add_argument("-j", "--image_band_index", required=True, help="channel index 0, 1, or 2 to use in image")
 ap.add_argument("-t", "--plot_polygon_type", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
-ap.add_argument("-m", "--margin_percent", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
+ap.add_argument("-m", "--margin_percent", required=True, help="the margin to remove from each plot image as a percent of width and height. generally 5 is used.")
 args = vars(ap.parse_args())
 
 input_images = args["image_paths"]
@@ -31,6 +31,54 @@ images = input_images.split(",")
 result_file_lines = [
     ['nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
 ]
+
+def crop(input_image, polygons):
+    input_image_size = input_image.shape
+    original_y = input_image_size[0]
+    original_x = input_image_size[1]
+    minY = original_y
+    minX = original_x
+    maxX = -1
+    maxY = -1
+
+    for polygon in polygons:
+        for point in polygon:
+            x = point['x']
+            y = point['y']
+
+            x = int(round(x))
+            y = int(round(y))
+            point['x'] = x
+            point['y'] = y
+
+            if x < minX:
+                minX = x
+            if x > maxX:
+                maxX = x
+            if y < minY:
+                minY = y
+            if y > maxY:
+                maxY = y
+
+    cropedImage = np.zeros_like(input_image)
+    for y in range(0,original_y):
+        for x in range(0, original_x):
+
+            if x < minX or x > maxX or y < minY or y > maxY:
+                continue
+
+            for polygon in polygons:
+                polygon_mat = []
+                for p in polygon:
+                    polygon_mat.append([p['x'], p['y']])
+
+                if cv2.pointPolygonTest(np.asarray([polygon_mat]),(x,y),False) >= 0:
+                    cropedImage[y, x] = input_image[y, x]
+
+    # Now we can crop again just the envloping rectangle
+    finalImage = cropedImage[minY:maxY,minX:maxX]
+
+    return finalImage
 
 count = 0
 for image in images:
@@ -54,7 +102,7 @@ for image in images:
     width_margin = margin_percent * original_width
     height_margin = margin_percent * original_height
 
-    #img = crop(img, [[{'x':width_margin, 'y':height_margin},{'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin},{'x':width_margin, 'y':original_height-height_margin}]])
+    img = crop(img, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
 
     height, width = img.shape
 
@@ -114,7 +162,8 @@ for image in images:
     #cv2.imshow('image'+str(count),kpsimage)
     #cv2.imwrite(outfiles[count], kpsimage)
 
-    if plot_polygon_type == 'observation_unit_polygon_tgi_imagery' or plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_tgi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
+    #NDVI and VARI are scaled i = (i + 1)*255/2 in their respective scripts while all others are scale i*255 in MoveAlphaChannel.py
+    if plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
         total_pixel_sum = (2 * total_pixel_sum / 255) - 1
         mean_pixel_value = (2 * mean_pixel_value / 255) - 1
         harmonic_mean_pixel_value = (2 * harmonic_mean_pixel_value / 255) - 1
@@ -126,6 +175,18 @@ for image in images:
         max_pixel = (2 * max_pixel / 255) - 1
         minority_pixel_value = (2 * minority_pixel_value / 255) - 1
         majority_pixel_value = (2 * majority_pixel_value / 255) - 1
+    else:
+        total_pixel_sum = total_pixel_sum / 255
+        mean_pixel_value = mean_pixel_value / 255
+        harmonic_mean_pixel_value = harmonic_mean_pixel_value / 255
+        pixel_median_value = pixel_median_value / 255
+        pixel_variance = pixel_variance / 255
+        pixel_standard_dev = pixel_standard_dev / 255
+        pixel_pstandard_dev = pixel_pstandard_dev / 255
+        min_pixel = min_pixel / 255
+        max_pixel = max_pixel / 255
+        minority_pixel_value = minority_pixel_value / 255
+        majority_pixel_value = majority_pixel_value / 255
 
     result_file_lines.append([non_zero, total_pixel_sum, mean_pixel_value, harmonic_mean_pixel_value, pixel_median_value, pixel_variance, pixel_standard_dev, pixel_pstandard_dev, min_pixel, max_pixel, minority_pixel_value, minority_pixel_count, majority_pixel_value, majority_pixel_count, pixel_group_count])
 
@@ -137,55 +198,3 @@ with open(results_outfile, 'w') as writeFile:
     writer.writerows(result_file_lines)
 
 writeFile.close()
-
-#cv2.waitKey(0)
-
-def crop(input_image, polygons):
-    input_image_size = input_image.shape
-    original_y = input_image_size[0]
-    original_x = input_image_size[1]
-    minY = original_y
-    minX = original_x
-    maxX = -1
-    maxY = -1
-
-    for polygon in polygons:
-        for point in polygon:
-            x = point['x']
-            y = point['y']
-
-            x = int(round(x))
-            y = int(round(y))
-            point['x'] = x
-            point['y'] = y
-
-            if x < minX:
-                minX = x
-            if x > maxX:
-                maxX = x
-            if y < minY:
-                minY = y
-            if y > maxY:
-                maxY = y
-
-    cropedImage = np.zeros_like(input_image)
-    for y in range(0,original_y):
-        for x in range(0, original_x):
-
-            if x < minX or x > maxX or y < minY or y > maxY:
-                continue
-
-            for polygon in polygons:
-                polygon_mat = []
-                for p in polygon:
-                    polygon_mat.append([p['x'], p['y']])
-
-                if cv2.pointPolygonTest(np.asarray([polygon_mat]),(x,y),False) >= 0:
-                    cropedImage[y, x, 0] = input_image[y, x, 0]
-                    cropedImage[y, x, 1] = input_image[y, x, 1]
-                    cropedImage[y, x, 2] = input_image[y, x, 2]
-
-    # Now we can crop again just the envloping rectangle
-    finalImage = cropedImage[minY:maxY,minX:maxX]
-
-    return finalImage
