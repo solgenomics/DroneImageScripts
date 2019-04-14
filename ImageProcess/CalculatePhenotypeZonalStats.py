@@ -163,7 +163,7 @@ for image in images:
     #cv2.imwrite(outfiles[count], kpsimage)
 
     #NDVI and VARI are scaled i = (i + 1)*255/2 in their respective scripts while all others are scale i*255 in MoveAlphaChannel.py
-    if plot_polygon_type == 'observation_unit_polygon_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_vari_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
+    if plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
         total_pixel_sum = (2 * total_pixel_sum / 255) - 1
         mean_pixel_value = (2 * mean_pixel_value / 255) - 1
         harmonic_mean_pixel_value = (2 * harmonic_mean_pixel_value / 255) - 1
