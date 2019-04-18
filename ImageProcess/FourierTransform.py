@@ -15,11 +15,13 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image_path", required=True, help="image path")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path directory where the output will be saved")
 ap.add_argument("-j", "--image_band_index", required=True, help="channel index 0, 1, or 2 to use in image")
+ap.add_argument("-p", "--frequency_threshold", required=True, help="discard the highest x frequencies in the image e.g. 30")
 args = vars(ap.parse_args())
 
 input_image = args["image_path"]
 outfile_path = args["outfile_path"]
 image_band_index = int(args["image_band_index"])
+frequency_threshold = int(args["frequency_threshold"])
 
 img = cv2.imread(input_image, cv2.IMREAD_UNCHANGED)
 img_shape = img.shape
@@ -60,7 +62,7 @@ rows, cols = img.shape
 crow,ccol = rows/2 , cols/2
 crow = int(round(crow))
 ccol = int(round(ccol))
-fshift[crow-30:crow+30, ccol-30:ccol+30] = 0
+fshift[crow-frequency_threshold:crow+frequency_threshold, ccol-frequency_threshold:ccol+frequency_threshold] = 0
 f_ishift = np.fft.ifftshift(fshift)
 img_back = np.fft.ifft2(f_ishift)
 img_back = np.abs(img_back)
