@@ -147,8 +147,9 @@ for input_image in images:
     # plt.title('Result in JET'), plt.xticks([]), plt.yticks([])
     # plt.show()
 
-    img_back = img_back * 255
-    cv2.imwrite(outfiles[count], img_back)
+    plt.imsave(outfiles[count], img_back)
+    #cv2.imwrite(outfiles[count], img_back)
+    print(outfiles[count])
 
     #brightest spot
     # gray = cv2.GaussianBlur(img_back, (args["radius"], args["radius"]), 0)
