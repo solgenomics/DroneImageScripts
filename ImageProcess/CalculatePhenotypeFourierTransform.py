@@ -19,7 +19,7 @@ ap.add_argument("-i", "--image_paths", required=True, help="image path")
 ap.add_argument("-o", "--outfile_paths", required=True, help="file path directory where the output will be saved")
 ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
 ap.add_argument("-j", "--image_band_index", required=True, help="channel index 0, 1, or 2 to use in image")
-ap.add_argument("-p", "--frequency_threshold", required=True, help="discard the highest x frequencies in the image e.g. 30")
+ap.add_argument("-p", "--frequency_threshold", required=True, help="discard the highest x frequencies in the image e.g. 25")
 ap.add_argument("-t", "--plot_polygon_type", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
 ap.add_argument("-m", "--margin_percent", required=True, help="the margin to remove from each plot image as a percent of width and height. generally 5 is used.")
 args = vars(ap.parse_args())
@@ -28,7 +28,7 @@ input_images = args["image_paths"]
 outfile_paths = args["outfile_paths"]
 results_outfile = args["results_outfile_path"]
 image_band_index = int(args["image_band_index"])
-frequency_threshold = int(args["frequency_threshold"])
+frequency_threshold = int(args["frequency_threshold"])/100
 plot_polygon_type = args["plot_polygon_type"]
 margin_percent = int(args["margin_percent"])/100
 images = input_images.split(",")
@@ -89,7 +89,6 @@ def crop(input_image, polygons):
 count = 0
 for input_image in images:
     img = cv2.imread(input_image, cv2.IMREAD_UNCHANGED)
-    cv2.imshow('image_o'+str(count),img)
     img_shape = img.shape
 
     if len(img_shape) == 3:
@@ -102,43 +101,68 @@ for input_image in images:
             if image_band_index == 2:
                 img = r
 
+    dft = cv2.dft(np.float32(img),flags = cv2.DFT_COMPLEX_OUTPUT)
+    dft_shift = np.fft.fftshift(dft)
+    magnitude_spectrum = 20*np.log(cv2.magnitude(dft_shift[:,:,0], dft_shift[:,:,1]))
+
+    # plt.subplot(121),plt.imshow(img, cmap = 'gray')
+    # plt.title('Input Image 1'), plt.xticks([]), plt.yticks([])
+    # plt.subplot(122),plt.imshow(magnitude_spectrum, cmap = 'gray')
+    # plt.title('Magnitude Spectrum 1'), plt.xticks([]), plt.yticks([])
+    # plt.show()
+
     f = np.fft.fft2(img)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = 20*np.log(np.abs(fshift))
 
+    # plt.subplot(121),plt.imshow(img, cmap = 'gray')
+    # plt.title('Input Image 2'), plt.xticks([]), plt.yticks([])
+    # plt.subplot(122),plt.imshow(magnitude_spectrum, cmap = 'gray')
+    # plt.title('Magnitude Spectrum 2'), plt.xticks([]), plt.yticks([])
+    # plt.show()
+
     rows, cols = img.shape
-    crow,ccol = rows/2 , cols/2
+    crow, ccol = rows/2 , cols/2
     crow = int(round(crow))
-    print(crow)
-    frequency_threshold = 1
     ccol = int(round(ccol))
+    upper_frequency_threshold = int(round(rows*frequency_threshold))
+    lower_frequency_threshold = int(round(rows*frequency_threshold))
 
-    #fshift[crow-frequency_threshold:crow+frequency_threshold, ccol-frequency_threshold:ccol+frequency_threshold] = 0
+    fshift[crow-upper_frequency_threshold:crow+upper_frequency_threshold, ccol-upper_frequency_threshold:ccol+upper_frequency_threshold] = 0
 
-    fshift[0:rows, 0:ccol-113] = 0
-    fshift[0:rows, ccol+113:cols] = 0
-    fshift[0:crow-113, 0:cols] = 0
-    fshift[crow+113:rows, 0:cols] = 0
+    # fshift[0:lower_frequency_threshold, 0:cols] = 0
+    # fshift[rows-lower_frequency_threshold:rows, 0:cols] = 0
+    # fshift[0:rows, 0:lower_frequency_threshold] = 0
+    # fshift[0:rows, cols-lower_frequency_threshold:cols] = 0
 
     f_ishift = np.fft.ifftshift(fshift)
     img_back = np.fft.ifft2(f_ishift)
-    img = np.abs(img_back)
+    img_back = np.abs(img_back)
 
-    cv2.imshow('image'+str(count),img)
-    cv2.imwrite(outfiles[count], img)
-    cv2.waitKey(0)
-    
+    # plt.subplot(131),plt.imshow(img, cmap = 'gray')
+    # plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+    # plt.subplot(132),plt.imshow(img_back, cmap = 'gray')
+    # plt.title('Image after HPF'), plt.xticks([]), plt.yticks([])
+    # plt.subplot(133),plt.imshow(img_back)
+    # plt.title('Result in JET'), plt.xticks([]), plt.yticks([])
+    # plt.show()
 
-    non_zero = cv2.countNonZero(img)
+    cv2.imwrite(outfiles[count], img_back)
+
+    #brightest spot
+    # gray = cv2.GaussianBlur(img_back, (args["radius"], args["radius"]), 0)
+    # (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(img_back)
+
+    non_zero = cv2.countNonZero(img_back)
     #print("Nonzero: %s" % non_zero)
 
-    original_height, original_width = img.shape
+    original_height, original_width = img_back.shape
     width_margin = margin_percent * original_width
     height_margin = margin_percent * original_height
 
-    img = crop(img, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
+    img_back = crop(img_back, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
 
-    height, width = img.shape
+    height, width = img_back.shape
 
     total_pixel_sum = 0
     pixel_array = []
@@ -146,7 +170,7 @@ for input_image in images:
 
     for i in range(0, height):
         for j in range(0, width):
-            px = int(img[i,j])
+            px = int(img_back[i,j])
             total_pixel_sum += px
             pixel_array.append(px)
             pixel_dict[px] += 1
