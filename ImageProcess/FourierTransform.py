@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/FourierTransform.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/outimage.png --image_band_index 0
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/FourierTransform.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/outimage.png --frequency_threshold_method frequency --image_band_index 0
 
 # import the necessary packages
 import argparse
@@ -16,10 +16,12 @@ ap.add_argument("-i", "--image_path", required=True, help="image path")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path directory where the output will be saved")
 ap.add_argument("-j", "--image_band_index", required=True, help="channel index 0, 1, or 2 to use in image")
 ap.add_argument("-p", "--frequency_threshold", required=True, help="discard the highest x frequencies in the image e.g. 30")
+ap.add_argument("-m", "--frequency_threshold_method", required=True, help="frequency or magnitude")
 args = vars(ap.parse_args())
 
 input_image = args["image_path"]
 outfile_path = args["outfile_path"]
+frequency_threshold_method = args["frequency_threshold_method"]
 image_band_index = int(args["image_band_index"])
 frequency_threshold = int(args["frequency_threshold"])
 
