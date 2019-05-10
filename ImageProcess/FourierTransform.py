@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/FourierTransform.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/outimage.png --frequency_threshold_method frequency --image_band_index 0
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/FourierTransform.py --image_path /folder/mypic.png --outfile_path /export/mychoppedimages/outimage.png --frequency_threshold_method frequency --image_band_index 0 --frequency_threshold 30
 
 # import the necessary packages
 import argparse
@@ -61,13 +61,51 @@ magnitude_spectrum = 20*np.log(np.abs(fshift))
 # plt.show()
 
 rows, cols = img.shape
+print(img.shape)
 crow,ccol = rows/2 , cols/2
 crow = int(round(crow))
 ccol = int(round(ccol))
-fshift[crow-frequency_threshold:crow+frequency_threshold, ccol-frequency_threshold:ccol+frequency_threshold] = 0
-f_ishift = np.fft.ifftshift(fshift)
-img_back = np.fft.ifft2(f_ishift)
-img_back = np.abs(img_back)
+
+def getMax10(x):
+    return np.argpartition(x, -10)[-10:]
+
+if frequency_threshold_method == 'frequency':
+    fshift[crow-frequency_threshold:crow+frequency_threshold, ccol-frequency_threshold:ccol+frequency_threshold] = 0
+    f_ishift = np.fft.ifftshift(fshift)
+    img_back = np.fft.ifft2(f_ishift)
+    img_back = np.abs(img_back)
+if frequency_threshold_method == 'magnitude':
+    if frequency_threshold == 10:
+        mask = np.zeros((rows, cols, 2), np.uint8)
+        max10_a1 = np.apply_along_axis(getMax10, axis=1, arr=fshift)
+        max10_a2 = np.apply_along_axis(getMax10, axis=0, arr=fshift)
+
+        col_count = 0
+        row_count = 0
+        total_1 = 0
+        for x in np.nditer(max10_a1):
+            mask[row_count, x] = 1
+            col_count += 1
+            total_1 += 1
+            if col_count == max10_a1.shape[1]:
+                col_count = 0
+                row_count += 1
+
+        col_count = 0
+        row_count = 0
+        total_2 = 0
+        for x in np.nditer(max10_a2):
+            mask[x, row_count] = 1
+            col_count += 1
+            total_2 += 1
+            if col_count == max10_a2.shape[1]:
+                col_count = 0
+                row_count += 1
+
+        fshift = dft_shift*mask
+        f_ishift = np.fft.ifftshift(fshift)
+        img_back = cv2.idft(f_ishift)
+        img_back = cv2.magnitude(img_back[:,:,0],img_back[:,:,1])
 
 # plt.subplot(131),plt.imshow(img, cmap = 'gray')
 # plt.title('Input Image'), plt.xticks([]), plt.yticks([])
