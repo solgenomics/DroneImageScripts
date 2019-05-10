@@ -83,7 +83,9 @@ if frequency_threshold_method == 'magnitude':
         col_count = 0
         row_count = 0
         total_1 = 0
+        total_a = []
         for x in np.nditer(max10_a1):
+            total_a.append(x)
             mask[row_count, x] = 1
             col_count += 1
             total_1 += 1
@@ -95,12 +97,17 @@ if frequency_threshold_method == 'magnitude':
         row_count = 0
         total_2 = 0
         for x in np.nditer(max10_a2):
+            total_a.append(x)
             mask[x, row_count] = 1
             col_count += 1
             total_2 += 1
             if col_count == max10_a2.shape[1]:
                 col_count = 0
                 row_count += 1
+
+        print(len(np.unique(max10_a1)))
+        print(len(np.unique(max10_a2)))
+        print(len(np.unique(total_a)))
 
         fshift = dft_shift*mask
         f_ishift = np.fft.ifftshift(fshift)
