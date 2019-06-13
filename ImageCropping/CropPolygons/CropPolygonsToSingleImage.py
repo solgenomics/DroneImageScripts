@@ -47,9 +47,11 @@ class CropPolygonsToSingleImage:
                         polygon_mat.append([p['x'], p['y']])
 
                     if cv2.pointPolygonTest(np.asarray([polygon_mat]),(x,y),False) >= 0:
-                        cropedImage[y, x, 0] = input_image[y, x, 0]
-                        cropedImage[y, x, 1] = input_image[y, x, 1]
-                        cropedImage[y, x, 2] = input_image[y, x, 2]
+                        if len(input_image_size) == 3:
+                            for j in range(input_image_size[2]):
+                                cropedImage[y, x, j] = input_image[y, x, j]
+                        else:
+                            cropedImage[y, x] = input_image[y, x]
 
         # Now we can crop again just the envloping rectangle
         finalImage = cropedImage[minY:maxY,minX:maxX]
