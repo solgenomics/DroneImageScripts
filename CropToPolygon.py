@@ -30,12 +30,17 @@ img_shape = img.shape
 if len(img_shape) == 3:
     if img_shape[2] == 3:
         b,g,r = cv2.split(img)
-        if image_band_index == 0:
-            img = b
-        if image_band_index == 1:
-            img = g
-        if image_band_index == 2:
-            img = r
+        if image_band_index is not None:
+            image_band_index = int(image_band_index)
+            if image_band_index == 0:
+                print('Get Band1')
+                img = b
+            if image_band_index == 1:
+                print('Get Band2')
+                img = g
+            if image_band_index == 2:
+                print('Get Band3')
+                img = r
 
 sd = CropPolygonsToSingleImage()
 finalImage = sd.crop(img, polygons)
