@@ -123,5 +123,6 @@ if frequency_threshold_method == 'magnitude':
 # plt.show()
 # 
 # cv2.waitKey(0)
-
-plt.imsave(outfile_path, img_back)
+print("FT")
+print(img_back.shape)
+plt.imsave(outfile_path, img_back, cmap='gray')

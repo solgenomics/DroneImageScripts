@@ -147,7 +147,7 @@ for input_image in images:
     # plt.title('Result in JET'), plt.xticks([]), plt.yticks([])
     # plt.show()
 
-    plt.imsave(outfiles[count], img_back)
+    plt.imsave(outfiles[count], img_back, cmap='gray')
     #cv2.imwrite(outfiles[count], img_back)
     print(outfiles[count])
 
