@@ -222,31 +222,17 @@ for input_image in images:
     #cv2.imshow('image'+str(count),kpsimage)
     #cv2.imwrite(outfiles[count], kpsimage)
 
-    #NDVI and VARI are scaled i = (i + 1)*255/2 in their respective scripts while all others are scale i*255 in MoveAlphaChannel.py
-    if plot_polygon_type == 'observation_unit_polygon_ndvi_imagery' or plot_polygon_type == 'observation_unit_polygon_background_removed_ndvi_imagery':
-        total_pixel_sum = (2 * total_pixel_sum / 255) - 1
-        mean_pixel_value = (2 * mean_pixel_value / 255) - 1
-        harmonic_mean_pixel_value = (2 * harmonic_mean_pixel_value / 255) - 1
-        pixel_median_value = (2 * pixel_median_value / 255) - 1
-        pixel_variance = (2 * pixel_variance / 255) - 1
-        pixel_standard_dev = (2 * pixel_standard_dev / 255) - 1
-        pixel_pstandard_dev = (2 * pixel_pstandard_dev / 255) - 1
-        min_pixel = (2 * min_pixel / 255) - 1
-        max_pixel = (2 * max_pixel / 255) - 1
-        minority_pixel_value = (2 * minority_pixel_value / 255) - 1
-        majority_pixel_value = (2 * majority_pixel_value / 255) - 1
-    else:
-        total_pixel_sum = total_pixel_sum / 255
-        mean_pixel_value = mean_pixel_value / 255
-        harmonic_mean_pixel_value = harmonic_mean_pixel_value / 255
-        pixel_median_value = pixel_median_value / 255
-        pixel_variance = pixel_variance / 255
-        pixel_standard_dev = pixel_standard_dev / 255
-        pixel_pstandard_dev = pixel_pstandard_dev / 255
-        min_pixel = min_pixel / 255
-        max_pixel = max_pixel / 255
-        minority_pixel_value = minority_pixel_value / 255
-        majority_pixel_value = majority_pixel_value / 255
+    total_pixel_sum = total_pixel_sum / 255
+    mean_pixel_value = mean_pixel_value / 255
+    harmonic_mean_pixel_value = harmonic_mean_pixel_value / 255
+    pixel_median_value = pixel_median_value / 255
+    pixel_variance = pixel_variance / 255
+    pixel_standard_dev = pixel_standard_dev / 255
+    pixel_pstandard_dev = pixel_pstandard_dev / 255
+    min_pixel = min_pixel / 255
+    max_pixel = max_pixel / 255
+    minority_pixel_value = minority_pixel_value / 255
+    majority_pixel_value = majority_pixel_value / 255
 
     result_file_lines.append([non_zero, total_pixel_sum, mean_pixel_value, harmonic_mean_pixel_value, pixel_median_value, pixel_variance, pixel_standard_dev, pixel_pstandard_dev, min_pixel, max_pixel, minority_pixel_value, minority_pixel_count, majority_pixel_value, majority_pixel_count, pixel_group_count])
 

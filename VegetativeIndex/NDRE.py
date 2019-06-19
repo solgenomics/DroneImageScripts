@@ -30,7 +30,7 @@ ndre[np.isnan(ndre)] = 0
 print(ndre.shape)
 print(ndre.dtype)
 
-ndre = (ndre + 1)*255/2
+ndre = ndre * 255
 ndre = ndre.astype(np.uint8)
 
 print(ndre.shape)

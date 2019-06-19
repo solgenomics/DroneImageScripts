@@ -30,7 +30,7 @@ ndvi[np.isnan(ndvi)] = 0
 print(ndvi.shape)
 print(ndvi.dtype)
 
-ndvi = (ndvi + 1)*255/2
+ndvi = ndvi * 255
 ndvi = ndvi.astype(np.uint8)
 
 print(ndvi.shape)

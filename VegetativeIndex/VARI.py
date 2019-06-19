@@ -34,7 +34,7 @@ vari[np.isnan(vari)] = 0
 print(vari.shape)
 print(vari.dtype)
 
-vari = (vari + 1)*255/2
+vari = vari * 255
 vari = vari.astype(np.uint8)
 
 print(vari.shape)
