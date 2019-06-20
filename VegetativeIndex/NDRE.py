@@ -27,14 +27,14 @@ denominator = nir + re
 ndre = np.divide(numerator, denominator)
 ndre[np.isnan(ndre)] = 0
 
-print(ndre.shape)
-print(ndre.dtype)
+#print(ndre.shape)
+#print(ndre.dtype)
 
 ndre = ndre * 255
 ndre = ndre.astype(np.uint8)
 
-print(ndre.shape)
-print(ndre.dtype)
+#print(ndre.shape)
+#print(ndre.dtype)
 
 cv2.imwrite(outfile_path, ndre)
 #cv2.waitKey(0)

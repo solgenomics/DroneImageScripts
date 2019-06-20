@@ -23,22 +23,22 @@ b,g,r = cv2.split(img)
 
 numerator = g - r
 denominator = g + r - b
-print(img.dtype)
-print(numerator.dtype)
-print(denominator.dtype)
+#print(img.dtype)
+#print(numerator.dtype)
+#print(denominator.dtype)
 #cv2.imshow("numerator", numerator)
 #cv2.imshow("denominator", denominator)
 vari = np.divide(numerator, denominator)
 vari[np.isnan(vari)] = 0
 
-print(vari.shape)
-print(vari.dtype)
+#print(vari.shape)
+#print(vari.dtype)
 
 vari = vari * 255
 vari = vari.astype(np.uint8)
 
-print(vari.shape)
-print(vari.dtype)
+#print(vari.shape)
+#print(vari.dtype)
 #cv2.imshow("Result", vari)
 
 cv2.imwrite(outfile_path, vari)

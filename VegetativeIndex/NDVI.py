@@ -27,14 +27,14 @@ denominator = nir + r
 ndvi = np.divide(numerator, denominator)
 ndvi[np.isnan(ndvi)] = 0
 
-print(ndvi.shape)
-print(ndvi.dtype)
+#print(ndvi.shape)
+#print(ndvi.dtype)
 
 ndvi = ndvi * 255
 ndvi = ndvi.astype(np.uint8)
 
-print(ndvi.shape)
-print(ndvi.dtype)
+#print(ndvi.shape)
+#print(ndvi.dtype)
 
 cv2.imwrite(outfile_path, ndvi)
 #cv2.waitKey(0)

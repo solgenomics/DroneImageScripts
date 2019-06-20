@@ -61,7 +61,7 @@ magnitude_spectrum = 20*np.log(np.abs(fshift))
 # plt.show()
 
 rows, cols = img.shape
-print(img.shape)
+#print(img.shape)
 crow,ccol = rows/2 , cols/2
 crow = int(round(crow))
 ccol = int(round(ccol))
@@ -123,6 +123,6 @@ if frequency_threshold_method == 'magnitude':
 # plt.show()
 # 
 # cv2.waitKey(0)
-print("FT")
-print(img_back.shape)
+# print("FT")
+# print(img_back.shape)
 plt.imsave(outfile_path, img_back, cmap='gray')
