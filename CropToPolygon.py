@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageCropping/CropToPolygon.py --inputfile_path /export/archive/mystitchedimage.png --outputfile_path /export/mychoppedimages/polygon.png --polygon_json '[{x:10, y:10}, {x:15, y:20}, {x:1, y:10}, {x:1, y:25}]'
+# python /home/nmorales/cxgn/DroneImageScripts/CropToPolygon.py --inputfile_path /export/archive/mystitchedimage.png --outputfile_path /export/mychoppedimages/polygon.png --polygon_json '[{x:10, y:10}, {x:15, y:20}, {x:1, y:10}, {x:1, y:25}]' --polygon_type rectangular_polygon
 
 # import the necessary packages
 import argparse
@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import json
 from ImageCropping.CropPolygons.CropPolygonsToSingleImage import CropPolygonsToSingleImage
+from ImageCropping.CropPolygonsSquareRectangles.CropPolygonsToSingleSquareRectangularImage import CropPolygonsToSingleSquareRectangularImage
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -15,12 +16,14 @@ ap.add_argument("-i", "--inputfile_path", required=True, help="complete file pat
 ap.add_argument("-o", "--outputfile_path", required=True, help="complete file path to where to cropped polygon will be saved")
 ap.add_argument("-p", "--polygon_json", required=True, help="json string that is an array of length 4, with the x,y coordinates of the polygon")
 ap.add_argument("-b", "--image_band_index", required=False, help="if a specific channel should be returned, the band index 0,1,2 can be given")
+ap.add_argument("-t", "--polygon_type", required=True, help="can be: rectangular_square or rectangular_polygon")
 args = vars(ap.parse_args())
 
 inputfile_path = args["inputfile_path"]
 outputfile_path = args["outputfile_path"]
 image_band_index = args["image_band_index"]
 polygon_json = args["polygon_json"]
+polygon_type = args["polygon_type"]
 polygons = json.loads(polygon_json)
 print(polygons)
 
@@ -38,9 +41,12 @@ if len(img_shape) == 3:
                 img = g
             if image_band_index == 2:
                 img = r
-
-sd = CropPolygonsToSingleImage()
-finalImage = sd.crop(img, polygons)
+if polygon_type == 'rectangular_square':
+    sd = CropPolygonsToSingleSquareRectangularImage()
+    finalImage = sd.crop(img, polygons)
+elif polygon_type == 'rectangular_polygon':
+    sd = CropPolygonsToSingleImage()
+    finalImage = sd.crop(img, polygons)
 
 cv2.imwrite(outputfile_path, finalImage)
 #cv2.imshow("Result", finalImage)
