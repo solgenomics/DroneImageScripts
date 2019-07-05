@@ -104,11 +104,11 @@ def run():
     im_aligned = imageutils.aligned_capture(capture, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
     print(im_aligned.shape)
 
-    plt.imsave(outpathNames[0], im_aligned[:, :, 0])
-    plt.imsave(outpathNames[1], im_aligned[:, :, 1])
-    plt.imsave(outpathNames[2], im_aligned[:, :, 2])
-    plt.imsave(outpathNames[3], im_aligned[:, :, 3])
-    plt.imsave(outpathNames[4], im_aligned[:, :, 4])
+    plt.imsave(outpathNames[0], im_aligned[:, :, 0], cmap='gray')
+    plt.imsave(outpathNames[1], im_aligned[:, :, 1], cmap='gray')
+    plt.imsave(outpathNames[2], im_aligned[:, :, 2], cmap='gray')
+    plt.imsave(outpathNames[3], im_aligned[:, :, 3], cmap='gray')
+    plt.imsave(outpathNames[4], im_aligned[:, :, 4], cmap='gray')
 
 if __name__ == '__main__':
     run()
