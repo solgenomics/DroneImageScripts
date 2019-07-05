@@ -1,91 +1,97 @@
-import numpy as np
+import argparse
+import os, glob
+import micasense.capture as capture
 import cv2
-import os
+import numpy as np
+import matplotlib.pyplot as plt
+import micasense.imageutils as imageutils
+import micasense.plotutils as plotutils
 
-def align_images(in_fldr, out_fldr, moving, fixed):
-    MIN_MATCH_COUNT = 10
+# panelNames = []
+# imageNames = []
+# outpathNames = []
+# 
+# ap = argparse.ArgumentParser()
+# ap.add_argument("-a", "--image_path_band_1", required=True, help="image path band 1")
+# ap.add_argument("-b", "--image_path_band_2", required=True, help="image path band 2")
+# ap.add_argument("-c", "--image_path_band_3", required=False, help="image path band 3")
+# ap.add_argument("-d", "--image_path_band_4", required=False, help="image path band 4")
+# ap.add_argument("-e", "--image_path_band_5", required=False, help="image path band 5")
+# ap.add_argument("-f", "--outpath_aligned_image_path_band_1", required=False, help="outpath for aligned image path band 1")
+# ap.add_argument("-g", "--outpath_aligned_image_path_band_2", required=False, help="outpath for aligned image path band 2")
+# ap.add_argument("-p", "--outpath_aligned_image_path_band_3", required=False, help="outpath for aligned image path band 3")
+# ap.add_argument("-i", "--outpath_aligned_image_path_band_4", required=False, help="outpath for aligned image path band 4")
+# ap.add_argument("-j", "--outpath_aligned_image_path_band_5", required=False, help="outpath for aligned image path band 5")
+# ap.add_argument("-k", "--panel_image_path_band_1", required=False, help="panel image path band 1")
+# ap.add_argument("-l", "--panel_image_path_band_2", required=False, help="panel image path band 2")
+# ap.add_argument("-m", "--panel_image_path_band_3", required=False, help="panel image path band 3")
+# ap.add_argument("-n", "--panel_image_path_band_4", required=False, help="panel image path band 4")
+# ap.add_argument("-o", "--panel_image_path_band_5", required=False, help="panel image path band 5")
+# args = vars(ap.parse_args())
+# 
+# input_image_bands = [args["image_path_band_1"], args["image_path_band_2"], args["image_path_band_3"], args["image_path_band_4"], args["image_path_band_5"]]
+# outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
+# panel_image_bands = [args["panel_image_path_band_1"], args["panel_image_path_band_2"], args["panel_image_path_band_3"], args["panel_image_path_band_4"], args["panel_image_path_band_5"]]
 
-    moving_im = cv2.imread(moving, 0)  # image to be distorted
-    fixed_im = cv2.imread(fixed, 0)  # image to be matched
+panelNames = None
 
-    # Initiate SIFT detector
-    sift = cv2.xfeatures2d.SIFT_create()
+imagePath = "Downloads/MicasenseExample5AlignmentImages"
+imageNames = glob.glob(os.path.join(imagePath,'IMG_0085_*.jpg'))
 
-    # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(moving_im, None)
-    kp2, des2 = sift.detectAndCompute(fixed_im, None)
+# imagePath = "Downloads/NickKExample5AlignmentImages"
+# imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
 
-    # use FLANN method to match keypoints. Brute force matches not appreciably better
-    # and added processing time is significant.
-    FLANN_INDEX_KDTREE = 0
-    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=50)
+# for i in input_image_bands:
+#     if i is not None:
+#         imageNames.append(i)
+# 
+# for i in outpath_aligned_image_bands:
+#     if i is not None:
+#         outpathNames.append(i)
+# 
+# for i in panel_image_bands:
+#     if i is not None:
+#         panelNames.append(i)
 
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
+if panelNames is not None:
+    panelCap = capture.Capture.from_filelist(panelNames)
+else:
+    panelCap = None
 
-    matches = flann.knnMatch(des1, des2, k=2)
+capture = capture.Capture.from_filelist(imageNames)
 
-    # store all the good matches following Lowe's ratio test.
-    good = []
-    for m, n in matches:
-        if m.distance < 0.7 * n.distance:
-            good.append(m)
-
-    if len(good) > MIN_MATCH_COUNT:
-        src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
-
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-
-        h, w = moving_im.shape  # shape of input images, needs to remain the same for output
-
-        outimg = cv2.warpPerspective(moving_im, M, (w, h))
-
-        return outimg
-
-
+if panelCap is not None:
+    if panelCap.panel_albedo() is not None:
+        panel_reflectance_by_band = panelCap.panel_albedo()
     else:
-        print("Not enough matches are found for moving image")
-        matchesMask = None
+        panel_reflectance_by_band = [0.67, 0.69, 0.68, 0.61, 0.67] #RedEdge band_index order
+    panel_irradiance = panelCap.panel_irradiance(panel_reflectance_by_band)    
+    img_type = "reflectance"
+    capture.plot_undistorted_reflectance(panel_irradiance)
+else:
+    if capture.dls_present():
+        img_type='reflectance'
+        capture.plot_undistorted_reflectance(capture.dls_irradiance())
+    else:
+        img_type = "radiance"
+        capture.plot_undistorted_radiance()
 
-ch1 = int(input('Which band do you want for channel 1 on output image? Green(1), Red(2), Red Edge(3) or NIR(4)'))
-ch2 = int(input('Which band do you want for channel 2 on output image? Green(1), Red(2), Red Edge(3) or NIR(4)'))
-ch3 = int(input('Which band do you want for channel 3 on output image? Green(1), Red(2), Red Edge(3) or NIR(4)'))
-channel_order = [ch1,ch2,ch3]
+## Alignment settings
+match_index = 1 # Index of the band 
+max_alignment_iterations = 10
+warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
+pyramid_levels = 0 # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
+print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
+# Can potentially increase max_iterations for better results, but longer runtimes
+warp_matrices, alignment_pairs = imageutils.align_capture(capture,
+                                                          ref_index = match_index,
+                                                          max_iterations = max_alignment_iterations,
+                                                          warp_mode = warp_mode,
+                                                          pyramid_levels = pyramid_levels)
 
-output_folder = str(input('Enter path to output folder: '))
-input_folder = str(input('Enter path to input folder: '))
+print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-image_list = [f for f in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder,f))]
-image_tups = zip(*[image_list[i::4] for i in range(4)])
+cropped_dimensions, edges = imageutils.find_crop_bounds(capture, warp_matrices, warp_mode=warp_mode)
+im_aligned = imageutils.aligned_capture(capture, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
 
-# set the fixed image to minimize amount of translation that needs to occur
-if 1 in channel_order and 2 in channel_order and 3 in channel_order:
-    fixed_image = 1
-    moving_im1 = 0
-    moving_im2 = 2
-elif 2 in channel_order and 3 in channel_order and 4 in channel_order:
-    fixed_image = 2
-    moving_im1 = 1
-    moving_im2 = 3
-elif 1 in channel_order and 3 in channel_order and 4 in channel_order:
-    fixed_image = 2
-    moving_im1 = 0
-    moving_im2 = 3
-elif 1 in channel_order and 2 in channel_order and 4 in channel_order:
-    fixed_image = 1
-    moving_im1 = 0
-    moving_im2 = 3
-
-# iterate through each set of 4 images
-for tup in image_tups:
-    band1 = align_images(input_folder, output_folder, os.path.join(input_folder, tup[moving_im1]),
-                         os.path.join(input_folder, tup[fixed_image]))
-    band2 = align_images(input_folder, output_folder, os.path.join(input_folder, tup[moving_im2]),
-                         os.path.join(input_folder, tup[fixed_image]))
-    band3 = cv2.imread(os.path.join(input_folder, tup[fixed_image]), 0)
-
-    merged = cv2.merge((band1, band2, band3))
-
-    cv2.imwrite(os.path.join(output_folder, tup[fixed_image][-30:-4]) + '_merged.jpg', merged)
