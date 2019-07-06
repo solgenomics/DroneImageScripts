@@ -33,8 +33,11 @@ panelNames = None
 # imagePath = "Downloads/MicasenseExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0085_*.jpg'))
 
-imagePath = "Downloads/rededge-m"
-imageNames = glob.glob(os.path.join(imagePath,'img01_*.tif'))
+# imagePath = "Downloads/rededge-m"
+# imageNames = glob.glob(os.path.join(imagePath,'img01_*.tif'))
+
+imagePath = "Downloads/MicasenseTest/Panels"
+imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
 
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
@@ -86,9 +89,9 @@ def run():
 
     ## Alignment settings
     match_index = 0 # Index of the band 
-    max_alignment_iterations = 100
-    warp_mode = cv2.MOTION_AFFINE # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
-    pyramid_levels = 0 # for images with RigRelatives, setting this to 0 or 1 may improve alignment
+    max_alignment_iterations = 1000
+    warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
+    pyramid_levels = None # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
     print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
     # Can potentially increase max_iterations for better results, but longer runtimes
