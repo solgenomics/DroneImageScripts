@@ -1,6 +1,7 @@
 import argparse
 import os, glob
 from multiprocessing import Process, freeze_support
+import imutils
 
 # panelNames = []
 # imageNames = []
@@ -36,8 +37,12 @@ panelNames = None
 # imagePath = "Downloads/rededge-m"
 # imageNames = glob.glob(os.path.join(imagePath,'img01_*.tif'))
 
-imagePath = "Downloads/MicasenseTest/Panels"
-imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
+# imagePath = "Downloads/MicasenseTest/Panels"
+# imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
+
+imagePath = "Downloads/MicasenseTest/000"
+imageNames = glob.glob(os.path.join(imagePath,'IMG_0038_*.tif'))
+imageNames2 = glob.glob(os.path.join(imagePath,'IMG_0039_*.tif'))
 
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
@@ -69,7 +74,8 @@ def run():
     else:
         panelCap = None
 
-    capture = capture.Capture.from_filelist(imageNames)
+    capture1 = capture.Capture.from_filelist(imageNames)
+    capture2 = capture.Capture.from_filelist(imageNames2)
 
     if panelCap is not None:
         if panelCap.panel_albedo() is not None:
@@ -78,14 +84,14 @@ def run():
             panel_reflectance_by_band = [0.67, 0.69, 0.68, 0.61, 0.67] #RedEdge band_index order
         panel_irradiance = panelCap.panel_irradiance(panel_reflectance_by_band)    
         img_type = "reflectance"
-    #    capture.plot_undistorted_reflectance(panel_irradiance)
+    #    capture1.plot_undistorted_reflectance(panel_irradiance)
     else:
-        if capture.dls_present():
+        if capture1.dls_present():
             img_type='reflectance'
-    #        capture.plot_undistorted_reflectance(capture.dls_irradiance())
+    #        capture1.plot_undistorted_reflectance(capture1.dls_irradiance())
         else:
             img_type = "radiance"
-    #        capture.plot_undistorted_radiance()
+    #        capture1.plot_undistorted_radiance()
 
     ## Alignment settings
     match_index = 0 # Index of the band 
@@ -93,9 +99,10 @@ def run():
     warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
     pyramid_levels = None # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
+    print(img_type)
     print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
     # Can potentially increase max_iterations for better results, but longer runtimes
-    warp_matrices, alignment_pairs = imageutils.align_capture(capture,
+    warp_matrices, alignment_pairs = imageutils.align_capture(capture1,
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
                                                               warp_mode = warp_mode,
@@ -103,15 +110,25 @@ def run():
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-    cropped_dimensions, edges = imageutils.find_crop_bounds(capture, warp_matrices, warp_mode=warp_mode)
-    im_aligned = imageutils.aligned_capture(capture, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+    cropped_dimensions, edges = imageutils.find_crop_bounds(capture1, warp_matrices, warp_mode=warp_mode)
+    im_aligned = imageutils.aligned_capture(capture1, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
     print(im_aligned.shape)
 
-    plt.imsave(outpathNames[0], im_aligned[:, :, 0], cmap='gray')
-    plt.imsave(outpathNames[1], im_aligned[:, :, 1], cmap='gray')
-    plt.imsave(outpathNames[2], im_aligned[:, :, 2], cmap='gray')
-    plt.imsave(outpathNames[3], im_aligned[:, :, 3], cmap='gray')
-    plt.imsave(outpathNames[4], im_aligned[:, :, 4], cmap='gray')
+    cropped_dimensions2, edges2 = imageutils.find_crop_bounds(capture2, warp_matrices, warp_mode=warp_mode)
+    im_aligned2 = imageutils.aligned_capture(capture2, warp_matrices, warp_mode, cropped_dimensions2, match_index, img_type=img_type)
+    print(im_aligned2.shape)
+
+    plt.imsave(outpathNames[0], im_aligned2[:, :, 0], cmap='gray')
+    plt.imsave(outpathNames[1], im_aligned2[:, :, 1], cmap='gray')
+    plt.imsave(outpathNames[2], im_aligned2[:, :, 2], cmap='gray')
+    plt.imsave(outpathNames[3], im_aligned2[:, :, 3], cmap='gray')
+    plt.imsave(outpathNames[4], im_aligned2[:, :, 4], cmap='gray')
+
+    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+    stitch_result = stitcher.stitch([im_aligned, im_aligned2])
+    result = stitch_result[1]
+
+    cv2.imwrite("/home/nmorales/test.png", result)
 
 if __name__ == '__main__':
     run()
