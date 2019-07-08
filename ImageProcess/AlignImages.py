@@ -166,8 +166,9 @@ def run():
 
 
     if do_pairwise_stitch == 1:
-        cropped_dimensions, edges = imageutils.find_crop_bounds(imageCaptureSets[0], warp_matrices, warp_mode=warp_mode)
-        im_aligned = imageutils.aligned_capture(imageCaptureSets[0], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+        print("DOING PAIRWISE..")
+        cropped_dimensions, edges = imageutils.find_crop_bounds(captures[0], warp_matrices, warp_mode=warp_mode)
+        im_aligned = imageutils.aligned_capture(captures[0], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
         print(im_aligned.shape)
 
         i1 = im_aligned[:,:,[0,1,2]]
@@ -176,9 +177,9 @@ def run():
         i2 = im_aligned[:,:,[2,3,4]]
         img2 = np.uint8(i2*255)
 
-        for i in range(1, len(imageCaptureSets)):
-            cropped_dimensions, edges = imageutils.find_crop_bounds(imageCaptureSets[i], warp_matrices, warp_mode=warp_mode)
-            im_aligned = imageutils.aligned_capture(imageCaptureSets[i], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+        for i in range(1, len(captures)):
+            cropped_dimensions, edges = imageutils.find_crop_bounds(captures[i], warp_matrices, warp_mode=warp_mode)
+            im_aligned = imageutils.aligned_capture(captures[i], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
             print(im_aligned.shape)
 
             i1 = im_aligned[:,:,[0,1,2]]
