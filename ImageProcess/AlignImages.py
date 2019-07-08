@@ -153,7 +153,7 @@ def run():
                                                               max_iterations = max_alignment_iterations,
                                                               warp_mode = warp_mode,
                                                               pyramid_levels = pyramid_levels,
-                                                              multithreaded = False)
+                                                              multithreaded = True)
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
