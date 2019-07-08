@@ -178,6 +178,7 @@ def run():
         i2 = im_aligned[:,:,[2,3,4]]
         img2 = np.uint8(i2*255)
 
+        count = 0
         for i in range(1, len(captures)):
             cropped_dimensions, edges = imageutils.find_crop_bounds(captures[i], warp_matrices, warp_mode=warp_mode)
             im_aligned = imageutils.aligned_capture(captures[i], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
@@ -205,6 +206,7 @@ def run():
 
             cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", img1)
             cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", img2)
+            count = count + 1
 
         final_result_img1 = img1
         final_result_img2 = img2
