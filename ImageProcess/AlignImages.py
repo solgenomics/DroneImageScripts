@@ -164,7 +164,6 @@ def run():
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 
     if do_pairwise_stitch == 1:
         cropped_dimensions, edges = imageutils.find_crop_bounds(imageCaptureSets[0], warp_matrices, warp_mode=warp_mode)
@@ -188,10 +187,15 @@ def run():
             i2 = im_aligned[:,:,[2,3,4]]
             image2 = np.uint8(i2*255)
 
+            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
             stitch_result1 = stitcher.stitch([img1, image1])
             print(stitch_result1[0])
             print(stitch_result1[1])
             img1 = stitch_result1[1]
+
+            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
             stitch_result2 = stitcher.stitch([img2, image2])
             print(stitch_result2[0])
             print(stitch_result2[1])
@@ -222,9 +226,14 @@ def run():
                 image2 = np.uint8(i2*255)
                 images_to_stich2.append(image2)
 
+            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
             stitch_result1 = stitcher.stitch(images_to_stich1)
             print(stitch_result1[0])
             print(stitch_result1[1])
+
+            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
             stitch_result2 = stitcher.stitch(images_to_stich2)
             print(stitch_result2[0])
             print(stitch_result2[1])
@@ -236,9 +245,14 @@ def run():
 
             count = count + 1
 
+        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
         final_result1 = stitcher.stitch(resultsToStitch1)
         print(final_result1[0])
         print(final_result1[1])
+
+        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
         final_result2 = stitcher.stitch(resultsToStitch2)
         print(final_result2[0])
         print(final_result2[1])
