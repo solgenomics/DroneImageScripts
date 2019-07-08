@@ -9,6 +9,8 @@ import statistics
 # outpathNames = []
 
 ap = argparse.ArgumentParser()
+ap.add_argument("-a", "--image_path", required=True, default="/home/nmorales/MicasenseTest/000", help="image path")
+ap.add_argument("-o", "--output_path", required=True, help="output image path")
 # ap.add_argument("-a", "--image_path_band_1", required=True, help="image path band 1")
 # ap.add_argument("-b", "--image_path_band_2", required=True, help="image path band 2")
 # ap.add_argument("-c", "--image_path_band_3", required=False, help="image path band 3")
@@ -26,6 +28,8 @@ ap = argparse.ArgumentParser()
 # ap.add_argument("-o", "--panel_image_path_band_5", required=False, help="panel image path band 5")
 args = vars(ap.parse_args())
 
+image_path = args["image_path"]
+output_path = args["output_path"]
 # input_image_bands = [args["image_path_band_1"], args["image_path_band_2"], args["image_path_band_3"], args["image_path_band_4"], args["image_path_band_5"]]
 # outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
 # panel_image_bands = [args["panel_image_path_band_1"], args["panel_image_path_band_2"], args["panel_image_path_band_3"], args["panel_image_path_band_4"], args["panel_image_path_band_5"]]
@@ -41,8 +45,8 @@ panelNames = None
 # imagePath = "Downloads/MicasenseTest/Panels"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
 
-imagePath = "/home/nmorales/MicasenseTest/000"
-imageNamesAll = glob.glob(os.path.join(imagePath,'*.tif'))
+# imagePath = "/home/nmorales/MicasenseTest/000"
+imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
 imageNamesDict = {}
 for i in imageNamesAll:
     s = i.split("_")
@@ -193,8 +197,22 @@ def run():
 
         count = count + 1
 
+    c = 0
+    for i in resultsToStitch1:
+        cv2.imwrite(output_path+"/resultstostitch1_"+str(c)+".png", i)
+        c = c + 1
+
+    c = 0
+    for i in resultsToStitch2:
+        cv2.imwrite(output_path+"/resultstostitch2_"+str(c)+".png", i)
+        c = c + 1
+
     final_result1 = stitcher.stitch(resultsToStitch1)
+    print(final_result1[0])
+    print(final_result1[1])
     final_result2 = stitcher.stitch(resultsToStitch2)
+    print(final_result2[0])
+    print(final_result2[1])
 
     # cv2.imshow("final_result1", final_result1[1])
     # cv2.imshow("final_result2", final_result1[1])
@@ -207,8 +225,8 @@ def run():
 #     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 #     };
 
-    cv2.imwrite("/home/nmorales/test_1.png", final_result1[1])
-    cv2.imwrite("/home/nmorales/test_2.png", final_result2[1])
+    cv2.imwrite(output_path+"/result_1.png", final_result1[1])
+    cv2.imwrite(output_path+"/result_2.png", final_result2[1])
 
 if __name__ == '__main__':
     run()
