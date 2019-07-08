@@ -85,10 +85,10 @@ def run():
         GPSsorter[loc[0]][loc[1]] = counter
 
     imageCaptureSets = []
-    if do_pairwise_stitch is not None:
-        do_pairwise_stitch = int(do_pairwise_stitch)
-        for i in range(0, len(captures), do_pairwise_stitch):
-            im = captures[i:i + do_pairwise_stitch]
+    if do_pairwise_stitch != '':
+        do_pairwise_stitch_int = int(do_pairwise_stitch)
+        for i in range(0, len(captures), do_pairwise_stitch_int):
+            im = captures[i:i + do_pairwise_stitch_int]
             if len(im) > 0:
                 imageCaptureSets.append(im)
     else:
