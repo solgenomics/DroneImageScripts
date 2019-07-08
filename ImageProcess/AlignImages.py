@@ -41,7 +41,7 @@ panelNames = None
 # imagePath = "Downloads/MicasenseTest/Panels"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
 
-imagePath = "Downloads/MicasenseTest/000"
+imagePath = "/home/nmorales/MicasenseTest/000"
 imageNamesAll = glob.glob(os.path.join(imagePath,'*.tif'))
 imageNamesDict = {}
 for i in imageNamesAll:
@@ -186,18 +186,18 @@ def run():
         resultsToStitch1.append(stitch_result1[1])
         resultsToStitch2.append(stitch_result2[1])
 
-        cv2.imshow("stitch_result1"+str(count), stitch_result1[1])
-        cv2.imshow("stitch_result2"+str(count), stitch_result2[1])
-        cv2.waitKey(0)
+        # cv2.imshow("stitch_result1"+str(count), stitch_result1[1])
+        # cv2.imshow("stitch_result2"+str(count), stitch_result2[1])
+        # cv2.waitKey(0)
 
         count = count + 1
 
     final_result1 = stitcher.stitch(resultsToStitch1)
     final_result2 = stitcher.stitch(resultsToStitch2)
 
-    cv2.imshow("final_result1", final_result1[1])
-    cv2.imshow("final_result2", final_result1[1])
-    cv2.waitKey(0)
+    # cv2.imshow("final_result1", final_result1[1])
+    # cv2.imshow("final_result2", final_result1[1])
+    # cv2.waitKey(0)
 
 #     {
 #     OK = 0,
@@ -206,7 +206,8 @@ def run():
 #     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 #     };
 
-    cv2.imwrite("/home/nmorales/test.png", final_result1[1])
+    cv2.imwrite("/home/nmorales/test_1.png", final_result1[1])
+    cv2.imwrite("/home/nmorales/test_2.png", final_result2[1])
 
 if __name__ == '__main__':
     run()
