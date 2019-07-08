@@ -4,38 +4,15 @@ from multiprocessing import Process, freeze_support
 import imutils
 import statistics
 
-# panelNames = []
-# imageNames = []
-# outpathNames = []
-
 ap = argparse.ArgumentParser()
 ap.add_argument("-a", "--image_path", required=True, default="/home/nmorales/MicasenseTest/000", help="image path")
 ap.add_argument("-o", "--output_path", required=True, help="output image path")
 ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do dumb pairwise stitching, no GPS info")
-# ap.add_argument("-a", "--image_path_band_1", required=True, help="image path band 1")
-# ap.add_argument("-b", "--image_path_band_2", required=True, help="image path band 2")
-# ap.add_argument("-c", "--image_path_band_3", required=False, help="image path band 3")
-# ap.add_argument("-d", "--image_path_band_4", required=False, help="image path band 4")
-# ap.add_argument("-e", "--image_path_band_5", required=False, help="image path band 5")
-# ap.add_argument("-f", "--outpath_aligned_image_path_band_1", required=False, help="outpath for aligned image path band 1")
-# ap.add_argument("-g", "--outpath_aligned_image_path_band_2", required=False, help="outpath for aligned image path band 2")
-# ap.add_argument("-p", "--outpath_aligned_image_path_band_3", required=False, help="outpath for aligned image path band 3")
-# ap.add_argument("-i", "--outpath_aligned_image_path_band_4", required=False, help="outpath for aligned image path band 4")
-# ap.add_argument("-j", "--outpath_aligned_image_path_band_5", required=False, help="outpath for aligned image path band 5")
-# ap.add_argument("-k", "--panel_image_path_band_1", required=False, help="panel image path band 1")
-# ap.add_argument("-l", "--panel_image_path_band_2", required=False, help="panel image path band 2")
-# ap.add_argument("-m", "--panel_image_path_band_3", required=False, help="panel image path band 3")
-# ap.add_argument("-n", "--panel_image_path_band_4", required=False, help="panel image path band 4")
-# ap.add_argument("-o", "--panel_image_path_band_5", required=False, help="panel image path band 5")
 args = vars(ap.parse_args())
 
 image_path = args["image_path"]
 output_path = args["output_path"]
 do_pairwise_stitch = args["do_pairwise_stitch"]
-
-# input_image_bands = [args["image_path_band_1"], args["image_path_band_2"], args["image_path_band_3"], args["image_path_band_4"], args["image_path_band_5"]]
-# outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
-# panel_image_bands = [args["panel_image_path_band_1"], args["panel_image_path_band_2"], args["panel_image_path_band_3"], args["panel_image_path_band_4"], args["panel_image_path_band_5"]]
 
 panelNames = None
 
@@ -69,18 +46,6 @@ for i in sorted (imageNamesDict.keys()):
 
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
-
-# for i in input_image_bands:
-#     if i is not None:
-#         imageNames.append(i)
-# 
-# for i in outpath_aligned_image_bands:
-#     if i is not None:
-#         outpathNames.append(i)
-# 
-# for i in panel_image_bands:
-#     if i is not None:
-#         panelNames.append(i)
 
 def run():
     import micasense.capture as capture
@@ -120,9 +85,10 @@ def run():
         GPSsorter[loc[0]][loc[1]] = counter
 
     imageCaptureSets = []
-    if do_pairwise_stitch == '1':
-        for i in range(0, len(captures), 10):
-            im = captures[i:i + 10]
+    if do_pairwise_stitch is not None:
+        do_pairwise_stitch = int(do_pairwise_stitch)
+        for i in range(0, len(captures), do_pairwise_stitch):
+            im = captures[i:i + do_pairwise_stitch]
             if len(im) > 0:
                 imageCaptureSets.append(im)
     else:
