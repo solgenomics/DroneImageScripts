@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageStitching/PanoramaStitch.py --images_urls http://localhost:3000/data/images/image_files/25/7c/92/aa/15cc8b7f98f34f90406a802f/yosemite2.jpg,http://localhost:3000/data/images/image_files/0b/70/02/14/5b640d6ce9f20c80a6fd9189/yosemite4.jpg --outfile_path /export/archive/mystitchedimage.png
+# python /home/nmorales/cxgn/DroneImageScripts/ImageStitching/PanoramaStitch.py --images_urls http://localhost:3000/data/images/image_files/a8/11/e4/76/e7f24fbccc79bed797b73a31/TFV0TzMMlp.png,http://localhost:3000/data/images/image_files/1a/be/f4/eb/580da78f17245b318268df0d/GjUZHIhA25.png,http://localhost:3000/data/images/image_files/ac/31/ab/7e/9f332950a2f1d824a2100b61/4UJdR27u5Q.png,http://localhost:3000/data/images/image_files/63/12/5d/a7/dad19de8898c2e509d7b6bcf/pn2tyXhUz5.png --outfile_path /export/archive/mystitchedimage.png
 
 # import the necessary packages
 from Panorama.Panorama import Stitcher
@@ -27,10 +27,11 @@ for i in image_urls:
         #image = cv2.resize(image,(480, 320))
         images.append(image)
 
-
+print("Starting...")
 stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 stitch_result = stitcher.stitch(images)
 result = stitch_result[1]
+print("Complete")
 
 # from Panorama.Panorama import Stitcher
 # stitcher = Stitcher()
@@ -46,4 +47,3 @@ result = stitch_result[1]
 cv2.imwrite(outfile_path, result)
 #cv2.imwrite("streakedimage.png", result)
 #cv2.waitKey(0)
-

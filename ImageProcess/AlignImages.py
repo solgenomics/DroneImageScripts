@@ -43,6 +43,14 @@ panelNames = None
 imagePath = "Downloads/MicasenseTest/000"
 imageNames = glob.glob(os.path.join(imagePath,'IMG_0038_*.tif'))
 imageNames2 = glob.glob(os.path.join(imagePath,'IMG_0039_*.tif'))
+imageNames3 = glob.glob(os.path.join(imagePath,'IMG_0040_*.tif'))
+imageNames4 = glob.glob(os.path.join(imagePath,'IMG_0041_*.tif'))
+imageNames5 = glob.glob(os.path.join(imagePath,'IMG_0042_*.tif'))
+imageNames6 = glob.glob(os.path.join(imagePath,'IMG_0043_*.tif'))
+imageNames7 = glob.glob(os.path.join(imagePath,'IMG_0044_*.tif'))
+imageNames8 = glob.glob(os.path.join(imagePath,'IMG_0045_*.tif'))
+imageNames9 = glob.glob(os.path.join(imagePath,'IMG_0046_*.tif'))
+imageNames10 = glob.glob(os.path.join(imagePath,'IMG_0047_*.tif'))
 
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
@@ -74,8 +82,7 @@ def run():
     else:
         panelCap = None
 
-    capture1 = capture.Capture.from_filelist(imageNames)
-    capture2 = capture.Capture.from_filelist(imageNames2)
+    captures = [capture.Capture.from_filelist(imageNames), capture.Capture.from_filelist(imageNames2), capture.Capture.from_filelist(imageNames3), capture.Capture.from_filelist(imageNames4), capture.Capture.from_filelist(imageNames5), capture.Capture.from_filelist(imageNames6), capture.Capture.from_filelist(imageNames7), capture.Capture.from_filelist(imageNames8), capture.Capture.from_filelist(imageNames9), capture.Capture.from_filelist(imageNames10)]
 
     if panelCap is not None:
         if panelCap.panel_albedo() is not None:
@@ -86,7 +93,7 @@ def run():
         img_type = "reflectance"
     #    capture1.plot_undistorted_reflectance(panel_irradiance)
     else:
-        if capture1.dls_present():
+        if captures[0].dls_present():
             img_type='reflectance'
     #        capture1.plot_undistorted_reflectance(capture1.dls_irradiance())
         else:
@@ -102,7 +109,7 @@ def run():
     print(img_type)
     print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
     # Can potentially increase max_iterations for better results, but longer runtimes
-    warp_matrices, alignment_pairs = imageutils.align_capture(capture1,
+    warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
                                                               warp_mode = warp_mode,
@@ -110,23 +117,44 @@ def run():
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-    cropped_dimensions, edges = imageutils.find_crop_bounds(capture1, warp_matrices, warp_mode=warp_mode)
-    im_aligned = imageutils.aligned_capture(capture1, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-    print(im_aligned.shape)
+    images_to_stich = []
+    count = 1
+    for i in captures:
+        cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
+        im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+        print(im_aligned.shape)
 
-    cropped_dimensions2, edges2 = imageutils.find_crop_bounds(capture2, warp_matrices, warp_mode=warp_mode)
-    im_aligned2 = imageutils.aligned_capture(capture2, warp_matrices, warp_mode, cropped_dimensions2, match_index, img_type=img_type)
-    print(im_aligned2.shape)
+        plt.imsave(outpathNames[0], im_aligned[:, :, 0], cmap='gray')
+        plt.imsave(outpathNames[1], im_aligned[:, :, 1], cmap='gray')
+        plt.imsave(outpathNames[2], im_aligned[:, :, 2], cmap='gray')
+        plt.imsave(outpathNames[3], im_aligned[:, :, 3], cmap='gray')
+        plt.imsave(outpathNames[4], im_aligned[:, :, 4], cmap='gray')
 
-    plt.imsave(outpathNames[0], im_aligned2[:, :, 0], cmap='gray')
-    plt.imsave(outpathNames[1], im_aligned2[:, :, 1], cmap='gray')
-    plt.imsave(outpathNames[2], im_aligned2[:, :, 2], cmap='gray')
-    plt.imsave(outpathNames[3], im_aligned2[:, :, 3], cmap='gray')
-    plt.imsave(outpathNames[4], im_aligned2[:, :, 4], cmap='gray')
+        i1 = im_aligned[:,:,0]
+        i1.dtype
+        type(i1)
+        image = np.uint8(i1)
+        print(image)
+        print(type(image))
+        print(image.min())
+        print(image.max())
+        # cv2.imshow("I"+str(count), image)
+        # cv2.waitKey(0)
+        images_to_stich.append(image)
+        count = count + 1
 
     stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-    stitch_result = stitcher.stitch([im_aligned, im_aligned2])
+    stitch_result = stitcher.stitch(images_to_stich)
+    print(stitch_result[0])
+    print(stitch_result[1])
     result = stitch_result[1]
+
+#     {
+#     OK = 0,
+#     ERR_NEED_MORE_IMGS = 1,
+#     ERR_HOMOGRAPHY_EST_FAIL = 2,
+#     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
+#     };
 
     cv2.imwrite("/home/nmorales/test.png", result)
 
