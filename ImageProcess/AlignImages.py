@@ -122,7 +122,7 @@ def run():
     imageCaptureSets = []
     if do_pairwise_stitch == '1':
         for i in range(0, len(captures), 10):
-            im = captures[i:i + n]
+            im = captures[i:i + 10]
             if len(im) > 0:
                 imageCaptureSets.append(im)
     else:
