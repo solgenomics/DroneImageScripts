@@ -2,10 +2,11 @@ import argparse
 import os, glob
 from multiprocessing import Process, freeze_support
 import imutils
+import statistics
 
 # panelNames = []
 # imageNames = []
-outpathNames = []
+# outpathNames = []
 
 ap = argparse.ArgumentParser()
 # ap.add_argument("-a", "--image_path_band_1", required=True, help="image path band 1")
@@ -13,11 +14,11 @@ ap = argparse.ArgumentParser()
 # ap.add_argument("-c", "--image_path_band_3", required=False, help="image path band 3")
 # ap.add_argument("-d", "--image_path_band_4", required=False, help="image path band 4")
 # ap.add_argument("-e", "--image_path_band_5", required=False, help="image path band 5")
-ap.add_argument("-f", "--outpath_aligned_image_path_band_1", required=False, help="outpath for aligned image path band 1")
-ap.add_argument("-g", "--outpath_aligned_image_path_band_2", required=False, help="outpath for aligned image path band 2")
-ap.add_argument("-p", "--outpath_aligned_image_path_band_3", required=False, help="outpath for aligned image path band 3")
-ap.add_argument("-i", "--outpath_aligned_image_path_band_4", required=False, help="outpath for aligned image path band 4")
-ap.add_argument("-j", "--outpath_aligned_image_path_band_5", required=False, help="outpath for aligned image path band 5")
+# ap.add_argument("-f", "--outpath_aligned_image_path_band_1", required=False, help="outpath for aligned image path band 1")
+# ap.add_argument("-g", "--outpath_aligned_image_path_band_2", required=False, help="outpath for aligned image path band 2")
+# ap.add_argument("-p", "--outpath_aligned_image_path_band_3", required=False, help="outpath for aligned image path band 3")
+# ap.add_argument("-i", "--outpath_aligned_image_path_band_4", required=False, help="outpath for aligned image path band 4")
+# ap.add_argument("-j", "--outpath_aligned_image_path_band_5", required=False, help="outpath for aligned image path band 5")
 # ap.add_argument("-k", "--panel_image_path_band_1", required=False, help="panel image path band 1")
 # ap.add_argument("-l", "--panel_image_path_band_2", required=False, help="panel image path band 2")
 # ap.add_argument("-m", "--panel_image_path_band_3", required=False, help="panel image path band 3")
@@ -26,7 +27,7 @@ ap.add_argument("-j", "--outpath_aligned_image_path_band_5", required=False, hel
 args = vars(ap.parse_args())
 
 # input_image_bands = [args["image_path_band_1"], args["image_path_band_2"], args["image_path_band_3"], args["image_path_band_4"], args["image_path_band_5"]]
-outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
+# outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
 # panel_image_bands = [args["panel_image_path_band_1"], args["panel_image_path_band_2"], args["panel_image_path_band_3"], args["panel_image_path_band_4"], args["panel_image_path_band_5"]]
 
 panelNames = None
@@ -41,16 +42,23 @@ panelNames = None
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
 
 imagePath = "Downloads/MicasenseTest/000"
-imageNames = glob.glob(os.path.join(imagePath,'IMG_0038_*.tif'))
-imageNames2 = glob.glob(os.path.join(imagePath,'IMG_0039_*.tif'))
-imageNames3 = glob.glob(os.path.join(imagePath,'IMG_0040_*.tif'))
-imageNames4 = glob.glob(os.path.join(imagePath,'IMG_0041_*.tif'))
-imageNames5 = glob.glob(os.path.join(imagePath,'IMG_0042_*.tif'))
-imageNames6 = glob.glob(os.path.join(imagePath,'IMG_0043_*.tif'))
-imageNames7 = glob.glob(os.path.join(imagePath,'IMG_0044_*.tif'))
-imageNames8 = glob.glob(os.path.join(imagePath,'IMG_0045_*.tif'))
-imageNames9 = glob.glob(os.path.join(imagePath,'IMG_0046_*.tif'))
-imageNames10 = glob.glob(os.path.join(imagePath,'IMG_0047_*.tif'))
+imageNamesAll = glob.glob(os.path.join(imagePath,'*.tif'))
+imageNamesDict = {}
+for i in imageNamesAll:
+    s = i.split("_")
+    k = s[2].split(".")
+    if s[1] not in imageNamesDict:
+        imageNamesDict[s[1]] = {}
+    imageNamesDict[s[1]][k[0]] = i
+
+imageNameCaptures = []
+for i in sorted (imageNamesDict.keys()):
+    im = []
+    for j in sorted (imageNamesDict[i].keys()):
+        #print(imageNamesDict[i][j])
+        im.append(imageNamesDict[i][j])
+    if len(im) > 0:
+        imageNameCaptures.append(im)
 
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
@@ -59,9 +67,9 @@ imageNames10 = glob.glob(os.path.join(imagePath,'IMG_0047_*.tif'))
 #     if i is not None:
 #         imageNames.append(i)
 # 
-for i in outpath_aligned_image_bands:
-    if i is not None:
-        outpathNames.append(i)
+# for i in outpath_aligned_image_bands:
+#     if i is not None:
+#         outpathNames.append(i)
 # 
 # for i in panel_image_bands:
 #     if i is not None:
@@ -82,7 +90,38 @@ def run():
     else:
         panelCap = None
 
-    captures = [capture.Capture.from_filelist(imageNames), capture.Capture.from_filelist(imageNames2), capture.Capture.from_filelist(imageNames3), capture.Capture.from_filelist(imageNames4), capture.Capture.from_filelist(imageNames5), capture.Capture.from_filelist(imageNames6), capture.Capture.from_filelist(imageNames7), capture.Capture.from_filelist(imageNames8), capture.Capture.from_filelist(imageNames9), capture.Capture.from_filelist(imageNames10)]
+    captures = []
+    captureGPSDict = {}
+    counter = 0
+    for i in imageNameCaptures:
+        im = capture.Capture.from_filelist(i)
+        captures.append(im)
+        latitudes = []
+        longitudes = []
+        altitudes = []
+        for i,img in enumerate(im.images):
+            latitudes.append(img.latitude)
+            longitudes.append(img.longitude)
+            altitudes.append(img.altitude)
+        captureGPSDict[counter] = [round(statistics.mean(latitudes), 4), round(statistics.mean(longitudes), 4), statistics.mean(altitudes)]
+        counter = counter + 1
+
+    GPSsorter = {}
+    for counter, loc in captureGPSDict.items(): 
+        if loc[0] not in GPSsorter:
+            GPSsorter[loc[0]] = {}
+        GPSsorter[loc[0]][loc[1]] = counter
+
+    imageCaptureSets = []
+    for i in sorted (GPSsorter.keys()):
+        im = []
+        for j in sorted (GPSsorter[i].keys()):
+            #print(GPSsorter[i][j])
+            im.append(captures[GPSsorter[i][j]])
+        if len(im) > 0:
+            imageCaptureSets.append(im)
+
+    print(imageCaptureSets)
 
     if panelCap is not None:
         if panelCap.panel_albedo() is not None:
@@ -117,39 +156,48 @@ def run():
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-    images_to_stich = []
+    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
+    resultsToStitch1 = []
+    resultsToStitch2 = []
     count = 1
-    for i in captures:
-        cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
-        im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-        print(im_aligned.shape)
+    for x in imageCaptureSets:
+        images_to_stich1 = []
+        images_to_stich2 = []
+        for i in x:
+            cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
+            im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+            print(im_aligned.shape)
 
-        plt.imsave(outpathNames[0], im_aligned[:, :, 0], cmap='gray')
-        plt.imsave(outpathNames[1], im_aligned[:, :, 1], cmap='gray')
-        plt.imsave(outpathNames[2], im_aligned[:, :, 2], cmap='gray')
-        plt.imsave(outpathNames[3], im_aligned[:, :, 3], cmap='gray')
-        plt.imsave(outpathNames[4], im_aligned[:, :, 4], cmap='gray')
+            i1 = im_aligned[:,:,[0,1,2]]
+            image1 = np.uint8(i1*255)
+            images_to_stich1.append(image1)
 
-        i1 = im_aligned[:,:,[0,1,2]]
-        print(i1.dtype)
-        print(type(i1))
-        print(i1.min())
-        print(i1.max())
-        image = np.uint8(i1*255)
-        print(image.dtype)
-        print(type(image))
-        print(image.min())
-        print(image.max())
-        # cv2.imshow("I"+str(count), image)
-        # cv2.waitKey(0)
-        images_to_stich.append(image)
+            i2 = im_aligned[:,:,[2,3,4]]
+            image2 = np.uint8(i2*255)
+            images_to_stich2.append(image2)
+
+        stitch_result1 = stitcher.stitch(images_to_stich1)
+        print(stitch_result1[0])
+        print(stitch_result1[1])
+        stitch_result2 = stitcher.stitch(images_to_stich2)
+        print(stitch_result2[0])
+        print(stitch_result2[1])
+        resultsToStitch1.append(stitch_result1[1])
+        resultsToStitch2.append(stitch_result2[1])
+
+        cv2.imshow("stitch_result1"+str(count), stitch_result1[1])
+        cv2.imshow("stitch_result2"+str(count), stitch_result2[1])
+        cv2.waitKey(0)
+
         count = count + 1
 
-    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-    stitch_result = stitcher.stitch(images_to_stich)
-    print(stitch_result[0])
-    print(stitch_result[1])
-    result = stitch_result[1]
+    final_result1 = stitcher.stitch(resultsToStitch1)
+    final_result2 = stitcher.stitch(resultsToStitch2)
+
+    cv2.imshow("final_result1", final_result1[1])
+    cv2.imshow("final_result2", final_result1[1])
+    cv2.waitKey(0)
 
 #     {
 #     OK = 0,
@@ -158,7 +206,7 @@ def run():
 #     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 #     };
 
-    cv2.imwrite("/home/nmorales/test.png", result)
+    cv2.imwrite("/home/nmorales/test.png", final_result1[1])
 
 if __name__ == '__main__':
     run()
