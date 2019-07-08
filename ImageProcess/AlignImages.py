@@ -130,11 +130,13 @@ def run():
         plt.imsave(outpathNames[3], im_aligned[:, :, 3], cmap='gray')
         plt.imsave(outpathNames[4], im_aligned[:, :, 4], cmap='gray')
 
-        i1 = im_aligned[:,:,0]
-        i1.dtype
-        type(i1)
-        image = np.uint8(i1)
-        print(image)
+        i1 = im_aligned[:,:,[0,1,2]]
+        print(i1.dtype)
+        print(type(i1))
+        print(i1.min())
+        print(i1.max())
+        image = np.uint8(i1*255)
+        print(image.dtype)
         print(type(image))
         print(image.min())
         print(image.max())
