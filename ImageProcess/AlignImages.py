@@ -121,7 +121,8 @@ def run():
 
     imageCaptureSets = []
     if do_pairwise_stitch == '1':
-        imageCaptureSets = captures
+        for i in range(0, len(captures), 10):
+            imageCaptureSets.append(captures[i:i + n])
     else:
         for i in sorted (GPSsorter.keys()):
             im = []
@@ -166,102 +167,57 @@ def run():
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
 
-    if do_pairwise_stitch == '1':
-        print("DOING PAIRWISE..")
-        cropped_dimensions, edges = imageutils.find_crop_bounds(captures[0], warp_matrices, warp_mode=warp_mode)
-        im_aligned = imageutils.aligned_capture(captures[0], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-        print(im_aligned.shape)
-
-        i1 = im_aligned[:,:,[0,1,2]]
-        img1 = np.uint8(i1*255)
-
-        i2 = im_aligned[:,:,[2,3,4]]
-        img2 = np.uint8(i2*255)
-
-        count = 0
-        for i in range(1, len(captures)):
-            cropped_dimensions, edges = imageutils.find_crop_bounds(captures[i], warp_matrices, warp_mode=warp_mode)
-            im_aligned = imageutils.aligned_capture(captures[i], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+    resultsToStitch1 = []
+    resultsToStitch2 = []
+    count = 1
+    for x in imageCaptureSets:
+        images_to_stich1 = []
+        images_to_stich2 = []
+        for i in x:
+            cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
+            im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
             print(im_aligned.shape)
 
             i1 = im_aligned[:,:,[0,1,2]]
             image1 = np.uint8(i1*255)
+            images_to_stich1.append(image1)
 
             i2 = im_aligned[:,:,[2,3,4]]
             image2 = np.uint8(i2*255)
-
-            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
-            stitch_result1 = stitcher.stitch([img1, image1])
-            print(stitch_result1[0])
-            print(stitch_result1[1])
-            img1 = stitch_result1[1]
-
-            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
-            stitch_result2 = stitcher.stitch([img2, image2])
-            print(stitch_result2[0])
-            print(stitch_result2[1])
-            img2 = stitch_result2[1]
-
-            cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", img1)
-            cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", img2)
-            count = count + 1
-
-        final_result_img1 = img1
-        final_result_img2 = img2
-    else:
-        resultsToStitch1 = []
-        resultsToStitch2 = []
-        count = 1
-        for x in imageCaptureSets:
-            images_to_stich1 = []
-            images_to_stich2 = []
-            for i in x:
-                cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
-                im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-                print(im_aligned.shape)
-
-                i1 = im_aligned[:,:,[0,1,2]]
-                image1 = np.uint8(i1*255)
-                images_to_stich1.append(image1)
-
-                i2 = im_aligned[:,:,[2,3,4]]
-                image2 = np.uint8(i2*255)
-                images_to_stich2.append(image2)
-
-            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
-            stitch_result1 = stitcher.stitch(images_to_stich1)
-            print(stitch_result1[0])
-            print(stitch_result1[1])
-
-            stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
-            stitch_result2 = stitcher.stitch(images_to_stich2)
-            print(stitch_result2[0])
-            print(stitch_result2[1])
-            resultsToStitch1.append(stitch_result1[1])
-            resultsToStitch2.append(stitch_result2[1])
-
-            cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
-            cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
-
-            count = count + 1
+            images_to_stich2.append(image2)
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 
-        final_result1 = stitcher.stitch(resultsToStitch1)
-        print(final_result1[0])
-        print(final_result1[1])
+        stitch_result1 = stitcher.stitch(images_to_stich1)
+        print(stitch_result1[0])
+        print(stitch_result1[1])
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 
-        final_result2 = stitcher.stitch(resultsToStitch2)
-        print(final_result2[0])
-        print(final_result2[1])
-        final_result_img1 = final_result1[1]
-        final_result_img2 = final_result2[1]
+        stitch_result2 = stitcher.stitch(images_to_stich2)
+        print(stitch_result2[0])
+        print(stitch_result2[1])
+        resultsToStitch1.append(stitch_result1[1])
+        resultsToStitch2.append(stitch_result2[1])
+
+        cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
+        cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
+
+        count = count + 1
+
+    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
+    final_result1 = stitcher.stitch(resultsToStitch1)
+    print(final_result1[0])
+    print(final_result1[1])
+
+    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+
+    final_result2 = stitcher.stitch(resultsToStitch2)
+    print(final_result2[0])
+    print(final_result2[1])
+    final_result_img1 = final_result1[1]
+    final_result_img2 = final_result2[1]
 #     {
 #     OK = 0,
 #     ERR_NEED_MORE_IMGS = 1,
