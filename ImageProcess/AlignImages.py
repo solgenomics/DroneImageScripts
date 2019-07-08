@@ -122,7 +122,9 @@ def run():
     imageCaptureSets = []
     if do_pairwise_stitch == '1':
         for i in range(0, len(captures), 10):
-            imageCaptureSets.append(captures[i:i + n])
+            im = captures[i:i + n]
+            if len(im) > 0:
+                imageCaptureSets.append(im)
     else:
         for i in sorted (GPSsorter.keys()):
             im = []
