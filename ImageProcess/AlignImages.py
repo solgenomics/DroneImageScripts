@@ -191,21 +191,14 @@ def run():
         resultsToStitch1.append(stitch_result1[1])
         resultsToStitch2.append(stitch_result2[1])
 
+        cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
+        cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
+
         # cv2.imshow("stitch_result1"+str(count), stitch_result1[1])
         # cv2.imshow("stitch_result2"+str(count), stitch_result2[1])
         # cv2.waitKey(0)
 
         count = count + 1
-
-    c = 0
-    for i in resultsToStitch1:
-        cv2.imwrite(output_path+"/resultstostitch1_"+str(c)+".png", i)
-        c = c + 1
-
-    c = 0
-    for i in resultsToStitch2:
-        cv2.imwrite(output_path+"/resultstostitch2_"+str(c)+".png", i)
-        c = c + 1
 
     final_result1 = stitcher.stitch(resultsToStitch1)
     print(final_result1[0])
