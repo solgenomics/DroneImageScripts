@@ -32,6 +32,7 @@ args = vars(ap.parse_args())
 image_path = args["image_path"]
 output_path = args["output_path"]
 do_pairwise_stitch = args["do_pairwise_stitch"]
+
 # input_image_bands = [args["image_path_band_1"], args["image_path_band_2"], args["image_path_band_3"], args["image_path_band_4"], args["image_path_band_5"]]
 # outpath_aligned_image_bands = [args["outpath_aligned_image_path_band_1"], args["outpath_aligned_image_path_band_2"], args["outpath_aligned_image_path_band_3"], args["outpath_aligned_image_path_band_4"], args["outpath_aligned_image_path_band_5"]]
 # panel_image_bands = [args["panel_image_path_band_1"], args["panel_image_path_band_2"], args["panel_image_path_band_3"], args["panel_image_path_band_4"], args["panel_image_path_band_5"]]
@@ -119,7 +120,7 @@ def run():
         GPSsorter[loc[0]][loc[1]] = counter
 
     imageCaptureSets = []
-    if do_pairwise_stitch == 1:
+    if do_pairwise_stitch == '1':
         imageCaptureSets = captures
     else:
         for i in sorted (GPSsorter.keys()):
@@ -165,7 +166,7 @@ def run():
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
 
-    if do_pairwise_stitch == 1:
+    if do_pairwise_stitch == '1':
         print("DOING PAIRWISE..")
         cropped_dimensions, edges = imageutils.find_crop_bounds(captures[0], warp_matrices, warp_mode=warp_mode)
         im_aligned = imageutils.aligned_capture(captures[0], warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
