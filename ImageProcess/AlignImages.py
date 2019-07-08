@@ -197,6 +197,8 @@ def run():
             print(stitch_result2[1])
             img2 = stitch_result2[1]
 
+            cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", img1)
+            cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", img2)
 
         final_result_img1 = img1
         final_result_img2 = img2
