@@ -47,19 +47,6 @@ for i in sorted (imageNamesDict.keys()):
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
 
-def enhance_image(rgb):
-    gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
-    gaussian_rgb[gaussian_rgb<0] = 0
-    gaussian_rgb[gaussian_rgb>1] = 1
-    unsharp_rgb = cv2.addWeighted(rgb, 1.5, gaussian_rgb, -0.5, 0)
-    unsharp_rgb[unsharp_rgb<0] = 0
-    unsharp_rgb[unsharp_rgb>1] = 1
-
-    # Apply a gamma correction to make the render appear closer to what our eyes would see
-    gamma = 1.4
-    gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
-    return(gamma_corr_rgb)
-
 def run():
     import micasense.capture as capture
     import cv2
@@ -69,6 +56,19 @@ def run():
     import micasense.plotutils as plotutils
     
     freeze_support()
+
+    def enhance_image(rgb):
+        gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
+        gaussian_rgb[gaussian_rgb<0] = 0
+        gaussian_rgb[gaussian_rgb>1] = 1
+        unsharp_rgb = cv2.addWeighted(rgb, 1.5, gaussian_rgb, -0.5, 0)
+        unsharp_rgb[unsharp_rgb<0] = 0
+        unsharp_rgb[unsharp_rgb>1] = 1
+
+        # Apply a gamma correction to make the render appear closer to what our eyes would see
+        gamma = 1.4
+        gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
+        return(gamma_corr_rgb)
 
     if panelNames is not None:
         panelCap = capture.Capture.from_filelist(panelNames)
