@@ -164,6 +164,10 @@ def run():
             i1 = im_aligned[:,:,[0,1,2]]
             image1 = np.uint8(i1*255)
             image1 = enhance_image(image1)
+            print(image1)
+            print(image1.dtype)
+            print(image1.min())
+            print(image1.max())
             images_to_stich1.append(image1)
 
             i2 = im_aligned[:,:,[2,3,4]]
