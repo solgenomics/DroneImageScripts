@@ -68,7 +68,7 @@ def run():
         # Apply a gamma correction to make the render appear closer to what our eyes would see
         gamma = 1.4
         gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
-        return(gamma_corr_rgb)
+        return(np.uint8(gamma_corr_rgb))
 
     if panelNames is not None:
         panelCap = capture.Capture.from_filelist(panelNames)
