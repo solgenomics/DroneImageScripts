@@ -47,6 +47,19 @@ for i in sorted (imageNamesDict.keys()):
 # imagePath = "Downloads/NickKExample5AlignmentImages"
 # imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
 
+def enhance_image(rgb):
+    gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
+    gaussian_rgb[gaussian_rgb<0] = 0
+    gaussian_rgb[gaussian_rgb>1] = 1
+    unsharp_rgb = cv2.addWeighted(rgb, 1.5, gaussian_rgb, -0.5, 0)
+    unsharp_rgb[unsharp_rgb<0] = 0
+    unsharp_rgb[unsharp_rgb>1] = 1
+
+    # Apply a gamma correction to make the render appear closer to what our eyes would see
+    gamma = 1.4
+    gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
+    return(gamma_corr_rgb)
+
 def run():
     import micasense.capture as capture
     import cv2
@@ -150,10 +163,12 @@ def run():
 
             i1 = im_aligned[:,:,[0,1,2]]
             image1 = np.uint8(i1*255)
+            image1 = enhance_image(image1)
             images_to_stich1.append(image1)
 
             i2 = im_aligned[:,:,[2,3,4]]
             image2 = np.uint8(i2*255)
+            image2 = enhance_image(image2)
             images_to_stich2.append(image2)
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
