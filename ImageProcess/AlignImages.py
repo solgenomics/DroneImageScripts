@@ -55,7 +55,7 @@ for i in sorted (imageNamesDict.keys()):
     if len(im) > 0:
         imageNameCaptures.append(im)
 
-print(imageNameCaptures)
+#print(imageNameCaptures)
 
 def run():
     import micasense.capture as capture
@@ -124,8 +124,6 @@ def run():
                 im.append(captures[GPSsorter[i][j]])
             if len(im) > 0:
                 imageCaptureSets.append(im)
-
-    print(imageCaptureSets)
 
     if panelCap is not None:
         if panelCap.panel_albedo() is not None:
@@ -214,8 +212,8 @@ def run():
         final_result_img2 = resultsToStitch2[0]
 
 
-    final_result_img1 = enhance_image(final_result_img1)
-    final_result_img2 = enhance_image(final_result_img2)
+    final_result_img1 = enhance_image(final_result_img1/255) * 255
+    final_result_img2 = enhance_image(final_result_img2/255) * 255
 
     cv2.imwrite(output_path_band1, final_result_img1[:,:,0])
     cv2.imwrite(output_path_band2, final_result_img1[:,:,1])
