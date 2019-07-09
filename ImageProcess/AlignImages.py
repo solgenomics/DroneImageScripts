@@ -5,47 +5,57 @@ import imutils
 import statistics
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-a", "--image_path", required=True, default="/home/nmorales/MicasenseTest/000", help="image path")
-ap.add_argument("-o", "--output_path", required=True, help="output image path")
-ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do dumb pairwise stitching, no GPS info")
+ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
+ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
+ap.add_argument("-p", "--output_path_band1", required=True, help="output file path in which resulting band 1 will be placed. useful for using from the web interface")
+ap.add_argument("-q", "--output_path_band2", required=True, help="output file path in which resulting band 2 will be placed. useful for using from the web interface")
+ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
+ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
+ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
+ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do simple pairwise stitching, no GPS info. the number provided is the maximum number of captures that will be stitched at once.")
 args = vars(ap.parse_args())
 
 image_path = args["image_path"]
+file_with_image_paths = args["file_with_image_paths"]
 output_path = args["output_path"]
+output_path_band1 = args["output_path_band1"]
+output_path_band2 = args["output_path_band2"]
+output_path_band3 = args["output_path_band3"]
+output_path_band4 = args["output_path_band4"]
+output_path_band5 = args["output_path_band5"]
 do_pairwise_stitch = args["do_pairwise_stitch"]
 
 panelNames = None
 
-# imagePath = "Downloads/MicasenseExample5AlignmentImages"
-# imageNames = glob.glob(os.path.join(imagePath,'IMG_0085_*.jpg'))
+if image_path is not None:
+    imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
+elif file_with_image_paths is not None:
+    imageNamesAll = []
+    with open(file_with_image_paths) as fp:
+        for line in fp:
+            imageNamesAll.append(line.strip())
+else:
+    print("No input images given. use image_path OR file_with_image_paths args")
+    os._exit
 
-# imagePath = "Downloads/rededge-m"
-# imageNames = glob.glob(os.path.join(imagePath,'img01_*.tif'))
-
-# imagePath = "Downloads/MicasenseTest/Panels"
-# imageNames = glob.glob(os.path.join(imagePath,'IMG_0432_*.tif'))
-
-# imagePath = "/home/nmorales/MicasenseTest/000"
-imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
 imageNamesDict = {}
 for i in imageNamesAll:
     s = i.split("_")
-    k = s[2].split(".")
-    if s[1] not in imageNamesDict:
-        imageNamesDict[s[1]] = {}
-    imageNamesDict[s[1]][k[0]] = i
+    k = s[-1].split(".")
+    if s[-2] not in imageNamesDict:
+        imageNamesDict[s[-2]] = {}
+    imageNamesDict[s[-2]][k[0]] = i
 
 imageNameCaptures = []
 for i in sorted (imageNamesDict.keys()):
     im = []
     for j in sorted (imageNamesDict[i].keys()):
-        #print(imageNamesDict[i][j])
         im.append(imageNamesDict[i][j])
     if len(im) > 0:
         imageNameCaptures.append(im)
 
-# imagePath = "Downloads/NickKExample5AlignmentImages"
-# imageNames = glob.glob(os.path.join(imagePath,'IMG_0999_*.jpg'))
+print(imageNameCaptures)
 
 def run():
     import micasense.capture as capture
@@ -98,8 +108,11 @@ def run():
         GPSsorter[loc[0]][loc[1]] = counter
 
     imageCaptureSets = []
-    if do_pairwise_stitch != '':
+    doFinalMerge = True
+    if do_pairwise_stitch is not None:
         do_pairwise_stitch_int = int(do_pairwise_stitch)
+        if len(captures) <= do_pairwise_stitch_int:
+            doFinalMerge = False
         for i in range(0, len(captures), do_pairwise_stitch_int):
             im = captures[i:i + do_pairwise_stitch_int]
             if len(im) > 0:
@@ -108,7 +121,6 @@ def run():
         for i in sorted (GPSsorter.keys()):
             im = []
             for j in sorted (GPSsorter[i].keys()):
-                #print(GPSsorter[i][j])
                 im.append(captures[GPSsorter[i][j]])
             if len(im) > 0:
                 imageCaptureSets.append(im)
@@ -131,7 +143,6 @@ def run():
             img_type = "radiance"
     #        capture1.plot_undistorted_radiance()
 
-    ## Alignment settings
     match_index = 0 # Index of the band 
     max_alignment_iterations = 1000
     warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
@@ -139,7 +150,6 @@ def run():
 
     print(img_type)
     print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
-    # Can potentially increase max_iterations for better results, but longer runtimes
     warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
@@ -172,37 +182,47 @@ def run():
             images_to_stich2.append(image2)
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
         stitch_result1 = stitcher.stitch(images_to_stich1)
         print(stitch_result1[0])
         print(stitch_result1[1])
+        resultsToStitch1.append(stitch_result1[1])
+        cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-
         stitch_result2 = stitcher.stitch(images_to_stich2)
         print(stitch_result2[0])
         print(stitch_result2[1])
-        resultsToStitch1.append(stitch_result1[1])
         resultsToStitch2.append(stitch_result2[1])
-
-        cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
         cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
 
         count = count + 1
 
-    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+    if doFinalMerge == True:
+        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+        final_result1 = stitcher.stitch(resultsToStitch1)
+        print(final_result1[0])
+        print(final_result1[1])
+        final_result_img1 = final_result1[1]
 
-    final_result1 = stitcher.stitch(resultsToStitch1)
-    print(final_result1[0])
-    print(final_result1[1])
+        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
+        final_result2 = stitcher.stitch(resultsToStitch2)
+        print(final_result2[0])
+        print(final_result2[1])
+        final_result_img2 = final_result2[1]
+    else :
+        final_result_img1 = resultsToStitch1[0]
+        final_result_img2 = resultsToStitch2[0]
 
-    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
 
-    final_result2 = stitcher.stitch(resultsToStitch2)
-    print(final_result2[0])
-    print(final_result2[1])
-    final_result_img1 = final_result1[1]
-    final_result_img2 = final_result2[1]
+    final_result_img1 = enhance_image(final_result_img1)
+    final_result_img2 = enhance_image(final_result_img2)
+
+    cv2.imwrite(output_path_band1, final_result_img1[:,:,0])
+    cv2.imwrite(output_path_band2, final_result_img1[:,:,1])
+    cv2.imwrite(output_path_band3, final_result_img1[:,:,2])
+    cv2.imwrite(output_path_band4, final_result_img2[:,:,1])
+    cv2.imwrite(output_path_band5, final_result_img2[:,:,2])
+
 #     {
 #     OK = 0,
 #     ERR_NEED_MORE_IMGS = 1,
