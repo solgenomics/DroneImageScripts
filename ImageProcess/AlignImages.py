@@ -100,6 +100,8 @@ def run():
             if len(im) > 0:
                 imageCaptureSets.append(im)
 
+    print(imageCaptureSets)
+
     if panelCap is not None:
         if panelCap.panel_albedo() is not None:
             panel_reflectance_by_band = panelCap.panel_albedo()
