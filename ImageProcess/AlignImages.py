@@ -248,11 +248,35 @@ def run():
     final_result_img1 = enhance_image(final_result_img1/255)
     final_result_img2 = enhance_image(final_result_img2/255)
 
+    plt.imsave(final_rgb_output_path, final_result_img1)
+    plt.imsave(final_rnre_output_path, final_result_img2)
+
     plt.imsave(output_path_band1, final_result_img1[:,:,0], cmap='gray')
     plt.imsave(output_path_band2, final_result_img1[:,:,1], cmap='gray')
     plt.imsave(output_path_band3, final_result_img1[:,:,2], cmap='gray')
     plt.imsave(output_path_band4, final_result_img2[:,:,1], cmap='gray')
     plt.imsave(output_path_band5, final_result_img2[:,:,2], cmap='gray')
+
+    finalCapture = Capture([Image(output_path_band1), Image(output_path_band2), Image(output_path_band3), Image(output_path_band4), Image(output_path_band5)])
+
+    print("Alinging Final images. Depending on settings this can take from a few seconds to many minutes")
+    warp_matrices_final, alignment_pairs_final = imageutils.align_capture(finalCapture,
+                                                              ref_index = match_index,
+                                                              max_iterations = max_alignment_iterations,
+                                                              warp_mode = warp_mode,
+                                                              pyramid_levels = pyramid_levels,
+                                                              multithreaded = True)
+
+    print("Finished Final Alignment, warp matrices={}".format(warp_matrices_final))
+
+    cropped_dimensions_final, edges_final = imageutils.find_crop_bounds(finalCapture, warp_matrices_final, warp_mode=warp_mode)
+    im_aligned_final = imageutils.aligned_capture(finalCapture, warp_matrices_final, warp_mode, cropped_dimensions_final, match_index, img_type=img_type)
+
+    plt.imsave(output_path_band1, im_aligned_final[:,:,0], cmap='gray')
+    plt.imsave(output_path_band2, im_aligned_final[:,:,1], cmap='gray')
+    plt.imsave(output_path_band3, im_aligned_final[:,:,2], cmap='gray')
+    plt.imsave(output_path_band4, im_aligned_final[:,:,3], cmap='gray')
+    plt.imsave(output_path_band5, im_aligned_final[:,:,4], cmap='gray')
 
 #     {
 #     OK = 0,
@@ -260,9 +284,6 @@ def run():
 #     ERR_HOMOGRAPHY_EST_FAIL = 2,
 #     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 #     };
-
-    plt.imsave(final_rgb_output_path, final_result_img1)
-    plt.imsave(final_rnre_output_path, final_result_img2)
 
 if __name__ == '__main__':
     run()
