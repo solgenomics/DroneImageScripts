@@ -7,6 +7,12 @@ import statistics
 ap = argparse.ArgumentParser()
 ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
 ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+ap.add_argument("-d", "--micasense_panel_calibration_1", required=True, help="Micasense panel calibration for band 1. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
+ap.add_argument("-e", "--micasense_panel_calibration_2", required=True, help="Micasense panel calibration for band 2. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
+ap.add_argument("-f", "--micasense_panel_calibration_3", required=True, help="Micasense panel calibration for band 3. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
+ap.add_argument("-g", "--micasense_panel_calibration_4", required=True, help="Micasense panel calibration for band 4. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
+ap.add_argument("-h", "--micasense_panel_calibration_5", required=True, help="Micasense panel calibration for band 5. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
 ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
 ap.add_argument("-p", "--output_path_band1", required=True, help="output file path in which resulting band 1 will be placed. useful for using from the web interface")
 ap.add_argument("-q", "--output_path_band2", required=True, help="output file path in which resulting band 2 will be placed. useful for using from the web interface")
@@ -18,6 +24,12 @@ args = vars(ap.parse_args())
 
 image_path = args["image_path"]
 file_with_image_paths = args["file_with_image_paths"]
+file_with_panel_image_paths = args["file_with_panel_image_paths"]
+micasense_panel_calibration_1 = args["micasense_panel_calibration_1"]
+micasense_panel_calibration_2 = args["micasense_panel_calibration_2"]
+micasense_panel_calibration_3 = args["micasense_panel_calibration_3"]
+micasense_panel_calibration_4 = args["micasense_panel_calibration_4"]
+micasense_panel_calibration_5 = args["micasense_panel_calibration_5"]
 output_path = args["output_path"]
 output_path_band1 = args["output_path_band1"]
 output_path_band2 = args["output_path_band2"]
@@ -26,8 +38,7 @@ output_path_band4 = args["output_path_band4"]
 output_path_band5 = args["output_path_band5"]
 do_pairwise_stitch = args["do_pairwise_stitch"]
 
-panelNames = None
-
+#Must supply either image_path or file_with_image_paths as a source of images
 if image_path is not None:
     imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
 elif file_with_image_paths is not None:
@@ -38,6 +49,11 @@ elif file_with_image_paths is not None:
 else:
     print("No input images given. use image_path OR file_with_image_paths args")
     os._exit
+
+panelNames = []
+with open(file_with_panel_image_paths) as fp:
+    for line in fp:
+        panelNames.append(line.strip())
 
 imageNamesDict = {}
 for i in imageNamesAll:
@@ -64,6 +80,7 @@ def run():
     import matplotlib.pyplot as plt
     import micasense.imageutils as imageutils
     import micasense.plotutils as plotutils
+    import micasense.panel as Panel
     
     freeze_support()
 
@@ -80,10 +97,7 @@ def run():
         gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
         return(gamma_corr_rgb)
 
-    if panelNames is not None:
-        panelCap = capture.Capture.from_filelist(panelNames)
-    else:
-        panelCap = None
+    panelCap = capture.Capture.from_filelist(panelNames)
 
     captures = []
     captureGPSDict = {}
