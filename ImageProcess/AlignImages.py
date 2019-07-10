@@ -1,88 +1,124 @@
-import argparse
-import os, glob
-from multiprocessing import Process, freeze_support
-import imutils
-import statistics
-
-ap = argparse.ArgumentParser()
-ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
-ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
-ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
-ap.add_argument("-d", "--micasense_panel_calibration_1", required=True, help="Micasense panel calibration for band 1. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
-ap.add_argument("-e", "--micasense_panel_calibration_2", required=True, help="Micasense panel calibration for band 2. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
-ap.add_argument("-f", "--micasense_panel_calibration_3", required=True, help="Micasense panel calibration for band 3. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
-ap.add_argument("-g", "--micasense_panel_calibration_4", required=True, help="Micasense panel calibration for band 4. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
-ap.add_argument("-h", "--micasense_panel_calibration_5", required=True, help="Micasense panel calibration for band 5. listed on you Micasense Panel in a table next to the large QR code and square white reflectance panel.")
-ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
-ap.add_argument("-p", "--output_path_band1", required=True, help="output file path in which resulting band 1 will be placed. useful for using from the web interface")
-ap.add_argument("-q", "--output_path_band2", required=True, help="output file path in which resulting band 2 will be placed. useful for using from the web interface")
-ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
-ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
-ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
-ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do simple pairwise stitching, no GPS info. the number provided is the maximum number of captures that will be stitched at once.")
-args = vars(ap.parse_args())
-
-image_path = args["image_path"]
-file_with_image_paths = args["file_with_image_paths"]
-file_with_panel_image_paths = args["file_with_panel_image_paths"]
-micasense_panel_calibration_1 = args["micasense_panel_calibration_1"]
-micasense_panel_calibration_2 = args["micasense_panel_calibration_2"]
-micasense_panel_calibration_3 = args["micasense_panel_calibration_3"]
-micasense_panel_calibration_4 = args["micasense_panel_calibration_4"]
-micasense_panel_calibration_5 = args["micasense_panel_calibration_5"]
-output_path = args["output_path"]
-output_path_band1 = args["output_path_band1"]
-output_path_band2 = args["output_path_band2"]
-output_path_band3 = args["output_path_band3"]
-output_path_band4 = args["output_path_band4"]
-output_path_band5 = args["output_path_band5"]
-do_pairwise_stitch = args["do_pairwise_stitch"]
-
-#Must supply either image_path or file_with_image_paths as a source of images
-if image_path is not None:
-    imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
-elif file_with_image_paths is not None:
-    imageNamesAll = []
-    with open(file_with_image_paths) as fp:
-        for line in fp:
-            imageNamesAll.append(line.strip())
-else:
-    print("No input images given. use image_path OR file_with_image_paths args")
-    os._exit
-
-panelNames = []
-with open(file_with_panel_image_paths) as fp:
-    for line in fp:
-        panelNames.append(line.strip())
-
-imageNamesDict = {}
-for i in imageNamesAll:
-    s = i.split("_")
-    k = s[-1].split(".")
-    if s[-2] not in imageNamesDict:
-        imageNamesDict[s[-2]] = {}
-    imageNamesDict[s[-2]][k[0]] = i
-
-imageNameCaptures = []
-for i in sorted (imageNamesDict.keys()):
-    im = []
-    for j in sorted (imageNamesDict[i].keys()):
-        im.append(imageNamesDict[i][j])
-    if len(im) > 0:
-        imageNameCaptures.append(im)
-
-#print(imageNameCaptures)
 
 def run():
-    import micasense.capture as capture
+    from micasense.capture import Capture
     import cv2
     import numpy as np
     import matplotlib.pyplot as plt
     import micasense.imageutils as imageutils
     import micasense.plotutils as plotutils
-    import micasense.panel as Panel
-    
+    import argparse
+    import os, glob
+    from multiprocessing import Process, freeze_support
+    import imutils
+    import statistics
+    import matplotlib.pyplot as plt
+    from micasense.image import Image
+    from micasense.panel import Panel
+    import micasense.utils as msutils
+
     freeze_support()
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
+    ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+    ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+    ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
+    ap.add_argument("-y", "--final_rgb_output_path", required=True, help="output file path for stitched RGB image")
+    ap.add_argument("-z", "--final_rnre_output_path", required=True, help="output file path for stitched RNRe image")
+    ap.add_argument("-p", "--output_path_band1", required=True, help="output file path in which resulting band 1 will be placed. useful for using from the web interface")
+    ap.add_argument("-q", "--output_path_band2", required=True, help="output file path in which resulting band 2 will be placed. useful for using from the web interface")
+    ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
+    ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
+    ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
+    ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do simple pairwise stitching, no GPS info. the number provided is the maximum number of captures that will be stitched at once.")
+    args = vars(ap.parse_args())
+
+    image_path = args["image_path"]
+    file_with_image_paths = args["file_with_image_paths"]
+    file_with_panel_image_paths = args["file_with_panel_image_paths"]
+    output_path = args["output_path"]
+    final_rgb_output_path = args["final_rgb_output_path"]
+    final_rnre_output_path = args["final_rnre_output_path"]
+    output_path_band1 = args["output_path_band1"]
+    output_path_band2 = args["output_path_band2"]
+    output_path_band3 = args["output_path_band3"]
+    output_path_band4 = args["output_path_band4"]
+    output_path_band5 = args["output_path_band5"]
+    do_pairwise_stitch = args["do_pairwise_stitch"]
+
+    #Must supply either image_path or file_with_image_paths as a source of images
+    imageNameToCalibratedImageName = {}
+    if image_path is not None:
+        imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
+        for i in imageNamesAll:
+            imageNameToCalibratedImageName[i] = os.path.join(output_path,i+'calibrated.tif')
+    elif file_with_image_paths is not None:
+        imageNamesAll = []
+        with open(file_with_image_paths) as fp:
+            for line in fp:
+                imageName, calibratedImageName = line.strip().split(",")
+                imageNamesAll.append(imageName)
+                imageNameToCalibratedImageName[imageName] = calibratedImageName
+    else:
+        print("No input images given. use image_path OR file_with_image_paths args")
+        os._exit
+
+    panelBandCorrection = {}
+    panelNames = []
+    with open(file_with_panel_image_paths) as fp:
+        for line in fp:
+            imageName = line.strip()
+            panelNames.append(imageName)
+            img = Image(imageName)
+            band_name = img.band_name
+            if img.auto_calibration_image:
+                print("Found automatic calibration image")
+            panel = Panel(img)
+
+            if not panel.panel_detected():
+                raise IOError("Panel Not Detected!")
+
+            print("Detected panel serial: {}".format(panel.serial))
+            mean, std, num, sat_count = panel.raw()
+            print("Extracted Panel Statistics:")
+            print("Mean: {}".format(mean))
+            print("Standard Deviation: {}".format(std))
+            print("Panel Pixel Count: {}".format(num))
+            print("Saturated Pixel Count: {}".format(sat_count))
+            micasense_panel_calibration = panel.reflectance_from_panel_serial()
+            print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+            radianceToReflectance = micasense_panel_calibration / mean
+            print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+            panelBandCorrection[band_name] = radianceToReflectance
+
+    imageNamesDict = {}
+    for i in imageNamesAll:
+        s = i.split("_")
+        k = s[-1].split(".")
+        if s[-2] not in imageNamesDict:
+            imageNamesDict[s[-2]] = {}
+        imageNamesDict[s[-2]][k[0]] = i
+
+    imageNameCaptures = []
+    for i in sorted (imageNamesDict.keys()):
+        im = []
+        for j in sorted (imageNamesDict[i].keys()):
+            imageName = imageNamesDict[i][j]
+            img = Image(imageName)
+            # meta = img.meta
+            # flightImageRaw=plt.imread(imageName)
+            # flightRadianceImage, _, _, _ = msutils.raw_image_to_radiance(meta, flightImageRaw)
+            # flightReflectanceImage = flightRadianceImage * panelBandCorrection[img.band_name]
+            # flightUndistortedReflectance = msutils.correct_lens_distortion(meta, flightReflectanceImage)
+            # calibratedImage = imageNameToCalibratedImageName[imageName]
+            # print(flightUndistortedReflectance.shape)
+            # plt.imsave(calibratedImage, flightUndistortedReflectance, cmap='gray')
+            # calIm = Image(calibratedImage, meta = meta)
+            im.append(img)
+        if len(im) > 0:
+            imageNameCaptures.append(im)
+
+    #print(imageNameCaptures)
 
     def enhance_image(rgb):
         gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
@@ -97,13 +133,11 @@ def run():
         gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
         return(gamma_corr_rgb)
 
-    panelCap = capture.Capture.from_filelist(panelNames)
-
     captures = []
     captureGPSDict = {}
     counter = 0
     for i in imageNameCaptures:
-        im = capture.Capture.from_filelist(i)
+        im = Capture(i)
         captures.append(im)
         latitudes = []
         longitudes = []
@@ -139,22 +173,7 @@ def run():
             if len(im) > 0:
                 imageCaptureSets.append(im)
 
-    if panelCap is not None:
-        if panelCap.panel_albedo() is not None:
-            panel_reflectance_by_band = panelCap.panel_albedo()
-        else:
-            panel_reflectance_by_band = [0.67, 0.69, 0.68, 0.61, 0.67] #RedEdge band_index order
-        panel_irradiance = panelCap.panel_irradiance(panel_reflectance_by_band)    
-        img_type = "reflectance"
-    #    capture1.plot_undistorted_reflectance(panel_irradiance)
-    else:
-        if captures[0].dls_present():
-            img_type='reflectance'
-    #        capture1.plot_undistorted_reflectance(capture1.dls_irradiance())
-        else:
-            img_type = "radiance"
-    #        capture1.plot_undistorted_radiance()
-
+    img_type = "reflectance"
     match_index = 0 # Index of the band 
     max_alignment_iterations = 1000
     warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
@@ -198,14 +217,14 @@ def run():
         print(stitch_result1[0])
         print(stitch_result1[1])
         resultsToStitch1.append(stitch_result1[1])
-        cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
+        #cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
 
         stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
         stitch_result2 = stitcher.stitch(images_to_stich2)
         print(stitch_result2[0])
         print(stitch_result2[1])
         resultsToStitch2.append(stitch_result2[1])
-        cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
+        #cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
 
         count = count + 1
 
@@ -226,14 +245,14 @@ def run():
         final_result_img2 = resultsToStitch2[0]
 
 
-    final_result_img1 = enhance_image(final_result_img1/255) * 255
-    final_result_img2 = enhance_image(final_result_img2/255) * 255
+    final_result_img1 = enhance_image(final_result_img1/255)
+    final_result_img2 = enhance_image(final_result_img2/255)
 
-    cv2.imwrite(output_path_band1, final_result_img1[:,:,0])
-    cv2.imwrite(output_path_band2, final_result_img1[:,:,1])
-    cv2.imwrite(output_path_band3, final_result_img1[:,:,2])
-    cv2.imwrite(output_path_band4, final_result_img2[:,:,1])
-    cv2.imwrite(output_path_band5, final_result_img2[:,:,2])
+    plt.imsave(output_path_band1, final_result_img1[:,:,0], cmap='gray')
+    plt.imsave(output_path_band2, final_result_img1[:,:,1], cmap='gray')
+    plt.imsave(output_path_band3, final_result_img1[:,:,2], cmap='gray')
+    plt.imsave(output_path_band4, final_result_img2[:,:,1], cmap='gray')
+    plt.imsave(output_path_band5, final_result_img2[:,:,2], cmap='gray')
 
 #     {
 #     OK = 0,
@@ -242,8 +261,8 @@ def run():
 #     ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
 #     };
 
-    cv2.imwrite(output_path+"/result_1.png", final_result_img1)
-    cv2.imwrite(output_path+"/result_2.png", final_result_img2)
+    plt.imsave(final_rgb_output_path, final_result_img1)
+    plt.imsave(final_rnre_output_path, final_result_img2)
 
 if __name__ == '__main__':
     run()

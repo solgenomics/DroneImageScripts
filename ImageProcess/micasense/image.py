@@ -62,12 +62,15 @@ class Image(object):
     An Image is a single file taken by a RedEdge camera representing one
     band of multispectral information
     """
-    def __init__(self, image_path, exiftool_obj=None):
+    def __init__(self, image_path, meta=None, exiftool_obj=None):
         if not os.path.isfile(image_path):
             raise IOError("Provided path is not a file: {}".format(image_path))
         self.path = image_path
-        self.meta = metadata.Metadata(self.path, exiftool_obj=exiftool_obj)
-        print(self.meta.print_all())
+        if meta is None:
+            self.meta = metadata.Metadata(self.path, exiftool_obj=exiftool_obj)
+        else:
+            self.meta = meta
+        #print(self.meta.print_all())
 
         if self.meta.band_name() is None:
             raise ValueError("Provided file path does not have a band name: {}".format(image_path))
