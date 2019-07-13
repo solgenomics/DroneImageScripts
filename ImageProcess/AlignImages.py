@@ -15,13 +15,17 @@ def run():
     from micasense.image import Image
     from micasense.panel import Panel
     import micasense.utils as msutils
+    import csv
 
     freeze_support()
 
     ap = argparse.ArgumentParser()
+    ap.add_argument("-j", "--cpp_path", required=True, help="directory path to cpp executables")
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+    ap.add_argument("-d", "--temp_file_with_image_paths_to_stitch", required=True, help="file path to file that has temporary file names in it, used for stitch first 3 bands. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+    ap.add_argument("-e", "--temp_file_with_image_paths_to_stitch2", required=True, help="file path to file that has temporary file names in it, used for stitch last 3 bands. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
     ap.add_argument("-y", "--final_rgb_output_path", required=True, help="output file path for stitched RGB image")
     ap.add_argument("-z", "--final_rnre_output_path", required=True, help="output file path for stitched RNRe image")
@@ -30,12 +34,14 @@ def run():
     ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
     ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
     ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
-    ap.add_argument("-i", "--do_pairwise_stitch", required=False, help="do simple pairwise stitching, no GPS info. the number provided is the maximum number of captures that will be stitched at once.")
     args = vars(ap.parse_args())
 
+    cpp_path = args["cpp_path"]
     image_path = args["image_path"]
     file_with_image_paths = args["file_with_image_paths"]
     file_with_panel_image_paths = args["file_with_panel_image_paths"]
+    temp_file_with_image_paths_to_stitch = args["temp_file_with_image_paths_to_stitch"]
+    temp_file_with_image_paths_to_stitch2 = args["temp_file_with_image_paths_to_stitch2"]
     output_path = args["output_path"]
     final_rgb_output_path = args["final_rgb_output_path"]
     final_rnre_output_path = args["final_rnre_output_path"]
@@ -44,22 +50,20 @@ def run():
     output_path_band3 = args["output_path_band3"]
     output_path_band4 = args["output_path_band4"]
     output_path_band5 = args["output_path_band5"]
-    do_pairwise_stitch = args["do_pairwise_stitch"]
 
     #Must supply either image_path or file_with_image_paths as a source of images
     imageNamesAll = []
-    # imageNameToCalibratedImageName = {}
+    imageTempNames = []
     if image_path is not None:
         imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
-        # for i in imageNamesAll:
-        #     imageNameToCalibratedImageName[i] = os.path.join(output_path,i+'calibrated.tif')
+        for i in imageNamesAll:
+            imageTempNames.append(os.path.join(output_path,i+'temp.tif'))
     elif file_with_image_paths is not None:
         with open(file_with_image_paths) as fp:
             for line in fp:
-                # imageName, calibratedImageName = line.strip().split(",")
-                imageName = line.strip()
+                imageName, tempImageName = line.strip().split(",")
                 imageNamesAll.append(imageName)
-                # imageNameToCalibratedImageName[imageName] = calibratedImageName
+                imageTempNames.append(tempImageName)
     else:
         print("No input images given. use image_path OR file_with_image_paths args")
         os._exit
@@ -156,23 +160,7 @@ def run():
             GPSsorter[loc[0]] = {}
         GPSsorter[loc[0]][loc[1]] = counter
 
-    imageCaptureSets = []
-    doFinalMerge = True
-    if do_pairwise_stitch is not None:
-        do_pairwise_stitch_int = int(do_pairwise_stitch)
-        if len(captures) <= do_pairwise_stitch_int:
-            doFinalMerge = False
-        for i in range(0, len(captures), do_pairwise_stitch_int):
-            im = captures[i:i + do_pairwise_stitch_int]
-            if len(im) > 0:
-                imageCaptureSets.append(im)
-    else:
-        for i in sorted (GPSsorter.keys()):
-            im = []
-            for j in sorted (GPSsorter[i].keys()):
-                im.append(captures[GPSsorter[i][j]])
-            if len(im) > 0:
-                imageCaptureSets.append(im)
+    imageCaptureSets = captures
 
     img_type = "reflectance"
     match_index = 0 # Index of the band 
@@ -191,61 +179,42 @@ def run():
 
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-
-    resultsToStitch1 = []
-    resultsToStitch2 = []
-    count = 1
+    images_to_stitch1 = []
+    images_to_stitch2 = []
+    count = 0
     for x in imageCaptureSets:
-        images_to_stich1 = []
-        images_to_stich2 = []
-        for i in x:
-            cropped_dimensions, edges = imageutils.find_crop_bounds(i, warp_matrices, warp_mode=warp_mode)
-            im_aligned = imageutils.aligned_capture(i, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-            print(im_aligned.shape)
+        cropped_dimensions, edges = imageutils.find_crop_bounds(x, warp_matrices, warp_mode=warp_mode)
+        im_aligned = imageutils.aligned_capture(x, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+        print(im_aligned.shape)
 
-            i1 = im_aligned[:,:,[0,1,2]]
-            i1 = enhance_image(i1)
-            image1 = np.uint8(i1*255)
-            images_to_stich1.append(image1)
-
-            i2 = im_aligned[:,:,[2,3,4]]
-            i2 = enhance_image(i2)
-            image2 = np.uint8(i2*255)
-            images_to_stich2.append(image2)
-
-        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-        stitch_result1 = stitcher.stitch(images_to_stich1)
-        print(stitch_result1[0])
-        print(stitch_result1[1])
-        resultsToStitch1.append(stitch_result1[1])
-        #cv2.imwrite(output_path+"/resultstostitch1_"+str(count)+".png", stitch_result1[1])
-
-        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-        stitch_result2 = stitcher.stitch(images_to_stich2)
-        print(stitch_result2[0])
-        print(stitch_result2[1])
-        resultsToStitch2.append(stitch_result2[1])
-        #cv2.imwrite(output_path+"/resultstostitch2_"+str(count)+".png", stitch_result2[1])
-
+        i1 = im_aligned[:,:,[0,1,2]]
+        i1 = enhance_image(i1)
+        image1 = np.uint8(i1*255)
+        cv2.imwrite(imageTempNames[count], image1)
+        images_to_stitch1.append([imageTempNames[count]])
         count = count + 1
 
-    if doFinalMerge == True:
-        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-        final_result1 = stitcher.stitch(resultsToStitch1)
-        print(final_result1[0])
-        print(final_result1[1])
-        final_result_img1 = final_result1[1]
+        i2 = im_aligned[:,:,[2,3,4]]
+        i2 = enhance_image(i2)
+        image2 = np.uint8(i2*255)
+        cv2.imwrite(imageTempNames[count], image2)
+        images_to_stitch2.append([imageTempNames[count]])
+        count = count + 1
 
-        stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True) #Try GPU #Stitcher::SCANS or Stitcher::PANORAMA
-        final_result2 = stitcher.stitch(resultsToStitch2)
-        print(final_result2[0])
-        print(final_result2[1])
-        final_result_img2 = final_result2[1]
-    else :
-        final_result_img1 = resultsToStitch1[0]
-        final_result_img2 = resultsToStitch2[0]
+    with open(temp_file_with_image_paths_to_stitch, 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(images_to_stitch1)
 
+    with open(temp_file_with_image_paths_to_stitch2, 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(images_to_stitch2)
 
+    stitchCmd = "stitching_multi --images1 '"+temp_file_with_image_paths_to_stitch+"' --images2 '"+temp_file_with_image_paths_to_stitch2+"' --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"'"
+    print(stitchCmd)
+    os.system(stitchCmd)
+
+    final_result_img1 = cv2.imread(final_rgb_output_path, cv2.IMREAD_UNCHANGED)
+    final_result_img2 = cv2.imread(final_rnre_output_path, cv2.IMREAD_UNCHANGED)
     final_result_img1 = enhance_image(final_result_img1/255)
     final_result_img2 = enhance_image(final_result_img2/255)
 
@@ -257,27 +226,6 @@ def run():
     plt.imsave(output_path_band3, final_result_img1[:,:,2], cmap='gray')
     plt.imsave(output_path_band4, final_result_img2[:,:,1], cmap='gray')
     plt.imsave(output_path_band5, final_result_img2[:,:,2], cmap='gray')
-
-    finalCapture = Capture([Image(output_path_band1), Image(output_path_band2), Image(output_path_band3), Image(output_path_band4), Image(output_path_band5)])
-
-    print("Alinging Final images. Depending on settings this can take from a few seconds to many minutes")
-    warp_matrices_final, alignment_pairs_final = imageutils.align_capture(finalCapture,
-                                                              ref_index = match_index,
-                                                              max_iterations = max_alignment_iterations,
-                                                              warp_mode = warp_mode,
-                                                              pyramid_levels = pyramid_levels,
-                                                              multithreaded = True)
-
-    print("Finished Final Alignment, warp matrices={}".format(warp_matrices_final))
-
-    cropped_dimensions_final, edges_final = imageutils.find_crop_bounds(finalCapture, warp_matrices_final, warp_mode=warp_mode)
-    im_aligned_final = imageutils.aligned_capture(finalCapture, warp_matrices_final, warp_mode, cropped_dimensions_final, match_index, img_type=img_type)
-
-    plt.imsave(output_path_band1, im_aligned_final[:,:,0], cmap='gray')
-    plt.imsave(output_path_band2, im_aligned_final[:,:,1], cmap='gray')
-    plt.imsave(output_path_band3, im_aligned_final[:,:,2], cmap='gray')
-    plt.imsave(output_path_band4, im_aligned_final[:,:,3], cmap='gray')
-    plt.imsave(output_path_band5, im_aligned_final[:,:,4], cmap='gray')
 
 #     {
 #     OK = 0,

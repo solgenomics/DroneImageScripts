@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <typeinfo>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgcodecs.hpp"
@@ -35,6 +36,7 @@ static void printUsage()
         "Rotation model images stitcher.\n\n"
         "stitching_detailed  [flags]\n\n"
         "Flags:\n"
+        "  --inputfiletemplate\n"
         "  --images1\n"
         "  --images2\n"
         "  --result1\n"
@@ -111,8 +113,10 @@ static void printUsage()
 
 
 // Default command line args
-vector<String> img_names;
-vector<String> img_names2;
+// vector<String> img_names;
+std::vector<std::string> img_names;
+std::vector<std::string> img_names2;
+// vector<String> img_names2;
 bool preview = false;
 bool try_cuda = false;
 double work_megapix = 0.6;
@@ -388,37 +392,49 @@ static int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--images1")
         {
             string fileName = argv[i + 1];
+            LOGLN("File images1 " << fileName);
             std::ifstream in(fileName);
             if(!in)
             {
                 std::cerr << "Cannot open the Image1 File : "<<fileName<<std::endl;
                 return false;
             }
-            std::string str;
-            while (std::getline(in, str))
+            std::string str = "/home/nmorales/cxgn/sgn/static/documents/tempfiles/upload_drone_imagery_temp_raw/fileSWxY.png";
+            img_names.push_back(str);
+            while (std::getline(in, str, '\n'))
             {
                 if(str.size() > 0)
-                    img_names.push_back(str);
+                {
+                    img_names.push_back(String(str));
+                    LOGLN("Image1 " << str);
+                }
             }
             in.close();
+            for(std::string & line : img_names)
+                std::cout<<line<<std::endl;
             i++;
         }
         else if (string(argv[i]) == "--images2")
         {
             string fileName = argv[i + 1];
-            std::ifstream in(fileName);
-            if(!in)
+            LOGLN("File images2 " << fileName);
+            std::ifstream in2(fileName);
+            if(!in2)
             {
                 std::cerr << "Cannot open the Image2 File : "<<fileName<<std::endl;
                 return false;
             }
-            std::string str;
-            while (std::getline(in, str))
+            std::string str = "/home/nmorales/cxgn/sgn//static/documents/tempfiles/upload_drone_imagery_temp_raw/fileJbSZ.png";
+            img_names2.push_back(str);
+            while (std::getline(in2, str, '\n'))
             {
                 if(str.size() > 0)
-                    img_names2.push_back(str);
+                {
+                    img_names2.push_back(String(str));
+                    LOGLN("Image2 " << str);
+                }
             }
-            in.close();
+            in2.close();
             i++;
         }
         // else
@@ -496,8 +512,10 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < num_images; ++i)
     {
-        full_img = imread(img_names[i]);
-        full_img2 = imread(img_names2[i]);
+        LOGLN("READ" << img_names[i]);
+        std::cout << typeid(img_names[i]).name() << '\n';
+        full_img = cv::imread(String(img_names[i]), IMREAD_COLOR);
+        full_img2 = cv::imread(String(img_names2[i]), IMREAD_COLOR);
         full_img_sizes[i] = full_img.size();
         full_img_sizes2[i] = full_img2.size();
 
@@ -781,8 +799,10 @@ int main(int argc, char* argv[])
     vector<UMat> images_warped_f(num_images);
     vector<UMat> images_warped_f2(num_images);
     for (int i = 0; i < num_images; ++i)
+    {
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
         images_warped2[i].convertTo(images_warped_f2[i], CV_32F);
+    }
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -888,8 +908,8 @@ int main(int argc, char* argv[])
         LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
-        full_img = imread(samples::findFile(img_names[img_idx]));
-        full_img2 = imread(samples::findFile(img_names2[img_idx]));
+        full_img = imread(img_names[img_idx]);
+        full_img2 = imread(img_names2[img_idx]);
         if (!is_compose_scale_set)
         {
             if (compose_megapix > 0)
@@ -935,11 +955,15 @@ int main(int argc, char* argv[])
             }
         }
         if (abs(compose_scale - 1) > 1e-1)
+        {
             resize(full_img, img, Size(), compose_scale, compose_scale, INTER_LINEAR_EXACT);
             resize(full_img2, img2, Size(), compose_scale, compose_scale, INTER_LINEAR_EXACT);
+        }
         else
+        {
             img = full_img;
             img2 = full_img2;
+        }
         full_img.release();
         full_img2.release();
         Size img_size = img.size();
@@ -987,8 +1011,10 @@ int main(int argc, char* argv[])
             Size dst_sz = resultRoi(corners, sizes).size();
             float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength / 100.f;
             if (blend_width < 1.f)
+            {
                 blender = Blender::createDefault(Blender::NO, try_cuda);
                 blender2 = Blender::createDefault(Blender::NO, try_cuda);
+            }
             else if (blend_type == Blender::MULTI_BAND)
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(blender.get());
