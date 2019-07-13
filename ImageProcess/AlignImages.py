@@ -191,25 +191,20 @@ def run():
         i1 = enhance_image(i1)
         image1 = np.uint8(i1*255)
         cv2.imwrite(imageTempNames[count], image1)
-        images_to_stitch1.append([imageTempNames[count]])
+        images_to_stitch1.append(imageTempNames[count])
         count = count + 1
 
         i2 = im_aligned[:,:,[2,3,4]]
         i2 = enhance_image(i2)
         image2 = np.uint8(i2*255)
         cv2.imwrite(imageTempNames[count], image2)
-        images_to_stitch2.append([imageTempNames[count]])
+        images_to_stitch2.append(imageTempNames[count])
         count = count + 1
 
-    with open(temp_file_with_image_paths_to_stitch, 'w') as writeFile:
-        writer = csv.writer(writeFile)
-        writer.writerows(images_to_stitch1)
-
-    with open(temp_file_with_image_paths_to_stitch2, 'w') as writeFile:
-        writer = csv.writer(writeFile)
-        writer.writerows(images_to_stitch2)
-
-    stitchCmd = "stitching_multi --images1 '"+temp_file_with_image_paths_to_stitch+"' --images2 '"+temp_file_with_image_paths_to_stitch2+"' --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"'"
+    sep = " ";
+    images_string1 = sep.join(images_to_stitch1)
+    images_string2 = sep.join(images_to_stitch2)
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+len(images_to_stitch1)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"'"
     print(stitchCmd)
     os.system(stitchCmd)
 

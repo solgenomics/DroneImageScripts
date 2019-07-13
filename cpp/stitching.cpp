@@ -34,11 +34,9 @@ static void printUsage()
 {
     cout <<
         "Rotation model images stitcher.\n\n"
-        "stitching_detailed  [flags]\n\n"
+        "stitching_detailed img1 img2 imgN [flags]\n\n"
         "Flags:\n"
-        "  --inputfiletemplate\n"
-        "  --images1\n"
-        "  --images2\n"
+        "  --num_images\n"
         "  --result1\n"
         "  --result2\n"
         "  --preview\n"
@@ -113,10 +111,8 @@ static void printUsage()
 
 
 // Default command line args
-// vector<String> img_names;
-std::vector<std::string> img_names;
-std::vector<std::string> img_names2;
-// vector<String> img_names2;
+vector<String> img_names;
+vector<String> img_names2;
 bool preview = false;
 bool try_cuda = false;
 double work_megapix = 0.6;
@@ -150,15 +146,15 @@ string result_name = "result.jpg";
 string result_name2 = "result2.jpg";
 bool timelapse = false;
 int range_width = -1;
-
+int num_images = 0;
 
 static int parseCmdArgs(int argc, char** argv)
 {
-    // if (argc == 1)
-    // {
-    //     printUsage();
-    //     return -1;
-    // }
+    if (argc == 1)
+    {
+        printUsage();
+        return -1;
+    }
     for (int i = 1; i < argc; ++i)
     {
         if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
@@ -389,56 +385,13 @@ static int parseCmdArgs(int argc, char** argv)
             result_name = argv[i + 1];
             i++;
         }
-        else if (string(argv[i]) == "--images1")
+        else if (string(argv[i]) == "--num_images")
         {
-            string fileName = argv[i + 1];
-            LOGLN("File images1 " << fileName);
-            std::ifstream in(fileName);
-            if(!in)
-            {
-                std::cerr << "Cannot open the Image1 File : "<<fileName<<std::endl;
-                return false;
-            }
-            std::string str = "/home/nmorales/cxgn/sgn/static/documents/tempfiles/upload_drone_imagery_temp_raw/fileSWxY.png";
-            img_names.push_back(str);
-            while (std::getline(in, str, '\n'))
-            {
-                if(str.size() > 0)
-                {
-                    img_names.push_back(String(str));
-                    LOGLN("Image1 " << str);
-                }
-            }
-            in.close();
-            for(std::string & line : img_names)
-                std::cout<<line<<std::endl;
+            num_images = atoi(argv[i + 1]);
             i++;
         }
-        else if (string(argv[i]) == "--images2")
-        {
-            string fileName = argv[i + 1];
-            LOGLN("File images2 " << fileName);
-            std::ifstream in2(fileName);
-            if(!in2)
-            {
-                std::cerr << "Cannot open the Image2 File : "<<fileName<<std::endl;
-                return false;
-            }
-            std::string str = "/home/nmorales/cxgn/sgn//static/documents/tempfiles/upload_drone_imagery_temp_raw/fileJbSZ.png";
-            img_names2.push_back(str);
-            while (std::getline(in2, str, '\n'))
-            {
-                if(str.size() > 0)
-                {
-                    img_names2.push_back(String(str));
-                    LOGLN("Image2 " << str);
-                }
-            }
-            in2.close();
-            i++;
-        }
-        // else
-        //     img_names.push_back(argv[i]);
+        else
+            img_names.push_back(argv[i]);
     }
     if (preview)
     {
@@ -463,7 +416,6 @@ int main(int argc, char* argv[])
         return retval;
 
     // Check if have enough images
-    int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
         LOGLN("Need more images");
@@ -513,9 +465,8 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_images; ++i)
     {
         LOGLN("READ" << img_names[i]);
-        std::cout << typeid(img_names[i]).name() << '\n';
-        full_img = cv::imread(String(img_names[i]), IMREAD_COLOR);
-        full_img2 = cv::imread(String(img_names2[i]), IMREAD_COLOR);
+        full_img = cv::imread(img_names[i], IMREAD_COLOR);
+        full_img2 = cv::imread(img_names[i+num_images], IMREAD_COLOR);
         full_img_sizes[i] = full_img.size();
         full_img_sizes2[i] = full_img2.size();
 
@@ -602,7 +553,7 @@ int main(int argc, char* argv[])
     for (size_t i = 0; i < indices.size(); ++i)
     {
         img_names_subset.push_back(img_names[indices[i]]);
-        img_names_subset2.push_back(img_names2[indices[i]]);
+        img_names_subset2.push_back(img_names[indices[i] + num_images]);
         img_subset.push_back(images[indices[i]]);
         img_subset2.push_back(images2[indices[i]]);
         full_img_sizes_subset.push_back(full_img_sizes[indices[i]]);
@@ -908,8 +859,8 @@ int main(int argc, char* argv[])
         LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
-        full_img = imread(img_names[img_idx]);
-        full_img2 = imread(img_names2[img_idx]);
+        full_img = imread(img_names[img_idx], IMREAD_COLOR);
+        full_img2 = imread(img_names2[img_idx], IMREAD_COLOR);
         if (!is_compose_scale_set)
         {
             if (compose_megapix > 0)
