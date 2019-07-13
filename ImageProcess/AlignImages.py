@@ -47,18 +47,19 @@ def run():
     do_pairwise_stitch = args["do_pairwise_stitch"]
 
     #Must supply either image_path or file_with_image_paths as a source of images
-    imageNameToCalibratedImageName = {}
+    imageNamesAll = []
+    # imageNameToCalibratedImageName = {}
     if image_path is not None:
         imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
-        for i in imageNamesAll:
-            imageNameToCalibratedImageName[i] = os.path.join(output_path,i+'calibrated.tif')
+        # for i in imageNamesAll:
+        #     imageNameToCalibratedImageName[i] = os.path.join(output_path,i+'calibrated.tif')
     elif file_with_image_paths is not None:
-        imageNamesAll = []
         with open(file_with_image_paths) as fp:
             for line in fp:
-                imageName, calibratedImageName = line.strip().split(",")
+                # imageName, calibratedImageName = line.strip().split(",")
+                imageName = line.strip()
                 imageNamesAll.append(imageName)
-                imageNameToCalibratedImageName[imageName] = calibratedImageName
+                # imageNameToCalibratedImageName[imageName] = calibratedImageName
     else:
         print("No input images given. use image_path OR file_with_image_paths args")
         os._exit
