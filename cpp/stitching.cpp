@@ -416,6 +416,7 @@ int main(int argc, char* argv[])
         return retval;
 
     // Check if have enough images
+    cout << num_images;
     if (num_images < 2)
     {
         LOGLN("Need more images");
@@ -426,6 +427,7 @@ int main(int argc, char* argv[])
     bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
     LOGLN("Finding features...");
+    cout << "Finding features...";
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
@@ -517,6 +519,7 @@ int main(int argc, char* argv[])
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOG("Pairwise matching");
+    cout << "Pairwise matching";
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -575,6 +578,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    cout << "Translation estimation";
     Ptr<Estimator> estimator;
     if (estimator_type == "affine")
         estimator = makePtr<AffineBasedEstimator>();
@@ -647,6 +651,7 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Warping images (auxiliary)... ");
+    cout << "Warping images";
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -758,6 +763,7 @@ int main(int argc, char* argv[])
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Compensating exposure...");
+    cout << "Compensating exposure";
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -789,6 +795,7 @@ int main(int argc, char* argv[])
     LOGLN("Compensating exposure, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Finding seams...");
+    cout << "Finding seams";
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -842,6 +849,7 @@ int main(int argc, char* argv[])
     masks2.clear();
 
     LOGLN("Compositing...");
+    cout << "Compositing";
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -1026,6 +1034,7 @@ int main(int argc, char* argv[])
         imwrite(result_name2, result2);
     }
 
+    cout << "Finishing stitching";
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 }
