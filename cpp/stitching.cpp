@@ -424,7 +424,7 @@ int main(int argc, char* argv[])
 
     // Check if have enough images
     ofstream logfile;
-    logfile.open(log_file_path, ios:out | ios:app);
+    logfile.open(log_file_path, ios::out | ios::app);
 
     logfile << num_images;
     if (num_images < 2)
