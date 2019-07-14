@@ -1,5 +1,6 @@
 
 def run():
+    import sys
     from micasense.capture import Capture
     import cv2
     import numpy as np
@@ -20,6 +21,7 @@ def run():
     freeze_support()
 
     ap = argparse.ArgumentParser()
+    ap.add_argument("-l", "--log_file_path", required=True, help="file path to write log to. useful for using from the web interface")
     ap.add_argument("-j", "--cpp_path", required=True, help="directory path to cpp executables")
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
@@ -34,6 +36,7 @@ def run():
     ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
     args = vars(ap.parse_args())
 
+    log_file_path = args["log_file_path"]
     cpp_path = args["cpp_path"]
     image_path = args["image_path"]
     file_with_image_paths = args["file_with_image_paths"]
@@ -46,6 +49,8 @@ def run():
     output_path_band3 = args["output_path_band3"]
     output_path_band4 = args["output_path_band4"]
     output_path_band5 = args["output_path_band5"]
+
+    sys.stderr = open(log_file_path, 'a')
 
     #Must supply either image_path or file_with_image_paths as a source of images
     imageNamesAll = []
@@ -200,8 +205,9 @@ def run():
     sep = " ";
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
-    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes"
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path
     print(stitchCmd)
+    print(len(stitchCmd))
     os.system(stitchCmd)
 
     final_result_img1 = cv2.imread(final_rgb_output_path, cv2.IMREAD_UNCHANGED)
