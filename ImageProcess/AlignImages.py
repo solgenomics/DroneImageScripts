@@ -24,8 +24,6 @@ def run():
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
-    ap.add_argument("-d", "--temp_file_with_image_paths_to_stitch", required=True, help="file path to file that has temporary file names in it, used for stitch first 3 bands. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
-    ap.add_argument("-e", "--temp_file_with_image_paths_to_stitch2", required=True, help="file path to file that has temporary file names in it, used for stitch last 3 bands. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
     ap.add_argument("-y", "--final_rgb_output_path", required=True, help="output file path for stitched RGB image")
     ap.add_argument("-z", "--final_rnre_output_path", required=True, help="output file path for stitched RNRe image")
@@ -40,8 +38,6 @@ def run():
     image_path = args["image_path"]
     file_with_image_paths = args["file_with_image_paths"]
     file_with_panel_image_paths = args["file_with_panel_image_paths"]
-    temp_file_with_image_paths_to_stitch = args["temp_file_with_image_paths_to_stitch"]
-    temp_file_with_image_paths_to_stitch2 = args["temp_file_with_image_paths_to_stitch2"]
     output_path = args["output_path"]
     final_rgb_output_path = args["final_rgb_output_path"]
     final_rnre_output_path = args["final_rnre_output_path"]
@@ -204,7 +200,7 @@ def run():
     sep = " ";
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
-    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+len(images_to_stitch1)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"'"
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"'"
     print(stitchCmd)
     os.system(stitchCmd)
 
