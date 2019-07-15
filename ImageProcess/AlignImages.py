@@ -1,4 +1,6 @@
 
+
+
 def run():
     import sys
     from micasense.capture import Capture
@@ -21,7 +23,7 @@ def run():
     freeze_support()
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("-l", "--log_file_path", required=True, help="file path to write log to. useful for using from the web interface")
+    ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
     ap.add_argument("-j", "--cpp_path", required=True, help="directory path to cpp executables")
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
@@ -50,7 +52,11 @@ def run():
     output_path_band4 = args["output_path_band4"]
     output_path_band5 = args["output_path_band5"]
 
-    sys.stderr = open(log_file_path, 'a')
+    if log_file_path is not None:
+        sys.stderr = open(log_file_path, 'a')
+
+    def eprint(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
 
     #Must supply either image_path or file_with_image_paths as a source of images
     imageNamesAll = []
@@ -66,7 +72,10 @@ def run():
                 imageNamesAll.append(imageName)
                 imageTempNames.append(tempImageName)
     else:
-        print("No input images given. use image_path OR file_with_image_paths args")
+        if log_file_path is not None:
+            eprint("No input images given. use image_path OR file_with_image_paths args")
+        else:
+            print("No input images given. use image_path OR file_with_image_paths args")
         os._exit
 
     panelBandCorrection = {}
@@ -78,24 +87,37 @@ def run():
             img = Image(imageName)
             band_name = img.band_name
             if img.auto_calibration_image:
-                print("Found automatic calibration image")
+                if log_file_path is not None:
+                    eprint("Found automatic calibration image")
+                else:
+                    print("Found automatic calibration image")
             panel = Panel(img)
 
             if not panel.panel_detected():
                 raise IOError("Panel Not Detected!")
 
-            print("Detected panel serial: {}".format(panel.serial))
             mean, std, num, sat_count = panel.raw()
-            print("Extracted Panel Statistics:")
-            print("Mean: {}".format(mean))
-            print("Standard Deviation: {}".format(std))
-            print("Panel Pixel Count: {}".format(num))
-            print("Saturated Pixel Count: {}".format(sat_count))
             micasense_panel_calibration = panel.reflectance_from_panel_serial()
-            print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
             radianceToReflectance = micasense_panel_calibration / mean
-            print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
             panelBandCorrection[band_name] = radianceToReflectance
+            if log_file_path is not None:
+                eprint("Detected panel serial: {}".format(panel.serial))
+                eprint("Extracted Panel Statistics:")
+                eprint("Mean: {}".format(mean))
+                eprint("Standard Deviation: {}".format(std))
+                eprint("Panel Pixel Count: {}".format(num))
+                eprint("Saturated Pixel Count: {}".format(sat_count))
+                eprint('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+                eprint('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+            else:
+                print("Detected panel serial: {}".format(panel.serial))
+                print("Extracted Panel Statistics:")
+                print("Mean: {}".format(mean))
+                print("Standard Deviation: {}".format(std))
+                print("Panel Pixel Count: {}".format(num))
+                print("Saturated Pixel Count: {}".format(sat_count))
+                print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+                print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
 
     imageNamesDict = {}
     for i in imageNamesAll:
@@ -123,8 +145,6 @@ def run():
             im.append(img)
         if len(im) > 0:
             imageNameCaptures.append(im)
-
-    #print(imageNameCaptures)
 
     def enhance_image(rgb):
         gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
@@ -169,8 +189,12 @@ def run():
     warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
     pyramid_levels = None # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
-    print(img_type)
-    print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
+    if log_file_path is not None:
+        eprint(img_type)
+        eprint("Alinging images. Depending on settings this can take from a few seconds to many minutes")
+    else:
+        print(img_type)
+        print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
     warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
@@ -178,7 +202,10 @@ def run():
                                                               pyramid_levels = pyramid_levels,
                                                               multithreaded = True)
 
-    print("Finished Aligning, warp matrices={}".format(warp_matrices))
+    if log_file_path is not None:
+        eprint("Finished Aligning, warp matrices={}".format(warp_matrices))
+    else:
+        print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
     images_to_stitch1 = []
     images_to_stitch2 = []
@@ -186,7 +213,10 @@ def run():
     for x in imageCaptureSets:
         cropped_dimensions, edges = imageutils.find_crop_bounds(x, warp_matrices, warp_mode=warp_mode)
         im_aligned = imageutils.aligned_capture(x, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
-        print(im_aligned.shape)
+        if log_file_path is not None:
+            eprint(im_aligned.shape)
+        else:
+            print(im_aligned.shape)
 
         i1 = im_aligned[:,:,[0,1,2]]
         i1 = enhance_image(i1)
@@ -206,8 +236,12 @@ def run():
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
     stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path
-    print(stitchCmd)
-    print(len(stitchCmd))
+    if log_file_path is not None:
+        eprint(stitchCmd)
+        eprint(len(stitchCmd))
+    else:
+        print(stitchCmd)
+        print(len(stitchCmd))
     os.system(stitchCmd)
 
     final_result_img1 = cv2.imread(final_rgb_output_path, cv2.IMREAD_UNCHANGED)

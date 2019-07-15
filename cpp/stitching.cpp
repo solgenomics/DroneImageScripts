@@ -422,10 +422,9 @@ int main(int argc, char* argv[])
     if (retval)
         return retval;
 
-    // Check if have enough images
-    ofstream logfile;
-    logfile.open(log_file_path, ios::out | ios::app);
+    ofstream logfile (log_file_path, ios::out | ios::app);
 
+    // Check if have enough images
     logfile << num_images;
     if (num_images < 2)
     {
