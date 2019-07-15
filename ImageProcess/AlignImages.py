@@ -1,5 +1,7 @@
 
-
+# Works with Micasense 5 band images. Outputs orthophotomosaic images of each bandself.
+# Required cpp/stitching.cpp to be compiled and executable as 'stitching_multi' . Use g++ stitching.cpp -u /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs`
+# stitching_multi program will use CUDA GPU if opencv was installed with CUDA support
 
 def run():
     import sys
