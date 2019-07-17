@@ -482,7 +482,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_images; ++i)
     {
         LOGLN("READ" << img_names[i]);
-	LOGLN("READ" << img_names[i+num_images]);
+        LOGLN("READ" << img_names[i+num_images]);
         full_img = cv::imread(img_names[i], IMREAD_COLOR);
         full_img2 = cv::imread(img_names[i+num_images], IMREAD_COLOR);
         full_img_sizes[i] = full_img.size();
