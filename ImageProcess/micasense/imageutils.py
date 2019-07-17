@@ -183,7 +183,7 @@ def default_warp_matrix(warp_mode):
     else:
         return np.array([[1,0,0],[0,1,0]], dtype=np.float32)
 
-def align_capture(capture, ref_index=1, warp_mode=cv2.MOTION_HOMOGRAPHY, max_iterations=2500, epsilon_threshold=1e-9, multithreaded=True, debug=False, pyramid_levels = None, log_file_path = None):
+def align_capture(capture, ref_index=1, warp_mode=cv2.MOTION_HOMOGRAPHY, max_iterations=2500, epsilon_threshold=1e-9, multithreaded=True, debug=False, pyramid_levels = None):
     '''Align images in a capture using openCV
     MOTION_TRANSLATION sets a translational motion model; warpMatrix is 2x3 with the first 2x2 part being the unity matrix and the rest two parameters being estimated.
     MOTION_EUCLIDEAN sets a Euclidean (rigid) transformation as motion model; three parameters are estimated; warpMatrix is 2x3.
@@ -230,10 +230,7 @@ def align_capture(capture, ref_index=1, warp_mode=cv2.MOTION_HOMOGRAPHY, max_ite
         pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
         for _,mat in enumerate(pool.imap_unordered(align, alignment_pairs)):
             warp_matrices[mat['match_index']] = mat['warp_matrix']
-            if log_file_path is not None:
-                eprint("Finished aligning band {}".format(mat['match_index']))
-            else:
-                print("Finished aligning band {}".format(mat['match_index']))
+            print("Finished aligning band {}".format(mat['match_index']))
         pool.close()
         pool.join()
     else:
@@ -241,10 +238,7 @@ def align_capture(capture, ref_index=1, warp_mode=cv2.MOTION_HOMOGRAPHY, max_ite
         for pair in alignment_pairs:
             mat = align(pair)
             warp_matrices[mat['match_index']] = mat['warp_matrix']
-            if log_file_path is not None:
-                eprint("Finished aligning band {}".format(mat['match_index']))
-            else:
-                print("Finished aligning band {}".format(mat['match_index']))
+            print("Finished aligning band {}".format(mat['match_index']))
 
     if capture.images[-1].band_name == 'LWIR':
         img = capture.images[-1]

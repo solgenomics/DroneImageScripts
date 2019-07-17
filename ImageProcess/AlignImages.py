@@ -202,8 +202,7 @@ def run():
                                                               max_iterations = max_alignment_iterations,
                                                               warp_mode = warp_mode,
                                                               pyramid_levels = pyramid_levels,
-                                                              multithreaded = True,
-                                                              log_file_path = log_file_path)
+                                                              multithreaded = True)
 
     if log_file_path is not None:
         eprint("Finished Aligning, warp matrices={}".format(warp_matrices))
