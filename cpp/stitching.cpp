@@ -150,6 +150,13 @@ int range_width = -1;
 int num_images = 0;
 string log_file_path = "/var/log/sgn/error.log";
 
+void write_text_to_log_file( std::string log_file_path, std::string text )
+{
+    std::ofstream log_file(
+        log_file_path, std::ios_base::out | std::ios_base::app );
+    log_file << text << std::endl;
+}
+
 static int parseCmdArgs(int argc, char** argv)
 {
     if (argc == 1)
@@ -422,10 +429,8 @@ int main(int argc, char* argv[])
     if (retval)
         return retval;
 
-    ofstream logfile (log_file_path, ios::out | ios::app);
-
     // Check if have enough images
-    logfile << num_images;
+    write_text_to_log_file(log_file_path, std::to_string(num_images));
     if (num_images < 2)
     {
         LOGLN("Need more images");
@@ -436,7 +441,8 @@ int main(int argc, char* argv[])
     bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
     LOGLN("Finding features...");
-    logfile << "Finding features...";
+    write_text_to_log_file(log_file_path, "Finding features...");
+
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
@@ -461,7 +467,7 @@ int main(int argc, char* argv[])
 #endif
     else
     {
-        logfile << "Unknown 2D features type: '" << features_type << "'.\n";
+        write_text_to_log_file(log_file_path, "Unknown 2D features type\n");
         return -1;
     }
 
@@ -528,7 +534,8 @@ int main(int argc, char* argv[])
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOG("Pairwise matching");
-    logfile << "Pairwise matching";
+    write_text_to_log_file(log_file_path, "Pairwise matching\n");
+
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -587,7 +594,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    logfile << "Translation estimation";
+    write_text_to_log_file(log_file_path, "Translation estimation...\n");
+
     Ptr<Estimator> estimator;
     if (estimator_type == "affine")
         estimator = makePtr<AffineBasedEstimator>();
@@ -597,7 +605,7 @@ int main(int argc, char* argv[])
     vector<CameraParams> cameras;
     if (!(*estimator)(features, pairwise_matches, cameras))
     {
-        logfile << "Homography estimation failed.\n";
+        write_text_to_log_file(log_file_path, "Homography estimation failed.\n");
         return -1;
     }
 
@@ -616,7 +624,7 @@ int main(int argc, char* argv[])
     else if (ba_cost_func == "no") adjuster = makePtr<NoBundleAdjuster>();
     else
     {
-        logfile << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
+        write_text_to_log_file(log_file_path, "Unknown bundle adjustment cost function\n");
         return -1;
     }
     adjuster->setConfThresh(conf_thresh);
@@ -629,7 +637,7 @@ int main(int argc, char* argv[])
     adjuster->setRefinementMask(refine_mask);
     if (!(*adjuster)(features, pairwise_matches, cameras))
     {
-        logfile << "Camera parameters adjusting failed.\n";
+        write_text_to_log_file(log_file_path, "Camera parameters adjusting failed.\n");
         return -1;
     }
 
@@ -660,7 +668,8 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Warping images (auxiliary)... ");
-    logfile << "Warping images";
+    write_text_to_log_file(log_file_path, "Warping images\n");
+
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -737,7 +746,7 @@ int main(int argc, char* argv[])
 
     if (!warper_creator)
     {
-        logfile << "Can't create the following warper '" << warp_type << "'\n";
+        write_text_to_log_file(log_file_path, "Can't create the following warper\n");
         return 1;
     }
 
@@ -772,7 +781,8 @@ int main(int argc, char* argv[])
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Compensating exposure...");
-    logfile << "Compensating exposure";
+    write_text_to_log_file(log_file_path, "Compensating exposure\n");
+
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -804,7 +814,8 @@ int main(int argc, char* argv[])
     LOGLN("Compensating exposure, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Finding seams...");
-    logfile << "Finding seams";
+    write_text_to_log_file(log_file_path, "Finding seams\n");
+
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -838,7 +849,7 @@ int main(int argc, char* argv[])
         seam_finder = makePtr<detail::DpSeamFinder>(DpSeamFinder::COLOR_GRAD);
     if (!seam_finder)
     {
-        logfile << "Can't create the following seam finder '" << seam_find_type << "'\n";
+        write_text_to_log_file(log_file_path, "Can't create the following seam finder \n");
         return 1;
     }
 
@@ -858,7 +869,8 @@ int main(int argc, char* argv[])
     masks2.clear();
 
     LOGLN("Compositing...");
-    logfile << "Compositing";
+    write_text_to_log_file(log_file_path, "Compositing\n");
+
 #if ENABLE_LOG
     t = getTickCount();
 #endif
@@ -1043,8 +1055,7 @@ int main(int argc, char* argv[])
         imwrite(result_name2, result2);
     }
 
-    logfile << "Finishing stitching";
+    write_text_to_log_file(log_file_path, "Finishing stitching!\n");
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
-    logfile.close();
     return 0;
 }
