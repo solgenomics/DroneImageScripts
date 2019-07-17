@@ -533,7 +533,7 @@ int main(int argc, char* argv[])
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOG("Pairwise matching");
+    LOGLN("Pairwise matching");
     write_text_to_log_file(log_file_path, "Pairwise matching\n");
 
 #if ENABLE_LOG
