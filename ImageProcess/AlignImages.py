@@ -37,6 +37,7 @@ def run():
     ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
     ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
     ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
+    ap.add_argument("-w", "--work_megapix", required=True, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
@@ -51,6 +52,7 @@ def run():
     output_path_band3 = args["output_path_band3"]
     output_path_band4 = args["output_path_band4"]
     output_path_band5 = args["output_path_band5"]
+    work_megapix = args["work_megapix"]
 
     if log_file_path is not None:
         sys.stderr = open(log_file_path, 'a')
@@ -235,8 +237,8 @@ def run():
     sep = " ";
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
-    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path
-    # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix
+    # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path+" --work_megapix "+work_megapix
     if log_file_path is not None:
         eprint(stitchCmd)
         eprint(len(stitchCmd))
