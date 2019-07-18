@@ -34,7 +34,7 @@ static void printUsage()
 {
     cout <<
         "Rotation model images stitcher.\n\n"
-        "stitching_detailed img1 img2 imgN [flags]\n\n"
+        "stitching_detailed img1 img2 [...imgN] [flags]\n\n"
         "Flags:\n"
         "  --num_images\n"
         "  --result1\n"
