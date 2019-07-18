@@ -26,7 +26,6 @@ def run():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-    ap.add_argument("-j", "--cpp_path", required=True, help="directory path to cpp executables")
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names and temporary file names for each image in it, comma separated and separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
@@ -41,7 +40,6 @@ def run():
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
-    cpp_path = args["cpp_path"]
     image_path = args["image_path"]
     file_with_image_paths = args["file_with_image_paths"]
     file_with_panel_image_paths = args["file_with_panel_image_paths"]
