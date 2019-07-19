@@ -66,7 +66,7 @@ def run():
     if image_path is not None:
         imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
         for i in imageNamesAll:
-            imageTempNames.append(os.path.join(output_path,i+'temp.tif'))
+            imageTempNames.append(os.path.join(output_path,'/temp/'+i+'temp.tif'))
     elif file_with_image_paths is not None:
         with open(file_with_image_paths) as fp:
             for line in fp:
