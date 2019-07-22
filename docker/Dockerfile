@@ -29,7 +29,7 @@ RUN cd /opencv \
         -D BUILD_EXAMPLES=ON \
         -D OPENCV_ENABLE_NONFREE=ON \
         -D OPENCV_GENERATE_PKGCONFIG=YES .. \
-    && make \
+    && make -j 4 \
     && make install \
     && ldconfig
 
