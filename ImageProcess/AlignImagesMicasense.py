@@ -1,4 +1,6 @@
 
+#python3 /workdir/cxgn/DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /workdir/exampleDroneImagesTest/log.txt --image_path /workdir/exampleDroneImagesTest/pruned_small --panel_image_path /workdir/exampleDroneImagesTest/panel --output_path /workdir/exampleDroneImagesTest/output/ --final_rgb_output_path /workdir/exampleDroneImagesTest/output/rgb.png --final_rnre_output_path /workdir/exampleDroneImagesTest/output/rnre.png --output_path_band1 /workdir/exampleDroneImagesTest/output/b1.png --output_path_band2 /workdir/exampleDroneImagesTest/output/b2.png --output_path_band3 /workdir/exampleDroneImagesTest/output/b3.png --output_path_band4 /workdir/exampleDroneImagesTest/output/b4.png --output_path_band5 /workdir/exampleDroneImagesTest/output/b5.png --work_megapix 0.6
+
 # Works with Micasense 5 band images. Outputs orthophotomosaic images of each bandself.
 # Required cpp/stitching.cpp to be compiled and executable as 'stitching_multi' . Use g++ stitching.cpp -u /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs`
 # stitching_multi program will use CUDA GPU if opencv was installed with CUDA support
