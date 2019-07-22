@@ -7,11 +7,7 @@ RUN apt-get install -y libgtk2.0-dev libgtk-3-0 libgtk-3-dev libavcodec-dev liba
 RUN apt-get install -y libgdal-dev
 RUN apt-get install -y exiftool libzbar-dev
 
-RUN pip install virtualenv virtualenvwrapper
-RUN sed -i '$ a\export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3' /root/.bashrc \
-    && sed -i '$ a\export WORKON_HOME=/root/.virtualenvs' /root/.bashrc \
-    && /bin/bash -c "source /root/.bashrc; source /usr/local/bin/virtualenvwrapper.sh; mkvirtualenv -p python3 cv" \
-    && pip install imutils numpy matplotlib pillow statistics PyExifTool pytz pysolar scikit-image packaging pyzbar \
+RUN pip3 install imutils numpy matplotlib pillow statistics PyExifTool pytz pysolar scikit-image packaging pyzbar \
     && git clone https://github.com/opencv/opencv \
     && git clone https://github.com/opencv/opencv_contrib \
     && cd /opencv_contrib \
@@ -24,7 +20,8 @@ RUN sed -i '$ a\export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3' /root/.bashrc 
         -D CMAKE_INSTALL_PREFIX=/usr/local \
         -D INSTALL_PYTHON_EXAMPLES=ON \
         -D OPENCV_EXTRA_MODULES_PATH=/opencv_contrib/modules \
-        -D PYTHON_EXECUTABLE=/root/.virtualenvs/cv/bin/python \
+        -D PYTHON3_EXECUTABLE=$(which python3) \
+        -D PYTHON3_NUMPY_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
         -D BUILD_EXAMPLES=ON \
         -D OPENCV_ENABLE_NONFREE=ON \
         -D OPENCV_GENERATE_PKGCONFIG=YES .. \
