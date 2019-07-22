@@ -28,7 +28,8 @@ def run():
     ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
     ap.add_argument("-a", "--image_path", required=False, help="image path to directory with all images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names and temporary file names for each image in it, comma separated and separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
-    ap.add_argument("-c", "--file_with_panel_image_paths", required=True, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
+    ap.add_argument("-c", "--panel_image_path", required=False, help="image path to directory with all 5 panel images inside of it. useful for using from command line. e.g. /home/nmorales/MicasenseTest/000")
+    ap.add_argument("-d", "--file_with_panel_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
     ap.add_argument("-y", "--final_rgb_output_path", required=True, help="output file path for stitched RGB image")
     ap.add_argument("-z", "--final_rnre_output_path", required=True, help="output file path for stitched RNRe image")
@@ -43,6 +44,7 @@ def run():
     log_file_path = args["log_file_path"]
     image_path = args["image_path"]
     file_with_image_paths = args["file_with_image_paths"]
+    panel_image_path = args["panel_image_path"]
     file_with_panel_image_paths = args["file_with_panel_image_paths"]
     output_path = args["output_path"]
     final_rgb_output_path = args["final_rgb_output_path"]
@@ -82,44 +84,55 @@ def run():
 
     panelBandCorrection = {}
     panelNames = []
-    with open(file_with_panel_image_paths) as fp:
-        for line in fp:
-            imageName = line.strip()
-            panelNames.append(imageName)
-            img = Image(imageName)
-            band_name = img.band_name
-            if img.auto_calibration_image:
-                if log_file_path is not None:
-                    eprint("Found automatic calibration image")
-                else:
-                    print("Found automatic calibration image")
-            panel = Panel(img)
+    if panel_image_path is not None:
+        panelNames = glob.glob(os.path.join(panel_image_path,'*.tif'))
+    elif file_with_panel_image_paths is not None:
+        with open(file_with_panel_image_paths) as fp:
+            for line in fp:
+                imageName = line.strip()
+                panelNames.append(imageName)
+    else:
+        if log_file_path is not None:
+            eprint("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
+        else:
+            print("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
+        os._exit
 
-            if not panel.panel_detected():
-                raise IOError("Panel Not Detected!")
-
-            mean, std, num, sat_count = panel.raw()
-            micasense_panel_calibration = panel.reflectance_from_panel_serial()
-            radianceToReflectance = micasense_panel_calibration / mean
-            panelBandCorrection[band_name] = radianceToReflectance
+    for imageName in panelNames:
+        img = Image(imageName)
+        band_name = img.band_name
+        if img.auto_calibration_image:
             if log_file_path is not None:
-                eprint("Detected panel serial: {}".format(panel.serial))
-                eprint("Extracted Panel Statistics:")
-                eprint("Mean: {}".format(mean))
-                eprint("Standard Deviation: {}".format(std))
-                eprint("Panel Pixel Count: {}".format(num))
-                eprint("Saturated Pixel Count: {}".format(sat_count))
-                eprint('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
-                eprint('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+                eprint("Found automatic calibration image")
             else:
-                print("Detected panel serial: {}".format(panel.serial))
-                print("Extracted Panel Statistics:")
-                print("Mean: {}".format(mean))
-                print("Standard Deviation: {}".format(std))
-                print("Panel Pixel Count: {}".format(num))
-                print("Saturated Pixel Count: {}".format(sat_count))
-                print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
-                print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+                print("Found automatic calibration image")
+        panel = Panel(img)
+
+        if not panel.panel_detected():
+            raise IOError("Panel Not Detected!")
+
+        mean, std, num, sat_count = panel.raw()
+        micasense_panel_calibration = panel.reflectance_from_panel_serial()
+        radianceToReflectance = micasense_panel_calibration / mean
+        panelBandCorrection[band_name] = radianceToReflectance
+        if log_file_path is not None:
+            eprint("Detected panel serial: {}".format(panel.serial))
+            eprint("Extracted Panel Statistics:")
+            eprint("Mean: {}".format(mean))
+            eprint("Standard Deviation: {}".format(std))
+            eprint("Panel Pixel Count: {}".format(num))
+            eprint("Saturated Pixel Count: {}".format(sat_count))
+            eprint('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+            eprint('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+        else:
+            print("Detected panel serial: {}".format(panel.serial))
+            print("Extracted Panel Statistics:")
+            print("Mean: {}".format(mean))
+            print("Standard Deviation: {}".format(std))
+            print("Panel Pixel Count: {}".format(num))
+            print("Saturated Pixel Count: {}".format(sat_count))
+            print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+            print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
 
     imageNamesDict = {}
     for i in imageNamesAll:

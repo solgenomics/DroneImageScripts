@@ -27,7 +27,8 @@ RUN pip3 install imutils numpy matplotlib pillow statistics PyExifTool pytz pyso
         -D OPENCV_GENERATE_PKGCONFIG=YES .. \
     && make -j 40 \
     && make install \
-    && ldconfig
+    && ldconfig \
+    && mv /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.cpython-36m-x86_64-linux-gnu.so /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.so
 
 RUN git clone https://github.com/solgenomics/DroneImageScripts \
     && g++ /DroneImageScripts/cpp/stitching_multi.cpp -o /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs` \
