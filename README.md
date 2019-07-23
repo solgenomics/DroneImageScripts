@@ -3,7 +3,7 @@ ImageBreed DroneImageScripts
 
 This repository contains all Python drone image processing scripts which are used by the ImageBreed (http://imagebreed.org) plant breeding and genetics image processing web-database pipeline. The web-database is based on the BreedBase open-source system for plant breeding and genetics (https://github.com/solgenomics/sgn)
 
-To pull in a standalone docker image, so that you can use these scripts, use the following command. This docker image has OpenCV and all other dependencies installed.
+To pull in and run a standalone docker image, so that you can use these scripts, use the following command. This docker image has OpenCV and all other dependencies installed.
 
 `sudo docker run -r -d nmorales3142/imagebreeddroneimagescripts:latest`
 
