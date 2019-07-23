@@ -60,6 +60,13 @@ def run():
     output_path_band5 = args["output_path_band5"]
     work_megapix = args["work_megapix"]
 
+    if sys.version_info[0] < 3:
+        if log_file_path is not None:
+            eprint("Must use Python3. Use python3 in your command line.")
+        else:
+            print("Must use Python3. Use python3 in your command line.")
+        os._exit
+
     if log_file_path is not None:
         sys.stderr = open(log_file_path, 'a')
 
@@ -73,7 +80,7 @@ def run():
         tempImagePath = os.path.join(image_path,'temp')
         imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
         for idx, val in enumerate(imageNamesAll):
-            imageTempNames.append(os.path.join(tempImagePath,'temp'+idx+'.tif'))
+            imageTempNames.append(os.path.join(tempImagePath,'temp'+str(idx)+'.tif'))
     elif file_with_image_paths is not None:
         with open(file_with_image_paths) as fp:
             for line in fp:
