@@ -61,11 +61,7 @@ def run():
     work_megapix = args["work_megapix"]
 
     if sys.version_info[0] < 3:
-        if log_file_path is not None:
-            eprint("Must use Python3. Use python3 in your command line.")
-        else:
-            print("Must use Python3. Use python3 in your command line.")
-        os._exit
+        raise Exception("Must use Python3. Use python3 in your command line.")
 
     if log_file_path is not None:
         sys.stderr = open(log_file_path, 'a')
