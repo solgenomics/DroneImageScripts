@@ -3,6 +3,8 @@
 
 #python3 /workdir/cxgn/DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /workdir/Y_07162019_pruned/log.txt --image_path /workdir/Y_07162019_pruned/prunedv2 --panel_image_path /workdir/Y_07162019_pruned/panel2 --output_path /workdir/Y_07162019_pruned/output/ --final_rgb_output_path /workdir/Y_07162019_pruned/output/rgb.png --final_rnre_output_path /workdir/Y_07162019_pruned/output/rnre.png --output_path_band1 /workdir/Y_07162019_pruned/output/b1.png --output_path_band2 /workdir/Y_07162019_pruned/output/b2.png --output_path_band3 /workdir/Y_07162019_pruned/output/b3.png --output_path_band4 /workdir/Y_07162019_pruned/output/b4.png --output_path_band5 /workdir/Y_07162019_pruned/output/b5.png --work_megapix 0.6
 
+#python3 /DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /Y_07162019_pruned/log.txt --image_path /Y_07162019_pruned/prunedv2 --panel_image_path /Y_07162019_pruned/panel2 --output_path /Y_07162019_pruned/output/ --final_rgb_output_path /Y_07162019_pruned/output/rgb.png --final_rnre_output_path /Y_07162019_pruned/output/rnre.png --output_path_band1 /Y_07162019_pruned/output/b1.png --output_path_band2 /Y_07162019_pruned/output/b2.png --output_path_band3 /Y_07162019_pruned/output/b3.png --output_path_band4 /Y_07162019_pruned/output/b4.png --output_path_band5 /Y_07162019_pruned/output/b5.png --work_megapix 0.6
+
 # Works with Micasense 5 band images. Outputs orthophotomosaic images of each bandself.
 # Required cpp/stitching.cpp to be compiled and executable as 'stitching_multi' . Use g++ stitching.cpp -u /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs`
 # stitching_multi program will use CUDA GPU if opencv was installed with CUDA support
@@ -42,7 +44,8 @@ def run():
     ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
     ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
     ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
-    ap.add_argument("-w", "--work_megapix", required=True, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
+    ap.add_argument("-w", "--work_megapix", required=False, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
+    ap.add_argument("-x", "--ba_refine_mask", required=False, default='xxxxx', help="Set refinement mask for bundle adjustment. It looks like 'x_xxx' where 'x' means refine respective parameter and '_' means don't refine one, and has the following format: <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle adjustment doesn't support estimation of selected parameter then the respective flag is ignored.")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
@@ -59,6 +62,7 @@ def run():
     output_path_band4 = args["output_path_band4"]
     output_path_band5 = args["output_path_band5"]
     work_megapix = args["work_megapix"]
+    ba_refine_mask = args["ba_refine_mask"]
 
     if sys.version_info[0] < 3:
         raise Exception("Must use Python3. Use python3 in your command line.")
@@ -258,7 +262,17 @@ def run():
     sep = " ";
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
-    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix
+
+    del imageNamesAll
+    del imageTempNames
+    del imageNamesDict
+    del panelNames
+    del imageNameCaptures
+    del imageCaptureSets
+    del images_to_stitch1
+    del images_to_stitch2
+
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix+" --ba_refine_mask "+ba_refine_mask
     # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path+" --work_megapix "+work_megapix
     if log_file_path is not None:
         eprint(stitchCmd)

@@ -34,4 +34,4 @@ RUN git clone https://github.com/solgenomics/DroneImageScripts \
     && g++ /DroneImageScripts/cpp/stitching_multi.cpp -o /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs` \
     && g++ /DroneImageScripts/cpp/stitching_single.cpp -o /usr/bin/stitching_single `pkg-config opencv4 --cflags --libs`
 
-RUN apt-get install -y screen htop
+RUN apt-get install -y screen htop nano vim
