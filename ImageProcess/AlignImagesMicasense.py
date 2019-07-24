@@ -3,6 +3,8 @@
 
 #python3 /workdir/cxgn/DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /workdir/Y_07162019_pruned/log.txt --image_path /workdir/Y_07162019_pruned/prunedv2 --panel_image_path /workdir/Y_07162019_pruned/panel2 --output_path /workdir/Y_07162019_pruned/output/ --final_rgb_output_path /workdir/Y_07162019_pruned/output/rgb.png --final_rnre_output_path /workdir/Y_07162019_pruned/output/rnre.png --output_path_band1 /workdir/Y_07162019_pruned/output/b1.png --output_path_band2 /workdir/Y_07162019_pruned/output/b2.png --output_path_band3 /workdir/Y_07162019_pruned/output/b3.png --output_path_band4 /workdir/Y_07162019_pruned/output/b4.png --output_path_band5 /workdir/Y_07162019_pruned/output/b5.png --work_megapix 0.6
 
+#python3 /workdir/cxgn/DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /workdir/Y_07162019_pruned_i2/log.txt --image_path /workdir/Y_07162019_pruned_i2/prunedv2 --panel_image_path /workdir/Y_07162019_pruned_i2/panel2 --output_path /workdir/Y_07162019_pruned_i2/output/ --final_rgb_output_path /workdir/Y_07162019_pruned_i2/output/rgb.png --final_rnre_output_path /workdir/Y_07162019_pruned_i2/output/rnre.png --output_path_band1 /workdir/Y_07162019_pruned_i2/output/b1.png --output_path_band2 /workdir/Y_07162019_pruned_i2/output/b2.png --output_path_band3 /workdir/Y_07162019_pruned_i2/output/b3.png --output_path_band4 /workdir/Y_07162019_pruned_i2/output/b4.png --output_path_band5 /workdir/Y_07162019_pruned_i2/output/b5.png --work_megapix 0.1 --ba_refine_mask '_____'
+
 #python3 /DroneImageScripts/ImageProcess/AlignImagesMicasense.py --log_file_path /Y_07162019_pruned/log.txt --image_path /Y_07162019_pruned/prunedv2 --panel_image_path /Y_07162019_pruned/panel2 --output_path /Y_07162019_pruned/output/ --final_rgb_output_path /Y_07162019_pruned/output/rgb.png --final_rnre_output_path /Y_07162019_pruned/output/rnre.png --output_path_band1 /Y_07162019_pruned/output/b1.png --output_path_band2 /Y_07162019_pruned/output/b2.png --output_path_band3 /Y_07162019_pruned/output/b3.png --output_path_band4 /Y_07162019_pruned/output/b4.png --output_path_band5 /Y_07162019_pruned/output/b5.png --work_megapix 0.6
 
 # Works with Micasense 5 band images. Outputs orthophotomosaic images of each bandself.
@@ -273,7 +275,8 @@ def run():
     del images_to_stitch1
     del images_to_stitch2
 
-    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(num_images)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix+" --ba_refine_mask "+ba_refine_mask
+    stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(num_images)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+"
+    # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(num_images)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix+" --ba_refine_mask "+ba_refine_mask
     # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(len(images_to_stitch1))+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --try_cuda yes --log_file "+log_file_path+" --work_megapix "+work_megapix
     if log_file_path is not None:
         eprint(stitchCmd)
