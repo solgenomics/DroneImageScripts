@@ -236,8 +236,8 @@ def run():
 
     warp_matrices = None
     if tempImagePath is not None:
-        if os.path.exists(tempImagePath+'capturealignment.pkl'):
-            with open(tempImagePath+'capturealignment.pkl', 'rb') as f:
+        if os.path.exists(os.path.join(tempImagePath,'capturealignment.pkl')):
+            with open(os.path.join(tempImagePath,'capturealignment.pkl'), 'rb') as f:
                 warp_matrices, alignment_pairs = pickle.load(f)
 
     if warp_matrices is None:
@@ -254,7 +254,7 @@ def run():
         print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
     if tempImagePath is not None:
-        with open(tempImagePath+'capturealignment.pkl', 'wb') as f:
+        with open(os.path.join(tempImagePath,'capturealignment.pkl'), 'wb') as f:
             pickle.dump([warp_matrices, alignment_pairs], f)
 
     images_to_stitch1 = []
