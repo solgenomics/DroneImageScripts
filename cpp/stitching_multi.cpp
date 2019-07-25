@@ -589,6 +589,7 @@ int main(int argc, char* argv[])
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
+    LOGLN("Number of images: " << num_images);
     if (num_images < 2)
     {
         LOGLN("Need more images");
