@@ -127,20 +127,20 @@ string features_type = "orb";
 #endif
 string matcher_type = "homography";
 string estimator_type = "homography";
-string ba_cost_func = "ray";
-string ba_refine_mask = "xxxxx";
+string ba_cost_func = "ray"; // no|reproj|ray|affine
+string ba_refine_mask = "xxxxx"; // x____ ... _____
 bool do_wave_correct = true;
-WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
+WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
 bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
 int expos_comp_block_size = 32;
 float match_conf = 0.3f;
-string seam_find_type = "gc_color";
-int blend_type = Blender::MULTI_BAND;
+string seam_find_type = "gc_color"; //no|voronoi|gc_color|gc_colorgrad
+int blend_type = Blender::MULTI_BAND; //Blender::NO, Blender::Feather
 int timelapse_type = Timelapser::AS_IS;
 float blend_strength = 5;
 string result_name = "result.jpg";
