@@ -198,26 +198,26 @@ def run():
         return(gamma_corr_rgb)
 
     captures = []
-    captureGPSDict = {}
-    counter = 0
+    # captureGPSDict = {}
+    # counter = 0
     for i in imageNameCaptures:
         im = Capture(i)
         captures.append(im)
-        latitudes = []
-        longitudes = []
-        altitudes = []
-        for i,img in enumerate(im.images):
-            latitudes.append(img.latitude)
-            longitudes.append(img.longitude)
-            altitudes.append(img.altitude)
-        captureGPSDict[counter] = [round(statistics.mean(latitudes), 4), round(statistics.mean(longitudes), 4), statistics.mean(altitudes)]
-        counter = counter + 1
+        # latitudes = []
+        # longitudes = []
+        # altitudes = []
+        # for i,img in enumerate(im.images):
+        #     latitudes.append(img.latitude)
+        #     longitudes.append(img.longitude)
+        #     altitudes.append(img.altitude)
+        # captureGPSDict[counter] = [round(statistics.mean(latitudes), 4), round(statistics.mean(longitudes), 4), statistics.mean(altitudes)]
+        # counter = counter + 1
 
-    GPSsorter = {}
-    for counter, loc in captureGPSDict.items(): 
-        if loc[0] not in GPSsorter:
-            GPSsorter[loc[0]] = {}
-        GPSsorter[loc[0]][loc[1]] = counter
+    # GPSsorter = {}
+    # for counter, loc in captureGPSDict.items(): 
+    #     if loc[0] not in GPSsorter:
+    #         GPSsorter[loc[0]] = {}
+    #     GPSsorter[loc[0]][loc[1]] = counter
 
     imageCaptureSets = captures
 
