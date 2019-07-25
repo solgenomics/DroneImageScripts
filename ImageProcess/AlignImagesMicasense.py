@@ -31,6 +31,7 @@ def run():
     from micasense.panel import Panel
     import micasense.utils as msutils
     import csv
+    import pickle
 
     freeze_support()
 
@@ -80,11 +81,17 @@ def run():
     #Must supply either image_path or file_with_image_paths as a source of images
     imageNamesAll = []
     imageTempNames = []
+    tempImagePath = None
     if image_path is not None:
+
         tempImagePath = os.path.join(image_path,'temp')
+        if not os.path.exists(tempImagePath):
+            os.makedirs(tempImagePath)
+
         imageNamesAll = glob.glob(os.path.join(image_path,'*.tif'))
         for idx, val in enumerate(imageNamesAll):
             imageTempNames.append(os.path.join(tempImagePath,'temp'+str(idx)+'.tif'))
+
     elif file_with_image_paths is not None:
         with open(file_with_image_paths) as fp:
             for line in fp:
@@ -226,7 +233,15 @@ def run():
     else:
         print(img_type)
         print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
-    warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
+
+    warp_matrices = None
+    if tempImagePath in not None:
+        if os.path.exists(tempImagePath+'capturealignment.pkl'):
+            with open(tempImagePath+'capturealignment.pkl', 'rb') as f:
+                warp_matrices, alignment_pairs = pickle.load(f)
+
+    if warp_matrices in not None:
+        warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
                                                               warp_mode = warp_mode,
@@ -237,6 +252,10 @@ def run():
         eprint("Finished Aligning, warp matrices={}".format(warp_matrices))
     else:
         print("Finished Aligning, warp matrices={}".format(warp_matrices))
+
+    if tempImagePath in not None:
+        with open(tempImagePath+'capturealignment.pkl', 'wb') as f:
+            pickle.dump([warp_matrices, alignment_pairs], f)
 
     images_to_stitch1 = []
     images_to_stitch2 = []
