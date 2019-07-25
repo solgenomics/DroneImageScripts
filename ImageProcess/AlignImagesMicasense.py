@@ -235,12 +235,12 @@ def run():
         print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
 
     warp_matrices = None
-    if tempImagePath in not None:
+    if tempImagePath is not None:
         if os.path.exists(tempImagePath+'capturealignment.pkl'):
             with open(tempImagePath+'capturealignment.pkl', 'rb') as f:
                 warp_matrices, alignment_pairs = pickle.load(f)
 
-    if warp_matrices in not None:
+    if warp_matrices is not None:
         warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
@@ -253,7 +253,7 @@ def run():
     else:
         print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
-    if tempImagePath in not None:
+    if tempImagePath is not None:
         with open(tempImagePath+'capturealignment.pkl', 'wb') as f:
             pickle.dump([warp_matrices, alignment_pairs], f)
 
