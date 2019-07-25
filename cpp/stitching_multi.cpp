@@ -134,13 +134,13 @@ WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRE
 bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN, ExposureCompensator::GAIN_BLOCKS
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
 int expos_comp_block_size = 32;
 float match_conf = 0.3f;
 string seam_find_type = "gc_color"; //no|voronoi|gc_color|gc_colorgrad
-int blend_type = Blender::MULTI_BAND; //Blender::NO, Blender::Feather
+int blend_type = Blender::MULTI_BAND; //Blender::NO, Blender::Feather, Blender::MULTI_BAND
 int timelapse_type = Timelapser::AS_IS;
 float blend_strength = 5;
 string result_name = "result.jpg";
