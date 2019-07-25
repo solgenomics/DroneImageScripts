@@ -282,6 +282,14 @@ def run():
         images_to_stitch2.append(imageTempNames[count])
         count = count + 1
 
+        del cropped_dimensions
+        del edges
+        del im_aligned
+        del i1
+        del i2
+        del image1
+        del image2
+
     sep = " ";
     images_string1 = sep.join(images_to_stitch1)
     images_string2 = sep.join(images_to_stitch2)
