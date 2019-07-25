@@ -240,7 +240,7 @@ def run():
             with open(tempImagePath+'capturealignment.pkl', 'rb') as f:
                 warp_matrices, alignment_pairs = pickle.load(f)
 
-    if warp_matrices is not None:
+    if warp_matrices is None:
         warp_matrices, alignment_pairs = imageutils.align_capture(captures[0],
                                                               ref_index = match_index,
                                                               max_iterations = max_alignment_iterations,
