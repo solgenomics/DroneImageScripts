@@ -125,8 +125,8 @@ string features_type = "surf";
 #else
 string features_type = "orb";
 #endif
-string matcher_type = "homography";
-string estimator_type = "homography";
+string matcher_type = "homography"; //homography|affine
+string estimator_type = "homography"; //homography|affine
 string ba_cost_func = "ray"; // no|reproj|ray|affine
 string ba_refine_mask = "xxxxx"; // x____ ... _____
 bool do_wave_correct = true;
