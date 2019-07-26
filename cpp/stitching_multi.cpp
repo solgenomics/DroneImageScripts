@@ -119,7 +119,7 @@ bool try_cuda = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
-float conf_thresh = 1.f;
+float conf_thresh = 0.8f; //1.f default, 0.8f works with range_width=2
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
 #else
@@ -127,7 +127,7 @@ string features_type = "orb";
 #endif
 string matcher_type = "homography"; //homography|affine
 string estimator_type = "homography"; //homography|affine
-string ba_cost_func = "ray"; // no|reproj|ray|affine
+string ba_cost_func = "reproj"; // no|reproj|ray|affine //ray default, reproj and ray work, affine did not
 string ba_refine_mask = "xxxxx"; // x____ ... _____
 bool do_wave_correct = true;
 WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
@@ -146,7 +146,7 @@ float blend_strength = 5;
 string result_name = "result.jpg";
 string result_name2 = "result2.jpg";
 bool timelapse = false;
-int range_width = -1;
+int range_width = 2; //-1 default, 2 works
 int num_images = 0;
 string log_file_path = "/var/log/sgn/error.log";
 
