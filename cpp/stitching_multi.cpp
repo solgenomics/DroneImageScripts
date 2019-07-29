@@ -133,7 +133,7 @@ bool do_wave_correct = true;
 WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
 bool save_graph = false;
 std::string save_graph_to;
-string warp_type = "spherical";
+string warp_type = "plane"; //default spherical. spherical works for small field (49 captures). should try PaniniA2B1
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN, ExposureCompensator::GAIN_BLOCKS
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
