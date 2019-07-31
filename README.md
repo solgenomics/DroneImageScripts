@@ -5,7 +5,7 @@ This repository contains all Python drone image processing scripts which are use
 
 To pull in and run a standalone docker image, so that you can use these scripts, use the following command. This docker image has OpenCV and all other dependencies installed (https://hub.docker.com/r/nmorales3142/imagebreeddroneimagescripts).
 
-`sudo docker run -t -d nmorales3142/imagebreeddroneimagescripts:1.0`
+`sudo docker run -t -d nmorales3142/imagebreeddroneimagescripts:1.02`
 
 To enter running docker container, where all DroneImageScripts are runnable:
 
