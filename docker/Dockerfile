@@ -31,6 +31,8 @@ RUN pip3 install imutils numpy matplotlib pillow statistics PyExifTool pytz pyso
     && mv /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.cpython-36m-x86_64-linux-gnu.so /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.so
 
 RUN git clone https://github.com/solgenomics/DroneImageScripts \
+    && cd /DroneImageScripts \
+    && git checkout 1.01 \
     && g++ /DroneImageScripts/cpp/stitching_multi.cpp -o /usr/bin/stitching_multi `pkg-config opencv4 --cflags --libs` \
     && g++ /DroneImageScripts/cpp/stitching_single.cpp -o /usr/bin/stitching_single `pkg-config opencv4 --cflags --libs`
 
