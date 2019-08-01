@@ -38,7 +38,7 @@ def run():
     ap.add_argument("-r", "--output_path_band3", required=True, help="output file path in which resulting band 3 will be placed. useful for using from the web interface")
     ap.add_argument("-s", "--output_path_band4", required=True, help="output file path in which resulting band 4 will be placed. useful for using from the web interface")
     ap.add_argument("-u", "--output_path_band5", required=True, help="output file path in which resulting band 5 will be placed. useful for using from the web interface")
-    ap.add_argument("-w", "--work_megapix", required=False, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
+    ap.add_argument("-w", "--work_megapix", required=False, help="Resolution for image registration step. The default is 0.6 Mpx")
     ap.add_argument("-x", "--ba_refine_mask", required=False, default='xxxxx', help="Set refinement mask for bundle adjustment. It looks like 'x_xxx' where 'x' means refine respective parameter and '_' means don't refine one, and has the following format: <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle adjustment doesn't support estimation of selected parameter then the respective flag is ignored.")
     args = vars(ap.parse_args())
 

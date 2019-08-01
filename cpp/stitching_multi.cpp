@@ -116,10 +116,10 @@ vector<String> img_names;
 vector<String> img_names2;
 bool preview = false;
 bool try_cuda = false;
-double work_megapix = 0.6;
+double work_megapix = 0.4;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
-float conf_thresh = 0.8f; //1.f default, 0.8f works with range_width=2
+float conf_thresh = 1.f; //1.f default, 0.8f works with range_width=2
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
 #else
@@ -128,7 +128,7 @@ string features_type = "orb";
 string matcher_type = "homography"; //homography|affine
 string estimator_type = "homography"; //homography|affine
 string ba_cost_func = "reproj"; // no|reproj|ray|affine //ray default, reproj and ray work, affine did not
-string ba_refine_mask = "xxxxx"; // x____ ... _____
+string ba_refine_mask = "xxxxx"; // x____ ... _____ ... xxxxx, <fx><skew><ppx><aspect><ppy>
 bool do_wave_correct = true;
 WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
 bool save_graph = false;
