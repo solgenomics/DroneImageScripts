@@ -108,7 +108,7 @@ def run():
             eprint("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
         else:
             print("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
-        os._exit
+        #os._exit
 
     for imageName in panelNames:
         img = Image(imageName)
