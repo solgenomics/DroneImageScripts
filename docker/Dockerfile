@@ -30,7 +30,7 @@ RUN pip3 install imutils numpy matplotlib pillow statistics PyExifTool pytz pyso
     && ldconfig \
     && mv /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.cpython-36m-x86_64-linux-gnu.so /usr/local/lib/python3.6/dist-packages/cv2/python-3.6/cv2.so
 
-RUN apt-get install -y screen htop nano vim
+RUN apt-get install -y screen htop nano vim unzip
 
 RUN git clone https://github.com/solgenomics/DroneImageScripts \
     && cd /DroneImageScripts \
