@@ -116,10 +116,10 @@ vector<String> img_names;
 vector<String> img_names2;
 bool preview = false;
 bool try_cuda = false;
-double work_megapix = 0.4;
+double work_megapix = -1;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
-float conf_thresh = 1.f; //1.f default, 0.8f works with range_width=2
+float conf_thresh = 0.6f; //1.f default, 0.8f works with range_width=2
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
 #else
@@ -133,7 +133,7 @@ bool do_wave_correct = true;
 WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
 bool save_graph = false;
 std::string save_graph_to;
-string warp_type = "plane"; //default spherical. spherical works for small field (49 captures). should try PaniniA2B1
+string warp_type = "transverseMercator"; //default spherical. spherical and plane works for small field (49 captures). should try PaniniA2B1
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN, ExposureCompensator::GAIN_BLOCKS
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
@@ -146,7 +146,7 @@ float blend_strength = 5;
 string result_name = "result.jpg";
 string result_name2 = "result2.jpg";
 bool timelapse = false;
-int range_width = 2; //-1 default, 2 works
+int range_width = 1; //-1 default, 2 works
 int num_images = 0;
 string log_file_path = "/var/log/sgn/error.log";
 
