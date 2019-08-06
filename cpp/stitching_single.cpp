@@ -113,36 +113,36 @@ static void printUsage()
 vector<String> img_names;
 bool preview = false;
 bool try_cuda = false;
-double work_megapix = 0.6;
+double work_megapix = -1;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
-float conf_thresh = 1.f;
+float conf_thresh = 0.6f; //1.f default, 0.8f works with range_width=2
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
 #else
 string features_type = "orb";
 #endif
-string matcher_type = "homography";
-string estimator_type = "homography";
-string ba_cost_func = "ray";
-string ba_refine_mask = "xxxxx";
+string matcher_type = "homography"; //homography|affine
+string estimator_type = "homography"; //homography|affine
+string ba_cost_func = "reproj"; // no|reproj|ray|affine //ray default, reproj and ray work, affine did not
+string ba_refine_mask = "xxxxx"; // x____ ... _____ ... xxxxx, <fx><skew><ppx><aspect><ppy>
 bool do_wave_correct = true;
-WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
+WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ; // detail::WAVE_CORRECT_VERT
 bool save_graph = false;
 std::string save_graph_to;
-string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
+string warp_type = "transverseMercator"; //default spherical. spherical and plane works for small field (49 captures). should try PaniniA2B1
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //ExposureCompensator::NO, ExposureCompensator::GAIN, ExposureCompensator::GAIN_BLOCKS
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
 int expos_comp_block_size = 32;
 float match_conf = 0.3f;
-string seam_find_type = "gc_color";
-int blend_type = Blender::MULTI_BAND;
+string seam_find_type = "gc_color"; //no|voronoi|gc_color|gc_colorgrad
+int blend_type = Blender::MULTI_BAND; //Blender::NO, Blender::Feather, Blender::MULTI_BAND
 int timelapse_type = Timelapser::AS_IS;
 float blend_strength = 5;
 string result_name = "result.jpg";
 bool timelapse = false;
-int range_width = -1;
+int range_width = 1; //-1 default, 2 works
 int num_images = 0;
 string log_file_path = "/var/log/sgn/error.log";
 

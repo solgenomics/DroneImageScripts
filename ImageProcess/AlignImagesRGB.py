@@ -24,7 +24,7 @@ def run():
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names and temporary file names for each image in it, comma separated and separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
     ap.add_argument("-y", "--final_rgb_output_path", required=True, help="output file path for stitched RGB image")
-    ap.add_argument("-w", "--work_megapix", required=True, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
+    ap.add_argument("-w", "--work_megapix", required=False, default=0.6, help="Resolution for image registration step. The default is 0.6 Mpx")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
@@ -60,19 +60,6 @@ def run():
             print("No input images given. use image_path OR file_with_image_paths args")
         os._exit
 
-    def enhance_image(rgb):
-        gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
-        gaussian_rgb[gaussian_rgb<0] = 0
-        gaussian_rgb[gaussian_rgb>1] = 1
-        unsharp_rgb = cv2.addWeighted(rgb, 1.5, gaussian_rgb, -0.5, 0)
-        unsharp_rgb[unsharp_rgb<0] = 0
-        unsharp_rgb[unsharp_rgb>1] = 1
-
-        # Apply a gamma correction to make the render appear closer to what our eyes would see
-        gamma = 1.4
-        gamma_corr_rgb = unsharp_rgb**(1.0/gamma)
-        return(gamma_corr_rgb)
-
     img_type = "reflectance"
     match_index = 0 # Index of the band 
     max_alignment_iterations = 1000
@@ -81,7 +68,7 @@ def run():
 
     sep = " ";
     images_string1 = sep.join(imageNamesAll)
-    stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix
+    stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' --log_file "+log_file_path
     # stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' --try_cuda yes --log_file "+log_file_path+" --work_megapix "+work_megapix
     if log_file_path is not None:
         eprint(stitchCmd)
@@ -90,11 +77,6 @@ def run():
         print(stitchCmd)
         print(len(stitchCmd))
     os.system(stitchCmd)
-
-    final_result_img1 = cv2.imread(final_rgb_output_path, cv2.IMREAD_UNCHANGED)
-    final_result_img1 = enhance_image(final_result_img1/255)
-
-    plt.imsave(final_rgb_output_path, final_result_img1)
 
 #     {
 #     OK = 0,
