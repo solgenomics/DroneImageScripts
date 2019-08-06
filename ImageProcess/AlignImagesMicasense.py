@@ -166,39 +166,42 @@ def run():
     capture_count = 0
     skip_count = 0
     image_count = 0
-    proceed = 1
+    skip_proceed = 1
+    num_captures_proceed = 1
     for i in sorted (imageNamesDict.keys()):
         im = []
-        for j in sorted (imageNamesDict[i].keys()):
-            imageName = imageNamesDict[i][j]
-            img = Image(imageName)
-            # meta = img.meta
-            # flightImageRaw=plt.imread(imageName)
-            # flightRadianceImage, _, _, _ = msutils.raw_image_to_radiance(meta, flightImageRaw)
-            # flightReflectanceImage = flightRadianceImage * panelBandCorrection[img.band_name]
-            # flightUndistortedReflectance = msutils.correct_lens_distortion(meta, flightReflectanceImage)
-            # calibratedImage = imageNameToCalibratedImageName[imageName]
-            # print(flightUndistortedReflectance.shape)
-            # plt.imsave(calibratedImage, flightUndistortedReflectance, cmap='gray')
-            # calIm = Image(calibratedImage, meta = meta)
-            im.append(img)
-        if len(im) > 0:
-            if thin_images is not None:
-                if image_count > 0 and skip_count < thin_images:
-                    skip_count = skip_count + 1
-                    image_count = image_count + 1
-                    proceed = 0
+        if thin_images is not None:
+            if image_count > 0 and skip_count < thin_images:
+                skip_count = skip_count + 1
+                skip_proceed = 0
+            else:
+                skip_count = 0
+                skip_proceed = 1
+            image_count = image_count + 1
+
+        if skip_proceed == 1:
+            if number_captures is not None:
+                if capture_count < number_captures:
+                    num_captures_proceed = 1
                 else:
-                    skip_count = 0
-                    image_count = image_count + 1
-                    proceed = 1
-            if proceed == 1:
-                if number_captures is not None:
-                    if capture_count < number_captures:
-                        imageNameCaptures.append(im)
-                else:
+                    num_captures_proceed = 0
+            if num_captures_proceed == 1:
+                for j in sorted (imageNamesDict[i].keys()):
+                    imageName = imageNamesDict[i][j]
+                    img = Image(imageName)
+                    # meta = img.meta
+                    # flightImageRaw=plt.imread(imageName)
+                    # flightRadianceImage, _, _, _ = msutils.raw_image_to_radiance(meta, flightImageRaw)
+                    # flightReflectanceImage = flightRadianceImage * panelBandCorrection[img.band_name]
+                    # flightUndistortedReflectance = msutils.correct_lens_distortion(meta, flightReflectanceImage)
+                    # calibratedImage = imageNameToCalibratedImageName[imageName]
+                    # print(flightUndistortedReflectance.shape)
+                    # plt.imsave(calibratedImage, flightUndistortedReflectance, cmap='gray')
+                    # calIm = Image(calibratedImage, meta = meta)
+                    im.append(img)
+                if len(im) > 0:
                     imageNameCaptures.append(im)
-                capture_count = capture_count + 1
+                    capture_count = capture_count + 1
 
     def enhance_image(rgb):
         gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
