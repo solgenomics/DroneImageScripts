@@ -155,28 +155,18 @@ def run():
             print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
 
     imageNamesDict = {}
-    skip_count = 0
-    image_count = 0
-    proceed = 1
     for i in imageNamesAll:
-        if thin_images is not None:
-            if image_count > 0 and skip_count < thin_images:
-                skip_count = skip_count + 1
-                image_count = image_count + 1
-                proceed = 0
-            else:
-                skip_count = 0
-                image_count = image_count + 1
-                proceed = 1
-        if proceed == 1:
-            s = i.split("_")
-            k = s[-1].split(".")
-            if s[-2] not in imageNamesDict:
-                imageNamesDict[s[-2]] = {}
-            imageNamesDict[s[-2]][k[0]] = i
+        s = i.split("_")
+        k = s[-1].split(".")
+        if s[-2] not in imageNamesDict:
+            imageNamesDict[s[-2]] = {}
+        imageNamesDict[s[-2]][k[0]] = i
 
     imageNameCaptures = []
     capture_count = 0
+    skip_count = 0
+    image_count = 0
+    proceed = 1
     for i in sorted (imageNamesDict.keys()):
         im = []
         for j in sorted (imageNamesDict[i].keys()):
@@ -193,12 +183,22 @@ def run():
             # calIm = Image(calibratedImage, meta = meta)
             im.append(img)
         if len(im) > 0:
-            if number_captures is not None:
-                if capture_count < number_captures:
+            if thin_images is not None:
+                if image_count > 0 and skip_count < thin_images:
+                    skip_count = skip_count + 1
+                    image_count = image_count + 1
+                    proceed = 0
+                else:
+                    skip_count = 0
+                    image_count = image_count + 1
+                    proceed = 1
+            if proceed == 1:
+                if number_captures is not None:
+                    if capture_count < number_captures:
+                        imageNameCaptures.append(im)
+                else:
                     imageNameCaptures.append(im)
-            else:
-                imageNameCaptures.append(im)
-            capture_count = capture_count + 1
+                capture_count = capture_count + 1
 
     def enhance_image(rgb):
         gaussian_rgb = cv2.GaussianBlur(rgb, (9,9), 10.0)
