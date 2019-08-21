@@ -24,6 +24,7 @@ results_outfile_path = args["results_outfile_path"]
 
 image = cv2.imread(input_image_path, cv2.IMREAD_UNCHANGED)
 
+# BGR
 lower = [180, 180, 180]
 upper = [255, 255, 255]
 
@@ -54,23 +55,23 @@ cv2.drawContours(output, hull, -1, (0,255,0), 2)
 
 #cv2.rectangle(output,(x,y),(x+w,y+h),(0,255,0),2)
 
-# for i in range(len(contours)):
-#     c = contours[i]
-#     h = hierarchy[0]
-#     M = cv2.moments(c)
-#     cX = int((M["m10"] / M["m00"]) * ratio)
-#     cY = int((M["m01"] / M["m00"]) * ratio)
-#     shape = sd.detect(c)
-#     print(shape)
-# 
-#     if shape == 'circle':
-#         print(h[i])
-#         c = c.astype("float")
-#         c *= ratio
-#         c = c.astype("int")
-#         cv2.drawContours(image, contours, i, (255, 255, 0))
-        # cv2.imshow("Img"+str(i), image)
-        # cv2.waitKey(0)
+for i in range(len(contours)):
+    c = contours[i]
+    h = hierarchy[0]
+    # M = cv2.moments(c)
+    # cX = int((M["m10"] / M["m00"]) * ratio)
+    # cY = int((M["m01"] / M["m00"]) * ratio)
+    # shape = sd.detect(c)
+    # print(shape)
+    #
+    # if shape == 'circle':
+    # print(h[i])
+    c = c.astype("float")
+    c *= ratio
+    c = c.astype("int")
+    cv2.drawContours(output, contours, i, (255, 255, 0), 1)
+    # cv2.imshow("Img"+str(i), image)
+    # cv2.waitKey(0)
 
 cv2.imwrite(outfile_path, output)
 
