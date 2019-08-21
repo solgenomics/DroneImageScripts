@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import math
 from matplotlib import pyplot as plt
+import csv
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -18,16 +19,18 @@ args = vars(ap.parse_args())
 
 input_images = args["image_paths"]
 outfile_paths = args["outfile_paths"]
-results_ourfile = args["results_outfile_path"]
+results_outfile_path = args["results_outfile_path"]
 images = input_images.split(",")
 outfiles = outfile_paths.split(",")
 
 count = 0
+result_file_lines = []
 for image in images:
     img = cv2.imread(image)
     descriptor = cv2.xfeatures2d.SIFT_create()
     (kps, features) = descriptor.detectAndCompute(img, None)
     print(features)
+    result_file_lines.append([len(kps)])
 
     kpsimage = cv2.drawKeypoints(img, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     #cv2.imshow('image'+str(count),kpsimage)
@@ -37,3 +40,9 @@ for image in images:
 
 #cv2.waitKey(0)
 
+if results_outfile_path is not None:
+    with open(results_outfile_path, 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(result_file_lines)
+
+    writeFile.close()
