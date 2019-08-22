@@ -53,14 +53,12 @@ x,y,w,h = cv2.boundingRect(c)
 hull = [cv2.convexHull(c)]
 cv2.drawContours(output, hull, -1, (0,255,0), 2)
 largestcontourarea = cv2.contourArea(hull[0])
-print(largestcontourarea)
 
 polygon = []
 for p in hull[0]:
     polygon.append({'x':p[0][0], 'y':p[0][1]})
 #cv2.rectangle(output,(x,y),(x+w,y+h),(0,255,0),2)
 
-print(polygon)
 sd = CropPolygonsToSingleImage()
 finalImage = sd.crop(output, [polygon])
 grayimage = cv2.cvtColor(finalImage,cv2.COLOR_BGR2GRAY)
