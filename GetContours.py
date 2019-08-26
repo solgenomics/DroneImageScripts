@@ -23,7 +23,10 @@ outfile_path = args["outfile_path"]
 results_outfile_path = args["results_outfile_path"]
 
 image = cv2.imread(input_image_path, cv2.IMREAD_UNCHANGED)
-image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+img_shape = image.shape
+if len(img_shape) == 3:
+    if img_shape[2] == 3:
+        image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 imgray = cv2.blur(image,(15,15))
 
 #ret,thresh = cv2.threshold(imgray, math.floor(np.average(imgray)), 255, cv2.THRESH_BINARY_INV)
@@ -40,7 +43,7 @@ if imutils.is_cv3():
 else:
     contours, hierarchy = cv2.findContours(dilated,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
-print(hierarchy)
+#print(hierarchy)
 ratio = 1
 sd = ShapeDetector()
 
@@ -51,10 +54,10 @@ for i in range(len(contours)):
     cX = int((M["m10"] / M["m00"]) * ratio)
     cY = int((M["m01"] / M["m00"]) * ratio)
     shape = sd.detect(c)
-    print(shape)
+    #print(shape)
  
     if shape == 'circle':
-        print(h[i])
+        #print(h[i])
         c = c.astype("float")
         c *= ratio
         c = c.astype("int")
