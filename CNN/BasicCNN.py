@@ -56,7 +56,7 @@ with open(input_file) as csv_file:
 
         value = float(row[1])
         #value = str(int(float(row[1])*100))
-        #value = str(math.ceil(float(row[1]) / 2.)*2)
+        value = str(math.ceil(float(row[1]) / 2.)*2)
         #value = str(math.ceil(float(row[1]) / 3.)*3)
         labels.append(value)
         if value in unique_labels.keys():
@@ -72,7 +72,8 @@ else:
 
     labels_predict = []
     unique_labels_predict = {}
-    if len(labels) == len(data):
+    if len(unique_labels.keys()) == len(data):
+        print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
@@ -83,7 +84,8 @@ else:
         else:
             for l in labels:
                 labels_predict.append(str(math.ceil(float(l) / 3.)*3))
-    elif len(labels)/len(data) > 0.6:
+    elif len(unique_labels.keys())/len(data) > 0.6:
+        print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
