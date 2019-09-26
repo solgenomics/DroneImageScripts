@@ -23,6 +23,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Dropout
 from PIL import Image
 from keras.models import load_model
+from keras.utils import to_categorical
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -35,6 +36,7 @@ input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 
+unique_labels = {}
 labels = []
 data = []
 
@@ -52,93 +54,147 @@ with open(input_file) as csv_file:
         #print(image.shape)
         data.append(image)
 
-        #value = str(int(float(row[1])))
+        value = float(row[1])
+        #value = str(int(float(row[1])*100))
         #value = str(math.ceil(float(row[1]) / 2.)*2)
-        value = str(math.ceil(float(row[1]) / 3.)*3)
+        #value = str(math.ceil(float(row[1]) / 3.)*3)
         labels.append(value)
+        if value in unique_labels.keys():
+            unique_labels[value] += 1
+        else:
+            unique_labels[value] = 1
 
-lb = LabelBinarizer()
-labels = lb.fit_transform(labels)
-print(len(lb.classes_))
+lines = []
+if len(unique_labels) < 2:
+    lines = ["Number of labels is less than 2, so nothing to predict!"]
+else:
+    print(labels)
 
-print("[INFO] number of labels: %d" % (len(labels)))
-print("[INFO] number of images: %d" % (len(data)))
-
-print("[INFO] splitting training set...")
-(trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
-
-init = "he_normal"
-reg = regularizers.l2(0.01)
-chanDim = -1
-
-model = Sequential()
-model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(32, 32, 3)))
-model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# stack two more CONV layers, keeping the size of each filter
-# as 3x3 but increasing to 64 total learned filters
-model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# increase the number of filters again, this time to 128
-model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-model.add(Activation("relu"))
-model.add(BatchNormalization(axis=chanDim))
-model.add(Dropout(0.25))
-
-# fully-connected layer
-model.add(Flatten())
-model.add(Dense(512, kernel_initializer=init))
-model.add(Activation("relu"))
-model.add(BatchNormalization())
-model.add(Dropout(0.5))
-
-# softmax classifier
-model.add(Dense(len(lb.classes_)))
-model.add(Activation("softmax"))
-
-# model.add(Conv2D(8, (3, 3), padding="same", input_shape=(32, 32, 3)))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Conv2D(16, (3, 3), padding="same"))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Conv2D(32, (3, 3), padding="same"))
-# model.add(Activation("relu"))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-# model.add(Flatten())
-# model.add(Dense(3))
-# model.add(Activation("softmax"))
-
-for layer in model.layers:
-    print(layer.output_shape)
-
-print("[INFO] training network...")
-opt = Adam(lr=1e-3, decay=1e-3 / 50)
-model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32)
-
-print("[INFO] evaluating network...")
-predictions = model.predict(testX, batch_size=32)
-report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
-print(report)
+    labels_predict = []
+    unique_labels_predict = {}
+    if len(labels) == len(data):
+        all_labels_decimal = 1
+        for l in labels:
+            if l > 1 or l < 0:
+                all_labels_decimal = 0
+        if all_labels_decimal == 1:
+            for l in labels:
+                labels_predict.append(str(math.ceil(float(l*100) / 3.)*3/100))
+        else:
+            for l in labels:
+                labels_predict.append(str(math.ceil(float(l) / 3.)*3))
+    elif len(labels)/len(data) > 0.6:
+        all_labels_decimal = 1
+        for l in labels:
+            if l > 1 or l < 0:
+                all_labels_decimal = 0
+        if all_labels_decimal == 1:
+            for l in labels:
+                labels_predict.append(str(math.ceil(float(l*100) / 2.)*2/100))
+        else:
+            for l in labels:
+                labels_predict.append(str(math.ceil(float(l) / 2.)*2))
+    else:
+        for l in labels:
+            labels_predict.append(str(l))
 
 
-lines = report.split('\n')
+    for value in labels_predict:
+        if value in unique_labels_predict.keys():
+            unique_labels_predict[value] += 1
+        else:
+            unique_labels_predict[value] = 1
+
+    lb = LabelBinarizer()
+    labels = lb.fit_transform(labels_predict)
+    print(len(lb.classes_))
+    #print(labels)
+
+    separator = ", "
+    lines.append("Predicted Labels: " + separator.join(unique_labels_predict.keys()))
+
+    print("[INFO] number of labels: %d" % (len(labels)))
+    print("[INFO] number of images: %d" % (len(data)))
+
+    print("[INFO] splitting training set...")
+    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
+
+    init = "he_normal"
+    reg = regularizers.l2(0.01)
+    chanDim = -1
+
+    model = Sequential()
+    model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(32, 32, 3)))
+    model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+
+    # stack two more CONV layers, keeping the size of each filter
+    # as 3x3 but increasing to 64 total learned filters
+    model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+
+    # increase the number of filters again, this time to 128
+    model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+
+    # fully-connected layer
+    model.add(Flatten())
+    model.add(Dense(512, kernel_initializer=init))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+
+    # softmax classifier
+    model.add(Dense(len(lb.classes_)))
+    model.add(Activation("softmax"))
+
+    # model.add(Conv2D(8, (3, 3), padding="same", input_shape=(32, 32, 3)))
+    # model.add(Activation("relu"))
+    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    # model.add(Conv2D(16, (3, 3), padding="same"))
+    # model.add(Activation("relu"))
+    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    # model.add(Conv2D(32, (3, 3), padding="same"))
+    # model.add(Activation("relu"))
+    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    # model.add(Flatten())
+    # model.add(Dense(3))
+    # model.add(Activation("softmax"))
+
+    for layer in model.layers:
+        print(layer.output_shape)
+
+    print("[INFO] training network...")
+    opt = Adam(lr=1e-3, decay=1e-3 / 50)
+    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32)
+
+    print("[INFO] evaluating network...")
+    predictions = model.predict(testX, batch_size=32)
+    report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
+    print(report)
+
+    report_lines = report.split('\n')
+    separator = ""
+    for l in report_lines:
+        lines.append(separator.join(l))
+
+#print(lines)
 with open(outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerows(lines)
