@@ -30,11 +30,13 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
+ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
 args = vars(ap.parse_args())
 
 input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
+output_class_map = args["output_class_map"]
 
 unique_labels = {}
 labels = []
@@ -68,6 +70,7 @@ with open(input_file) as csv_file:
 
 #print(unique_labels)
 lines = []
+class_map_lines = []
 if len(unique_labels.keys()) < 2:
     lines = ["Number of labels is less than 2, so nothing to predict!"]
 else:
@@ -113,6 +116,7 @@ else:
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
     print(len(lb.classes_))
+    print(lb.classes_)
     #print(labels)
 
     separator = ", "
@@ -201,9 +205,19 @@ else:
     for l in report_lines:
         lines.append(separator.join(l))
 
+    iterator = 0
+    for c in lb.classes_:
+        class_map_lines.append([iterator, c])
+        iterator += 1
+
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerows(lines)
+writeFile.close()
 
+#print(class_map_lines)
+with open(output_class_map, 'w') as writeFile:
+    writer = csv.writer(writeFile)
+    writer.writerows(class_map_lines)
 writeFile.close()
