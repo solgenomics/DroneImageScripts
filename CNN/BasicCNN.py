@@ -44,7 +44,9 @@ print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
-        image = Image.open(row[0])
+        stock_id = row[0]
+        trait_name = row[3]
+        image = Image.open(row[1])
         image = np.array(image.resize((32,32))) / 255.0
 
         if (len(image.shape) == 2):
@@ -54,9 +56,9 @@ with open(input_file) as csv_file:
         #print(image.shape)
         data.append(image)
 
-        value = float(row[1])
+        value = float(row[2])
         #value = str(int(float(row[1])*100))
-        value = str(math.ceil(float(row[1]) / 2.)*2)
+        #value = str(math.ceil(float(row[1]) / 2.)*2)
         #value = str(math.ceil(float(row[1]) / 3.)*3)
         labels.append(value)
         if value in unique_labels.keys():
@@ -64,8 +66,9 @@ with open(input_file) as csv_file:
         else:
             unique_labels[value] = 1
 
+#print(unique_labels)
 lines = []
-if len(unique_labels) < 2:
+if len(unique_labels.keys()) < 2:
     lines = ["Number of labels is less than 2, so nothing to predict!"]
 else:
     print(labels)
@@ -190,6 +193,8 @@ else:
     predictions = model.predict(testX, batch_size=32)
     report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
     print(report)
+
+    model.save(output_model_file_path)
 
     report_lines = report.split('\n')
     separator = ""
