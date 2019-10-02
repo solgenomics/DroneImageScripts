@@ -32,13 +32,22 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
+ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
+
 args = vars(ap.parse_args())
 
 input_file = args["input_image_label_file"]
 input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
+keras_model_name = args["keras_model_type_name"]
 
 data = []
+
+image_size = 32
+if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
+    image_size = 32
+elif keras_model_name == 'KerasCNNInceptionResNetV2':
+    image_size = 75
 
 print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
@@ -46,7 +55,7 @@ with open(input_file) as csv_file:
     for row in csv_reader:
         stock_id = row[0]
         image = Image.open(row[1])
-        image = np.array(image.resize((32,32))) / 255.0
+        image = np.array(image.resize((image_size,image_size))) / 255.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -72,9 +81,15 @@ else:
         vstack.append(x)
 
     images = np.vstack(vstack)
-    predictions = model.predict_classes(images, batch_size=10)
+    prob_predictions = model.predict(images, batch_size=10)
+    predictions = np.argmax(prob_predictions, axis=1)
+    iterator = 0
     for p in predictions:
-        lines.append([p])
+        line = [p]
+        for i in prob_predictions[iterator]:
+            line.append(i)
+        lines.append(line)
+        iterator += 1
 
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
