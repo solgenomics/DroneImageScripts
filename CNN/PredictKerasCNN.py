@@ -33,6 +33,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
+ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
 
 args = vars(ap.parse_args())
@@ -40,6 +41,7 @@ args = vars(ap.parse_args())
 input_file = args["input_image_label_file"]
 input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
+outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 
 data = []
@@ -81,6 +83,7 @@ with open(input_file) as csv_file:
 
 #print(unique_labels)
 lines = []
+evaluation_lines = []
 if len(data) < 1:
     lines = ["No images, so nothing to predict!"]
 else:
@@ -159,11 +162,15 @@ else:
         report_lines = report.split('\n')
         separator = ""
         for l in report_lines:
-            lines.append(separator.join(l))
+            evaluation_lines.append(separator.join(l))
 
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerows(lines)
+writeFile.close()
 
+with open(outfile_evaluation_path, 'w') as writeFile:
+    writer = csv.writer(writeFile)
+    writer.writerows(evaluation_lines)
 writeFile.close()
