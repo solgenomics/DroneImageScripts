@@ -26,6 +26,7 @@ from PIL import Image
 from keras.models import load_model
 from keras.models import Model
 from keras.applications.inception_resnet_v2 import InceptionResNetV2
+from keras.callbacks import ModelCheckpoint
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -169,14 +170,16 @@ else:
     print("[INFO] training network...")
     opt = Adam(lr=1e-3, decay=1e-3 / 50)
     model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32)
+
+    checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
 
     print("[INFO] evaluating network...")
     predictions = model.predict(testX, batch_size=32)
     report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
     print(report)
-
-    model.save(output_model_file_path)
 
     report_lines = report.split('\n')
     separator = ""

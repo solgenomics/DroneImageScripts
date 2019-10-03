@@ -26,6 +26,7 @@ from keras.models import load_model
 from keras.utils import to_categorical
 from keras.models import load_model
 from keras.preprocessing.image import img_to_array
+from keras.callbacks import ModelCheckpoint
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -71,7 +72,7 @@ with open(input_file) as csv_file:
         if previous_value is not None:
             previous_value = float(previous_value)
             previous_labels.append(previous_value)
-            previous_labeled_data.append(data)
+            previous_labeled_data.append(image)
 
             if previous_value in unique_labels.keys():
                 unique_labels[previous_value] += 1
@@ -85,8 +86,6 @@ if len(data) < 1:
 else:
     print("[INFO] number of images: %d" % (len(data)))
     model = load_model(input_model_file_path)
-    opt = Adam(lr=1e-3, decay=1e-3 / 50)
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     vstack = []
     for img in data:
@@ -97,6 +96,7 @@ else:
     images = np.vstack(vstack)
     prob_predictions = model.predict(images, batch_size=10)
     predictions = np.argmax(prob_predictions, axis=1)
+    print(predictions)
     iterator = 0
     for p in predictions:
         line = [p]
@@ -145,7 +145,11 @@ else:
         print(lb.classes_)
 
         (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels), test_size=0.25)
-        H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32)
+
+        checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
+        H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
 
         print("[INFO] evaluating network...")
         predictions = model.predict(testX, batch_size=32)
