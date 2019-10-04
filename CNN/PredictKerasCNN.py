@@ -78,15 +78,19 @@ with open(input_file) as csv_file:
         data.append(image)
 
         previous_value = row[2]
-        if previous_value is not None:
-            previous_value = float(previous_value)
-            previous_labels.append(previous_value)
-            previous_labeled_data.append(image)
+        if previous_value is not None and previous_value:
+            if isinstance(previous_value, int) or isinstance(previous_value, float):
+                if isinstance(previous_value, int):
+                    previous_value = int(previous_value)
+                if isinstance(previous_value, float):
+                    previous_value = float(previous_value)
+                previous_labels.append(previous_value)
+                previous_labeled_data.append(image)
 
-            if previous_value in unique_labels.keys():
-                unique_labels[previous_value] += 1
-            else:
-                unique_labels[previous_value] = 1
+                if previous_value in unique_labels.keys():
+                    unique_labels[previous_value] += 1
+                else:
+                    unique_labels[previous_value] = 1
 
 #print(unique_labels)
 lines = []
@@ -115,7 +119,7 @@ else:
         lines.append(line)
         iterator += 1
 
-        
+    print("[INFO] Getting model activations for each images and each layer")
     layer_outputs = [layer.output for layer in model.layers[:12]] # Extracts the outputs of the top 12 layers
     activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     images_per_row = 16
