@@ -35,6 +35,7 @@ ap.add_argument("-m", "--input_model_file_path", required=True, help="file path 
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
+ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on the images. this will only work if the images already have phenotypes saved in the database.")
 
 args = vars(ap.parse_args())
 
@@ -43,6 +44,7 @@ input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
+retrain_model = args["retrain_model"]
 
 data = []
 previous_labeled_data = []
@@ -108,61 +110,61 @@ else:
         lines.append(line)
         iterator += 1
 
-
-    if len(unique_labels.keys()) < 2:
-        lines = ["Number of previous labels is less than 2, so will not evaluate model performance!"]
-    else:
-        labels_predict = []
-        unique_labels_predict = {}
-        if len(unique_labels.keys()) == len(previous_labeled_data):
-            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
-            all_labels_decimal = 1
-            for l in previous_labels:
-                if l > 1 or l < 0:
-                    all_labels_decimal = 0
-            if all_labels_decimal == 1:
-                for l in previous_labels:
-                    labels_predict.append(str(math.ceil(float(l*100) / 3.)*3/100))
-            else:
-                for l in previous_labels:
-                    labels_predict.append(str(math.ceil(float(l) / 3.)*3))
-        elif len(unique_labels.keys())/len(previous_labeled_data) > 0.6:
-            print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
-            all_labels_decimal = 1
-            for l in previous_labels:
-                if l > 1 or l < 0:
-                    all_labels_decimal = 0
-            if all_labels_decimal == 1:
-                for l in previous_labels:
-                    labels_predict.append(str(math.ceil(float(l*100) / 2.)*2/100))
-            else:
-                for l in previous_labels:
-                    labels_predict.append(str(math.ceil(float(l) / 2.)*2))
+    if retrain_model == True:
+        if len(unique_labels.keys()) < 2:
+            lines = ["Number of previous labels is less than 2, so will not evaluate model performance!"]
         else:
-            for l in previous_labels:
-                labels_predict.append(str(l))
+            labels_predict = []
+            unique_labels_predict = {}
+            if len(unique_labels.keys()) == len(previous_labeled_data):
+                print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
+                all_labels_decimal = 1
+                for l in previous_labels:
+                    if l > 1 or l < 0:
+                        all_labels_decimal = 0
+                if all_labels_decimal == 1:
+                    for l in previous_labels:
+                        labels_predict.append(str(math.ceil(float(l*100) / 3.)*3/100))
+                else:
+                    for l in previous_labels:
+                        labels_predict.append(str(math.ceil(float(l) / 3.)*3))
+            elif len(unique_labels.keys())/len(previous_labeled_data) > 0.6:
+                print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
+                all_labels_decimal = 1
+                for l in previous_labels:
+                    if l > 1 or l < 0:
+                        all_labels_decimal = 0
+                if all_labels_decimal == 1:
+                    for l in previous_labels:
+                        labels_predict.append(str(math.ceil(float(l*100) / 2.)*2/100))
+                else:
+                    for l in previous_labels:
+                        labels_predict.append(str(math.ceil(float(l) / 2.)*2))
+            else:
+                for l in previous_labels:
+                    labels_predict.append(str(l))
 
-        lb = LabelBinarizer()
-        labels = lb.fit_transform(labels_predict)
-        print(len(lb.classes_))
-        print(lb.classes_)
+            lb = LabelBinarizer()
+            labels = lb.fit_transform(labels_predict)
+            print(len(lb.classes_))
+            print(lb.classes_)
 
-        (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels), test_size=0.25)
+            (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels), test_size=0.25)
 
-        checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
-        callbacks_list = [checkpoint]
+            checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
+            callbacks_list = [checkpoint]
 
-        H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+            H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
 
-        print("[INFO] evaluating network...")
-        predictions = model.predict(testX, batch_size=32)
-        report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
-        print(report)
+            print("[INFO] evaluating network...")
+            predictions = model.predict(testX, batch_size=32)
+            report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
+            print(report)
 
-        report_lines = report.split('\n')
-        separator = ""
-        for l in report_lines:
-            evaluation_lines.append(separator.join(l))
+            report_lines = report.split('\n')
+            separator = ""
+            for l in report_lines:
+                evaluation_lines.append(separator.join(l))
 
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
