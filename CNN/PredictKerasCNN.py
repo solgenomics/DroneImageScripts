@@ -8,6 +8,7 @@ import imutils
 import cv2
 import numpy as np
 import math
+from keras import models
 from keras.models import Sequential
 from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
@@ -27,12 +28,15 @@ from keras.utils import to_categorical
 from keras.models import load_model
 from keras.preprocessing.image import img_to_array
 from keras.callbacks import ModelCheckpoint
+from matplotlib import pyplot as plt
+import matplotlib.backends.backend_pdf
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
+ap.add_argument("-e", "--outfile_activation_path", required=True, help="file path where the activation graph output will be saved")
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
 ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on the images. this will only work if the images already have phenotypes saved in the database.")
@@ -42,6 +46,7 @@ args = vars(ap.parse_args())
 input_file = args["input_image_label_file"]
 input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
+outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 retrain_model = args["retrain_model"]
@@ -109,6 +114,61 @@ else:
             line.append(i)
         lines.append(line)
         iterator += 1
+
+        
+    layer_outputs = [layer.output for layer in model.layers[:12]] # Extracts the outputs of the top 12 layers
+    activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
+    images_per_row = 16
+
+    layer_names = []
+    for layer in model.layers[:12]:
+        layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
+
+    for img in vstack:
+        activations = activation_model.predict(img/255) # Returns a list of five Numpy arrays: one array per layer activation
+
+        layer_displays = {}
+        for layer_name, layer_activation in zip(layer_names, activations): # Displays the feature maps
+            n_features = layer_activation.shape[-1] # Number of features in the feature map
+            size = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
+            n_cols = n_features // images_per_row # Tiles the activation channels in this matrix
+            for col in range(n_cols): # Tiles each filter into a big horizontal grid
+                for row in range(images_per_row):
+                    channel_image = layer_activation[0,
+                                                     :, :,
+                                                     col * images_per_row + row]
+                    channel_image -= channel_image.mean() # Post-processes the feature to make it visually palatable
+                    channel_image /= channel_image.std()
+                    channel_image *= 64
+                    channel_image += 128
+                    channel_image = np.clip(channel_image, 0, 255).astype('uint8')
+
+                    if layer_name in layer_displays.keys():
+                        layer_displays[layer_name].append(channel_image)
+                    else:
+                        layer_displays[layer_name] = [channel_image]
+
+    average_layer_display = {}
+    activation_figures = []
+    for layer_name in layer_displays.keys():
+        activation_images = layer_displays[layer_name]
+        avg_img = np.zeros_like(activation_images[0])
+        for a in activation_images:
+            avg_img += a
+        avg_activation = avg_img/len(activation_images)
+        average_layer_display[layer_name] = avg_activation
+
+        plt.figure()
+        plt.title(layer_name)
+        plt.grid(False)
+        plt.imshow(avg_activation, aspect='auto', cmap='viridis')
+        fig = plt.gcf()
+        activation_figures.append(fig)
+
+    pdf = matplotlib.backends.backend_pdf.PdfPages(outfile_activation_path)
+    for fig in activation_figures:
+        pdf.savefig(fig)
+    pdf.close()
 
     if retrain_model == True:
         if len(unique_labels.keys()) < 2:
