@@ -102,7 +102,9 @@ else:
     model = load_model(input_model_file_path)
 
     vstack = []
+    average_img = np.zeros_like(data[0])
     for img in data:
+        average_img += img
         x = img_to_array(img)
         x = np.expand_dims(x, axis=0)
         vstack.append(x)
@@ -152,8 +154,17 @@ else:
                     else:
                         layer_displays[layer_name] = [channel_image]
 
+    average_img = average_img/len(vstack)
     average_layer_display = {}
     activation_figures = []
+
+    plt.figure()
+    plt.title("Average Image")
+    plt.grid(False)
+    plt.imshow(average_img, aspect='auto', cmap='viridis')
+    fig = plt.gcf()
+    activation_figures.append(fig)
+
     for layer_name in layer_displays.keys():
         activation_images = layer_displays[layer_name]
         avg_img = np.zeros_like(activation_images[0])
