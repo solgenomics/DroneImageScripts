@@ -102,9 +102,7 @@ else:
     model = load_model(input_model_file_path)
 
     vstack = []
-    average_img = np.zeros_like(data[0])
     for img in data:
-        average_img += img
         x = img_to_array(img)
         x = np.expand_dims(x, axis=0)
         vstack.append(x)
@@ -113,6 +111,7 @@ else:
     prob_predictions = model.predict(images, batch_size=10)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
+    median_prediction = sum(predictions)/len(predictions)
     iterator = 0
     for p in predictions:
         line = [p]
@@ -122,7 +121,7 @@ else:
         iterator += 1
 
     print("[INFO] Getting model activations for each images and each layer")
-    layer_outputs = [layer.output for layer in model.layers[:12]] # Extracts the outputs of the top 12 layers
+    layer_outputs = [layer.output for layer in model.layers[:12]][1:] # Extracts the outputs of the top 12 layers
     activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     images_per_row = 16
 
@@ -130,10 +129,25 @@ else:
     for layer in model.layers[:12]:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
+    layer_displays_above_median = {}
+    layer_displays_below_median = {}
+    average_img_above_median = np.zeros_like(data[0])
+    average_img_below_median = np.zeros_like(data[0])
+    num_img_above_median = 0
+    num_img_below_median = 0
+    itera = 0
     for img in vstack:
+        image = data[itera]
         activations = activation_model.predict(img/255) # Returns a list of five Numpy arrays: one array per layer activation
+        pred = predictions[itera]
 
-        layer_displays = {}
+        if pred > median_prediction:
+            average_img_above_median += image
+            num_img_above_median += 1
+        else:
+            average_img_below_median += image
+            num_img_below_median += 1
+
         for layer_name, layer_activation in zip(layer_names, activations): # Displays the feature maps
             n_features = layer_activation.shape[-1] # Number of features in the feature map
             size = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
@@ -149,32 +163,59 @@ else:
                     channel_image += 128
                     channel_image = np.clip(channel_image, 0, 255).astype('uint8')
 
-                    if layer_name in layer_displays.keys():
-                        layer_displays[layer_name].append(channel_image)
+                    if pred > median_prediction:
+                        if layer_name in layer_displays_above_median.keys():
+                            layer_displays_above_median[layer_name].append(channel_image)
+                        else:
+                            layer_displays_above_median[layer_name] = [channel_image]
                     else:
-                        layer_displays[layer_name] = [channel_image]
+                        if layer_name in layer_displays_below_median.keys():
+                            layer_displays_below_median[layer_name].append(channel_image)
+                        else:
+                            layer_displays_below_median[layer_name] = [channel_image]
+        itera += 1
 
-    average_img = average_img/len(vstack)
-    average_layer_display = {}
+    average_img_above_median = average_img_above_median/num_img_above_median
+    average_img_below_median = average_img_below_median/num_img_below_median
     activation_figures = []
 
     plt.figure()
-    plt.title("Average Image")
+    plt.title("Average Image Above Median")
     plt.grid(False)
-    plt.imshow(average_img, aspect='auto', cmap='viridis')
+    plt.imshow(average_img_above_median, aspect='auto', cmap='viridis')
     fig = plt.gcf()
     activation_figures.append(fig)
 
-    for layer_name in layer_displays.keys():
-        activation_images = layer_displays[layer_name]
+    plt.figure()
+    plt.title("Average Image Below Median")
+    plt.grid(False)
+    plt.imshow(average_img_below_median, aspect='auto', cmap='viridis')
+    fig = plt.gcf()
+    activation_figures.append(fig)
+
+    for layer_name in layer_displays_above_median.keys():
+        activation_images = layer_displays_above_median[layer_name]
         avg_img = np.zeros_like(activation_images[0])
         for a in activation_images:
             avg_img += a
         avg_activation = avg_img/len(activation_images)
-        average_layer_display[layer_name] = avg_activation
 
         plt.figure()
-        plt.title(layer_name)
+        plt.title("Above Median: "+layer_name)
+        plt.grid(False)
+        plt.imshow(avg_activation, aspect='auto', cmap='viridis')
+        fig = plt.gcf()
+        activation_figures.append(fig)
+
+    for layer_name in layer_displays_below_median.keys():
+        activation_images = layer_displays_below_median[layer_name]
+        avg_img = np.zeros_like(activation_images[0])
+        for a in activation_images:
+            avg_img += a
+        avg_activation = avg_img/len(activation_images)
+
+        plt.figure()
+        plt.title("Below Median: "+layer_name)
         plt.grid(False)
         plt.imshow(avg_activation, aspect='auto', cmap='viridis')
         fig = plt.gcf()
