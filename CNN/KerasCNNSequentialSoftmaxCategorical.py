@@ -53,6 +53,7 @@ def eprint(*args, **kwargs):
 
 unique_labels = {}
 unique_image_types = {}
+unique_drone_run_band_names = {}
 labels = []
 data = []
 
@@ -63,6 +64,7 @@ with open(input_file) as csv_file:
         stock_id = row[0]
         trait_name = row[3]
         image_type = row[4]
+        drone_run_band_name = row[5]
         image = Image.open(row[1])
         image = np.array(image.resize((32,32))) / 255.0
 
@@ -86,6 +88,11 @@ with open(input_file) as csv_file:
         else:
             unique_image_types[image_type] = 1
 
+        if drone_run_band_name in unique_drone_run_band_names.keys():
+            unique_drone_run_band_names[drone_run_band_name] += 1
+        else:
+            unique_drone_run_band_names[drone_run_band_name] = 1
+
 #print(unique_labels)
 lines = []
 class_map_lines = []
@@ -103,7 +110,7 @@ else:
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
     labels_predict = []
-    if len(unique_labels.keys()) == len(data)/len(unique_image_types.keys()):
+    if len(unique_labels.keys()) == (len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys()):
         if log_file_path is not None:
             eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
         else:
@@ -119,7 +126,7 @@ else:
         else:
             for l in labels:
                 labels_predict.append(str(math.ceil(float(l) / 5.)*5))
-    elif len(unique_labels.keys())/(len(data)/len(unique_image_types.keys())) > 0.6:
+    elif len(unique_labels.keys())/((len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys())) > 0.6:
         if log_file_path is not None:
             eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 4")
         else:
