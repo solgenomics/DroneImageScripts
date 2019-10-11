@@ -2,6 +2,7 @@
 # python /home/nmorales/cxgn/DroneImageScripts/CNN/TransferLearningCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --output_model_file_path /folder/mymodel.h5 --outfile_path /export/myresults.csv
 
 # import the necessary packages
+import sys
 import argparse
 import csv
 import imutils
@@ -44,6 +45,15 @@ output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
 keras_model_name = args["keras_model_type_name"]
+
+if sys.version_info[0] < 3:
+    raise Exception("Must use Python3. Use python3 in your command line.")
+
+if log_file_path is not None:
+    sys.stderr = open(log_file_path, 'a')
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 labels = [];
 unique_labels = {}
@@ -106,7 +116,6 @@ else:
     print(labels)
 
     labels_predict = []
-    unique_labels_predict = {}
     if len(unique_labels.keys()) == len(data):
         print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
         all_labels_decimal = 1
@@ -115,10 +124,10 @@ else:
                 all_labels_decimal = 0
         if all_labels_decimal == 1:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 3.)*3/100))
+                labels_predict.append(str(math.ceil(float(l*100) / 5.)*5/100))
         else:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 3.)*3))
+                labels_predict.append(str(math.ceil(float(l) / 5.)*5))
     elif len(unique_labels.keys())/len(data) > 0.6:
         print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
         all_labels_decimal = 1
@@ -127,29 +136,27 @@ else:
                 all_labels_decimal = 0
         if all_labels_decimal == 1:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 2.)*2/100))
+                labels_predict.append(str(math.ceil(float(l*100) / 4.)*4/100))
         else:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 2.)*2))
+                labels_predict.append(str(math.ceil(float(l) / 4.)*4))
     else:
         for l in labels:
             labels_predict.append(str(l))
 
 
-    for value in labels_predict:
-        if value in unique_labels_predict.keys():
-            unique_labels_predict[value] += 1
-        else:
-            unique_labels_predict[value] = 1
-
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
-    print(len(lb.classes_))
-    print(lb.classes_)
-    #print(labels)
+
+    separator = ","
+    lb_classes_string = separator.join([str(x) for x in lb.classes_])
+    if log_file_path is not None:
+        eprint("Classes " + str(len(lb.classes_)) + ": " + lb_classes_string)
+    else:
+        print("Classes " + str(len(lb.classes_)) + ": " + lb_classes_string)
 
     separator = ", "
-    lines.append("Predicted Labels: " + separator.join(unique_labels_predict.keys()))
+    lines.append("Predicted Labels: " + separator.join(lb.classes_))
 
     print("[INFO] number of labels: %d" % (len(labels)))
     print("[INFO] number of images: %d" % (len(data)))
