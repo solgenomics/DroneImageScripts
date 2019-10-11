@@ -2,6 +2,7 @@
 # python /home/nmorales/cxgn/DroneImageScripts/CNN/PredictKerasCNN.py --input_image_label_file  /folder/myimagesandlabels.csv --output_model_file_path /folder/mymodel.h5 --outfile_path /export/myresults.csv
 
 # import the necessary packages
+import sys
 import argparse
 import csv
 import imutils
