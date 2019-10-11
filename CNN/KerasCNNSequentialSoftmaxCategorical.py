@@ -52,6 +52,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 unique_labels = {}
+unique_image_types = {}
 labels = []
 data = []
 
@@ -61,6 +62,7 @@ with open(input_file) as csv_file:
     for row in csv_reader:
         stock_id = row[0]
         trait_name = row[3]
+        image_type = row[4]
         image = Image.open(row[1])
         image = np.array(image.resize((32,32))) / 255.0
 
@@ -72,14 +74,17 @@ with open(input_file) as csv_file:
         data.append(image)
 
         value = float(row[2])
-        #value = str(int(float(row[1])*100))
-        #value = str(math.ceil(float(row[1]) / 2.)*2)
-        #value = str(math.ceil(float(row[1]) / 3.)*3)
         labels.append(value)
+
         if value in unique_labels.keys():
             unique_labels[value] += 1
         else:
             unique_labels[value] = 1
+
+        if image_type in unique_image_types.keys():
+            unique_image_types[image_type] += 1
+        else:
+            unique_image_types[image_type] = 1
 
 #print(unique_labels)
 lines = []
@@ -98,8 +103,12 @@ else:
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
     labels_predict = []
-    if len(unique_labels.keys()) == len(data):
-        print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
+    if len(unique_labels.keys()) == len(data)/len(unique_image_types.keys()):
+        if log_file_path is not None:
+            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
+        else:
+            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
+
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
@@ -110,8 +119,12 @@ else:
         else:
             for l in labels:
                 labels_predict.append(str(math.ceil(float(l) / 5.)*5))
-    elif len(unique_labels.keys())/len(data) > 0.6:
-        print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
+    elif len(unique_labels.keys())/(len(data)/len(unique_image_types.keys())) > 0.6:
+        if log_file_path is not None:
+            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 4")
+        else:
+            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 4")
+
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
