@@ -126,7 +126,7 @@ else:
     if log_file_path is not None:
         separator = ","
         prediction_string = separator.join([str(x) for x in predictions])
-        eprint("Predictions: {}".prediction_string)
+        eprint("Predictions: " + prediction_string)
 
     median_prediction = sum(predictions)/len(predictions)
     iterator = 0
