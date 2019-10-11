@@ -123,10 +123,12 @@ else:
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
 
+    separator = ","
+    prediction_string = separator.join([str(x) for x in predictions])
     if log_file_path is not None:
-        separator = ","
-        prediction_string = separator.join([str(x) for x in predictions])
         eprint("Predictions: " + prediction_string)
+    else:
+        print("Predictions: " + prediction_string)
 
     median_prediction = sum(predictions)/len(predictions)
     iterator = 0

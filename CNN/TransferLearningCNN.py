@@ -30,6 +30,7 @@ from keras.callbacks import ModelCheckpoint
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
@@ -37,6 +38,7 @@ ap.add_argument("-c", "--output_class_map", required=True, help="file path where
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
 args = vars(ap.parse_args())
 
+log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
@@ -172,7 +174,10 @@ else:
     checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+    history_callback = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+    loss_history = history_callback.history["loss"]
+    numpy_loss_history = numpy.array(loss_history)
+    print(numpy_loss_history)
 
     print("[INFO] evaluating network...")
     predictions = model.predict(testX, batch_size=32)
