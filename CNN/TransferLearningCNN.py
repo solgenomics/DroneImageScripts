@@ -57,6 +57,8 @@ def eprint(*args, **kwargs):
 
 labels = [];
 unique_labels = {}
+unique_image_types = {}
+unique_drone_run_band_names = {}
 data = []
 image_size = 75
 #image_size = 299
@@ -88,6 +90,8 @@ with open(input_file) as csv_file:
     for row in csv_reader:
         stock_id = row[0]
         trait_name = row[3]
+        image_type = row[4]
+        drone_run_band_name = row[5]
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
 
@@ -99,25 +103,44 @@ with open(input_file) as csv_file:
         data.append(image)
 
         value = float(row[2])
-        #value = str(int(float(row[1])*100))
-        #value = str(math.ceil(float(row[1]) / 2.)*2)
-        #value = str(math.ceil(float(row[1]) / 3.)*3)
         labels.append(value)
         if value in unique_labels.keys():
             unique_labels[value] += 1
         else:
             unique_labels[value] = 1
 
+        if image_type in unique_image_types.keys():
+            unique_image_types[image_type] += 1
+        else:
+            unique_image_types[image_type] = 1
+
+        if drone_run_band_name in unique_drone_run_band_names.keys():
+            unique_drone_run_band_names[drone_run_band_name] += 1
+        else:
+            unique_drone_run_band_names[drone_run_band_name] = 1
+
 lines = []
 class_map_lines = []
 if len(unique_labels.keys()) < 2:
     lines = ["Number of labels is less than 2, so nothing to predict!"]
 else:
-    print(labels)
+    separator = ","
+    labels_string = separator.join([str(x) for x in labels])
+    unique_labels_string = separator.join([str(x) for x in unique_labels.keys()])
+    if log_file_path is not None:
+        eprint("Labels " + str(len(labels)) + ": " + labels_string)
+        eprint("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
+    else:
+        print("Labels " + str(len(labels)) + ": " + labels_string)
+        print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
     labels_predict = []
-    if len(unique_labels.keys()) == len(data):
-        print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
+    if len(unique_labels.keys()) == (len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys()):
+        if log_file_path is not None:
+            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
+        else:
+            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
+
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
@@ -128,8 +151,12 @@ else:
         else:
             for l in labels:
                 labels_predict.append(str(math.ceil(float(l) / 5.)*5))
-    elif len(unique_labels.keys())/len(data) > 0.6:
-        print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
+    elif len(unique_labels.keys())/((len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys())) > 0.6:
+        if log_file_path is not None:
+            eprint("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
+        else:
+            print("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
+
         all_labels_decimal = 1
         for l in labels:
             if l > 1 or l < 0:
@@ -162,7 +189,7 @@ else:
     print("[INFO] number of images: %d" % (len(data)))
 
     print("[INFO] splitting training set...")
-    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
+    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.2)
 
     init = "he_normal"
     reg = regularizers.l2(0.01)
@@ -182,19 +209,19 @@ else:
     callbacks_list = [checkpoint]
 
     history_callback = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
-    loss_history = history_callback.history["loss"]
-    numpy_loss_history = numpy.array(loss_history)
-    print(numpy_loss_history)
+    # loss_history = history_callback.history["loss"]
+    # numpy_loss_history = numpy.array(loss_history)
+    # print(numpy_loss_history)
 
-    print("[INFO] evaluating network...")
-    predictions = model.predict(testX, batch_size=32)
-    report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
-    print(report)
-
-    report_lines = report.split('\n')
-    separator = ""
-    for l in report_lines:
-        lines.append(separator.join(l))
+    # print("[INFO] evaluating network...")
+    # predictions = model.predict(testX, batch_size=32)
+    # report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
+    # print(report)
+    # 
+    # report_lines = report.split('\n')
+    # separator = ""
+    # for l in report_lines:
+    #     lines.append(separator.join(l))
 
     iterator = 0
     for c in lb.classes_:

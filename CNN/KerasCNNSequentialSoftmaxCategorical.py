@@ -112,9 +112,9 @@ else:
     labels_predict = []
     if len(unique_labels.keys()) == (len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys()):
         if log_file_path is not None:
-            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 7")
+            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
         else:
-            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 7")
+            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
 
         all_labels_decimal = 1
         for l in labels:
@@ -122,15 +122,15 @@ else:
                 all_labels_decimal = 0
         if all_labels_decimal == 1:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 7.)*7/100))
+                labels_predict.append(str(math.ceil(float(l*100) / 5.)*5/100))
         else:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 7.)*7))
+                labels_predict.append(str(math.ceil(float(l) / 5.)*5))
     elif len(unique_labels.keys())/((len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys())) > 0.6:
         if log_file_path is not None:
-            eprint("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 6")
+            eprint("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
         else:
-            print("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 6")
+            print("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
 
         all_labels_decimal = 1
         for l in labels:
@@ -138,10 +138,10 @@ else:
                 all_labels_decimal = 0
         if all_labels_decimal == 1:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 6.)*6/100))
+                labels_predict.append(str(math.ceil(float(l*100) / 4.)*4/100))
         else:
             for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 6.)*6))
+                labels_predict.append(str(math.ceil(float(l) / 4.)*4))
     else:
         for l in labels:
             labels_predict.append(str(l))
@@ -164,7 +164,7 @@ else:
     print("[INFO] number of images: %d" % (len(data)))
 
     print("[INFO] splitting training set...")
-    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.25)
+    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.2)
 
     init = "he_normal"
     reg = regularizers.l2(0.01)
@@ -235,15 +235,15 @@ else:
 
     H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
 
-    print("[INFO] evaluating network...")
-    predictions = model.predict(testX, batch_size=32)
-    report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
-    print(report)
-
-    report_lines = report.split('\n')
-    separator = ""
-    for l in report_lines:
-        lines.append(separator.join(l))
+    # print("[INFO] evaluating network...")
+    # predictions = model.predict(testX, batch_size=32)
+    # report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
+    # print(report)
+    # 
+    # report_lines = report.split('\n')
+    # separator = ""
+    # for l in report_lines:
+    #     lines.append(separator.join(l))
 
     iterator = 0
     for c in lb.classes_:
