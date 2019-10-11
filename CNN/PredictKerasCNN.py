@@ -25,7 +25,6 @@ from keras.layers.core import Dropout
 from PIL import Image
 from keras.models import load_model
 from keras.utils import to_categorical
-from keras.models import load_model
 from keras.preprocessing.image import img_to_array
 from keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
@@ -33,6 +32,7 @@ import matplotlib.backends.backend_pdf
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
@@ -43,6 +43,7 @@ ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on t
 
 args = vars(ap.parse_args())
 
+log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
 input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
@@ -50,6 +51,15 @@ outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 retrain_model = args["retrain_model"]
+
+if sys.version_info[0] < 3:
+    raise Exception("Must use Python3. Use python3 in your command line.")
+
+if log_file_path is not None:
+    sys.stderr = open(log_file_path, 'a')
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 data = []
 previous_labeled_data = []
@@ -111,6 +121,12 @@ else:
     prob_predictions = model.predict(images, batch_size=10)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
+
+    if log_file_path is not None:
+        separator = ","
+        prediction_string = separator.join(predictions)
+        eprint("Predictions: {}".prediction_string)
+
     median_prediction = sum(predictions)/len(predictions)
     iterator = 0
     for p in predictions:

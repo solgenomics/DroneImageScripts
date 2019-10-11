@@ -47,6 +47,7 @@ labels = [];
 unique_labels = {}
 data = []
 image_size = 75
+#image_size = 299
 
 def build_model(model_name, number_labels):
     model = Model()
@@ -55,12 +56,9 @@ def build_model(model_name, number_labels):
         base_model = InceptionResNetV2(
             include_top = False,
             weights = 'imagenet',
-            #input_tensor = None,
             input_tensor = input_tensor,
-            #input_shape = None,
             input_shape = (image_size,image_size,3),
             pooling = 'avg'
-            #classes = 1000
         )
         for layer in base_model.layers:
             layer.trainable = True
