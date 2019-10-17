@@ -36,8 +36,9 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
-ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
-ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the per-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model")
+ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the pre-trained Keras CNN model to use e.g. InceptionResNetV2")
+ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
+ap.add_argument("-k", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
@@ -47,6 +48,9 @@ outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
 keras_model_name = args["keras_model_type_name"]
 keras_model_weights = args["keras_model_weights"]
+keras_model_layers = args["keras_model_layers"]
+if keras_model_layers is not None:
+    keras_model_layers = int(keras_model_layers)
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -65,7 +69,7 @@ data = []
 image_size = 75
 #image_size = 299
 
-def build_model(model_name, number_labels, weights):
+def build_model(model_name, number_labels, weights, use_layers_num):
     model = Model()
     if model_name == 'InceptionResNetV2':
         input_tensor = Input(shape=(image_size,image_size,3))
@@ -76,9 +80,21 @@ def build_model(model_name, number_labels, weights):
             input_shape = (image_size,image_size,3),
             pooling = 'avg'
         )
+
+        new_model = Sequential()
+        layer_num = 0
         for layer in base_model.layers:
             layer.trainable = True
-        
+
+            if use_layers_num is not None and layer_num < use_layers_num:
+                new_model.add(layer)
+            
+            layer_num += 1
+
+        if use_layers_num is not None:
+            new_model.add(Flatten())
+            base_model = new_model
+    
         op = Dense(256, activation='relu')(base_model.output)
         op = Dropout(0.25)(op)
         output_tensor = Dense(number_labels, activation='softmax')(op)
@@ -198,7 +214,7 @@ else:
     chanDim = -1
 
     print("[INFO] building model...")
-    model = build_model(keras_model_name, len(lb.classes_), keras_model_weights)
+    model = build_model(keras_model_name, len(lb.classes_), keras_model_weights, keras_model_layers)
 
     for layer in model.layers:
         print(layer.output_shape)

@@ -140,14 +140,21 @@ else:
         iterator += 1
 
     print("[INFO] Getting model activations for each images and each layer")
-    layer_outputs = [layer.output for layer in model.layers[:12]][1:] # Extracts the outputs of the top 12 layers
-    activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
+    layer_outputs = None
     images_per_row = 16
-
     layer_names = []
-    for layer in model.layers[:12]:
-        layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
+    if len(model.layers) > 20:
+        layer_outputs = [layer.output for layer in model.layers[:20]][1:] # Extracts the outputs of the top 20 layers
+        for layer in model.layers[:20]:
+            layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
+    else:
+        layer_outputs = [layer.output for layer in model.layers[:8]][1:]
+        images_per_row = len(model.layers)
+        for layer in model.layers[:8]:
+            layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
+    activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
+    
     layer_displays_above_median = {}
     layer_displays_below_median = {}
     average_img_above_median = np.zeros_like(data[0])
