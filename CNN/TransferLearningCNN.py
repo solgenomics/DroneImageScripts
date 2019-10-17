@@ -37,6 +37,7 @@ ap.add_argument("-m", "--output_model_file_path", required=True, help="file path
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
+ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the per-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
@@ -45,6 +46,7 @@ output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
 keras_model_name = args["keras_model_type_name"]
+keras_model_weights = args["keras_model_weights"]
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -63,13 +65,13 @@ data = []
 image_size = 75
 #image_size = 299
 
-def build_model(model_name, number_labels):
+def build_model(model_name, number_labels, weights):
     model = Model()
     if model_name == 'InceptionResNetV2':
         input_tensor = Input(shape=(image_size,image_size,3))
         base_model = InceptionResNetV2(
             include_top = False,
-            weights = 'imagenet',
+            weights = weights,
             input_tensor = input_tensor,
             input_shape = (image_size,image_size,3),
             pooling = 'avg'
@@ -196,7 +198,7 @@ else:
     chanDim = -1
 
     print("[INFO] building model...")
-    model = build_model(keras_model_name, len(lb.classes_))
+    model = build_model(keras_model_name, len(lb.classes_), keras_model_weights)
 
     for layer in model.layers:
         print(layer.output_shape)
