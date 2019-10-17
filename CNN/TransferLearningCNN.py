@@ -153,42 +153,16 @@ else:
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
     labels_predict = []
-    if len(unique_labels.keys()) == (len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys()):
-        if log_file_path is not None:
-            eprint("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
-        else:
-            print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 5")
-
-        all_labels_decimal = 1
+    all_labels_decimal = 1
+    for l in labels:
+        if l > 1 or l < 0:
+            all_labels_decimal = 0
+    if all_labels_decimal == 1:
         for l in labels:
-            if l > 1 or l < 0:
-                all_labels_decimal = 0
-        if all_labels_decimal == 1:
-            for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 5.)*5/100))
-        else:
-            for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 5.)*5))
-    elif len(unique_labels.keys())/((len(data)/len(unique_image_types.keys()))/len(unique_drone_run_band_names.keys())) > 0.6:
-        if log_file_path is not None:
-            eprint("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
-        else:
-            print("Number of unique labels is > 60% number of data points, so dividing number of labels by roughly 4")
-
-        all_labels_decimal = 1
-        for l in labels:
-            if l > 1 or l < 0:
-                all_labels_decimal = 0
-        if all_labels_decimal == 1:
-            for l in labels:
-                labels_predict.append(str(math.ceil(float(l*100) / 4.)*4/100))
-        else:
-            for l in labels:
-                labels_predict.append(str(math.ceil(float(l) / 4.)*4))
+            labels_predict.append(str(math.ceil(float(l*100) / 4.)*4/100))
     else:
         for l in labels:
-            labels_predict.append(str(l))
-
+            labels_predict.append(str(math.ceil(float(l) / 4.)*4))
 
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
