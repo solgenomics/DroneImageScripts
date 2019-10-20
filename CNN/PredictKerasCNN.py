@@ -119,7 +119,7 @@ else:
         vstack.append(x)
 
     images = np.vstack(vstack)
-    prob_predictions = model.predict(images, batch_size=10)
+    prob_predictions = model.predict(images, batch_size=8)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
 

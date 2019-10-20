@@ -200,7 +200,7 @@ else:
     checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
-    history_callback = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+    history_callback = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=8, callbacks=callbacks_list)
     # loss_history = history_callback.history["loss"]
     # numpy_loss_history = numpy.array(loss_history)
     # print(numpy_loss_history)
