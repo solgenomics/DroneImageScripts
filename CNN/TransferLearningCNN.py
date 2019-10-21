@@ -123,9 +123,9 @@ with open(input_file) as csv_file:
         value = float(row[2])
         labels.append(value)
         if value in unique_labels.keys():
-            unique_labels[value] += 1
+            unique_labels[str(value)] += 1
         else:
-            unique_labels[value] = 1
+            unique_labels[str(value)] = 1
 
         if image_type in unique_image_types.keys():
             unique_image_types[image_type] += 1
@@ -153,16 +153,29 @@ else:
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
     labels_predict = []
+    labels_predict_unique = {}
     all_labels_decimal = 1
     for l in labels:
         if l > 1 or l < 0:
             all_labels_decimal = 0
     if all_labels_decimal == 1:
         for l in labels:
-            labels_predict.append(str(math.ceil(float(l*100) / 4.)*4/100))
+            binned_value = str(math.ceil(float(l*100) / 4.)*4/100)
+            if binned_value in labels_predict_unique.keys():
+                labels_predict_unique[binned_value] += 1
+            else:
+                labels_predict_unique[binned_value] = 1
+
+            labels_predict.append(binned_value)
     else:
         for l in labels:
-            labels_predict.append(str(math.ceil(float(l) / 4.)*4))
+            binned_value = str(math.ceil(float(l) / 4.)*4)
+            if binned_value in labels_predict_unique.keys():
+                labels_predict_unique[binned_value] += 1
+            else:
+                labels_predict_unique[binned_value] = 1
+
+            labels_predict.append(binned_value)
 
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
@@ -217,7 +230,7 @@ else:
 
     iterator = 0
     for c in lb.classes_:
-        class_map_lines.append([iterator, c])
+        class_map_lines.append([iterator, c, labels_predict_unique[str(c)]])
         iterator += 1
 
 #print(lines)
