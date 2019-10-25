@@ -17,6 +17,7 @@ from keras.layers.core import Flatten
 from keras.layers.core import Dense
 from keras.layers import Input
 from keras.optimizers import Adam
+from sklearn import preprocessing
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -160,7 +161,7 @@ else:
             all_labels_decimal = 0
     if all_labels_decimal == 1:
         for l in labels:
-            binned_value = str(math.ceil(float(l*100) / 4.)*4/100)
+            binned_value = str(math.ceil(float(l*100) / 5.)*5/100)
             if binned_value in labels_predict_unique.keys():
                 labels_predict_unique[binned_value] += 1
             else:
@@ -169,7 +170,7 @@ else:
             labels_predict.append(binned_value)
     else:
         for l in labels:
-            binned_value = str(math.ceil(float(l) / 4.)*4)
+            binned_value = str(math.ceil(float(l) / 5.)*5)
             if binned_value in labels_predict_unique.keys():
                 labels_predict_unique[binned_value] += 1
             else:
@@ -177,6 +178,9 @@ else:
 
             labels_predict.append(binned_value)
 
+    labels_predict = preprocessing.normalize([labels_predict], norm='l2')
+    labels_predict = labels_predict[0]
+    labels_predict = labels_predict.astype(str)
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
 

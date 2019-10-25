@@ -17,6 +17,7 @@ from keras.layers.core import Activation
 from keras.layers.core import Flatten
 from keras.layers.core import Dense
 from keras.optimizers import Adam
+from sklearn import preprocessing
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
