@@ -154,7 +154,7 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    categorical_object = pd.cut(labels, 15)
+    categorical_object = pd.cut(labels, 10)
     labels_predict_codes = categorical_object.codes
     categories = categorical_object.categories
 

@@ -28,6 +28,11 @@ from keras.models import load_model
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
 import pandas as pd
+from keras.wrappers.scikit_learn import KerasRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
