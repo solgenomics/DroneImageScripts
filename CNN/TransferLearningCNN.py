@@ -29,6 +29,7 @@ from keras.models import load_model
 from keras.models import Model
 from keras.applications.inception_resnet_v2 import InceptionResNetV2
 from keras.callbacks import ModelCheckpoint
+import pandas as pd
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -153,36 +154,23 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    labels_predict = []
-    labels_predict_unique = {}
-    all_labels_decimal = 1
-    for l in labels:
-        if l > 1 or l < 0:
-            all_labels_decimal = 0
-    if all_labels_decimal == 1:
-        for l in labels:
-            binned_value = str(math.ceil(float(l*100) / 5.)*5/100)
-            if binned_value in labels_predict_unique.keys():
-                labels_predict_unique[binned_value] += 1
-            else:
-                labels_predict_unique[binned_value] = 1
+    categorical_object = pd.cut(labels, 15)
+    labels_predict_codes = categorical_object.codes
+    categories = categorical_object.categories
 
-            labels_predict.append(binned_value)
-    else:
-        for l in labels:
-            binned_value = str(math.ceil(float(l) / 5.)*5)
-            if binned_value in labels_predict_unique.keys():
-                labels_predict_unique[binned_value] += 1
-            else:
-                labels_predict_unique[binned_value] = 1
-
-            labels_predict.append(binned_value)
-
-    labels_predict = preprocessing.normalize([labels_predict], norm='l2')
-    labels_predict = labels_predict[0]
-    labels_predict = labels_predict.astype(str)
+    #labels_predict = preprocessing.normalize([labels_predict], norm='l2')
+    #labels_predict = labels_predict[0]
+    labels_predict = labels_predict_codes.astype(str)
     lb = LabelBinarizer()
     labels = lb.fit_transform(labels_predict)
+
+    for index in range(len(labels)):
+        label_index = labels_predict_codes[index]
+        print(labels[index], label_index, categories[label_index] )
+        if str(label_index) in labels_predict_unique.keys():
+            labels_predict_unique[str(label_index)] += 1
+        else:
+            labels_predict_unique[str(label_index)] = 1
 
     separator = ","
     lb_classes_string = separator.join([str(x) for x in lb.classes_])
