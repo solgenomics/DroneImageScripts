@@ -154,24 +154,27 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    labels_predict_unique = {}
     categorical_object = pd.cut(labels, 15)
     labels_predict_codes = categorical_object.codes
     categories = categorical_object.categories
+
+    labels_predict_map = {}
+    labels_predict_unique = {}
+    for index in range(len(labels)):
+        label = labels[index]
+        label_code = labels_predict_codes[index]
+        cat_mid = categories[label_code].mid
+        labels_predict_map[str(label_code)] = cat_mid
+        if str(label_code) in labels_predict_unique.keys():
+            labels_predict_unique[str(label_code)] += 1
+        else:
+            labels_predict_unique[str(label_code)] = 1
 
     #labels_predict = preprocessing.normalize([labels_predict], norm='l2')
     #labels_predict = labels_predict[0]
     labels_predict = labels_predict_codes.astype(str)
     lb = LabelBinarizer()
-    labels = lb.fit_transform(labels_predict)
-
-    for index in range(len(labels)):
-        label_index = labels_predict_codes[index]
-        print(labels[index], label_index, categories[label_index] )
-        if str(label_index) in labels_predict_unique.keys():
-            labels_predict_unique[str(label_index)] += 1
-        else:
-            labels_predict_unique[str(label_index)] = 1
+    labels_lb = lb.fit_transform(labels_predict)
 
     separator = ","
     lb_classes_string = separator.join([str(x) for x in lb.classes_])
@@ -183,11 +186,11 @@ else:
     separator = ", "
     lines.append("Predicted Labels: " + separator.join(lb.classes_))
 
-    print("[INFO] number of labels: %d" % (len(labels)))
+    print("[INFO] number of labels: %d" % (len(labels_lb)))
     print("[INFO] number of images: %d" % (len(data)))
 
     print("[INFO] splitting training set...")
-    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels), test_size=0.2)
+    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels_lb), test_size=0.2)
 
     init = "he_normal"
     reg = regularizers.l2(0.01)
@@ -223,7 +226,7 @@ else:
 
     iterator = 0
     for c in lb.classes_:
-        class_map_lines.append([iterator, c, labels_predict_unique[str(c)]])
+        class_map_lines.append([iterator, labels_predict_map[str(c)], labels_predict_unique[str(c)]])
         iterator += 1
 
 #print(lines)
