@@ -10,19 +10,25 @@ import cv2
 import numpy as np
 import math
 from keras.models import Sequential
+from keras.models import Model
 from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
 from keras.layers.core import Activation
 from keras.layers.core import Flatten
 from keras.layers.core import Dense
+from keras.layers.core import Dropout
+from keras.layers import Concatenate
+from keras.layers.core import Lambda
+from keras.layers import GlobalAveragePooling2D
+from keras.engine.input_layer import Input
 from keras.optimizers import Adam
+from keras import backend
 from sklearn import preprocessing
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras import regularizers
 from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Dropout
 from PIL import Image
 from keras.models import load_model
 from keras.utils import to_categorical
@@ -58,6 +64,60 @@ if log_file_path is not None:
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+def conv2d(x,numfilt,filtsz,strides=1,pad='same',act=True,name=None):
+    x = Conv2D(numfilt,filtsz,strides=strides,padding=pad,data_format='channels_last',use_bias=False,name=name+'conv2d')(x)
+    x = BatchNormalization(axis=3,scale=False,name=name+'conv2d'+'bn')(x)
+    if act:
+        x = Activation('relu',name=name+'conv2d'+'act')(x)
+    return x
+
+def incresA(x,scale,name=None):
+    pad = 'same'
+    branch0 = conv2d(x,32,1,1,pad,True,name=name+'b0')
+    branch1 = conv2d(x,32,1,1,pad,True,name=name+'b1_1')
+    branch1 = conv2d(branch1,32,3,1,pad,True,name=name+'b1_2')
+    branch2 = conv2d(x,32,1,1,pad,True,name=name+'b2_1')
+    branch2 = conv2d(branch2,48,3,1,pad,True,name=name+'b2_2')
+    branch2 = conv2d(branch2,64,3,1,pad,True,name=name+'b2_3')
+    branches = [branch0,branch1,branch2]
+    mixed = Concatenate(axis=3, name=name + '_concat')(branches)
+    filt_exp_1x1 = conv2d(mixed,384,1,1,pad,False,name=name+'filt_exp_1x1')
+    final_lay = Lambda(lambda inputs, scale: inputs[0] + inputs[1] * scale,
+                      output_shape=backend.int_shape(x)[1:],
+                      arguments={'scale': scale},
+                      name=name+'act_scaling')([x, filt_exp_1x1])
+    return final_lay
+
+def incresB(x,scale,name=None):
+    pad = 'same'
+    branch0 = conv2d(x,192,1,1,pad,True,name=name+'b0')
+    branch1 = conv2d(x,128,1,1,pad,True,name=name+'b1_1')
+    branch1 = conv2d(branch1,160,[1,7],1,pad,True,name=name+'b1_2')
+    branch1 = conv2d(branch1,192,[7,1],1,pad,True,name=name+'b1_3')
+    branches = [branch0,branch1]
+    mixed = Concatenate(axis=3, name=name + '_mixed')(branches)
+    filt_exp_1x1 = conv2d(mixed,1152,1,1,pad,False,name=name+'filt_exp_1x1')
+    final_lay = Lambda(lambda inputs, scale: inputs[0] + inputs[1] * scale,
+                      output_shape=backend.int_shape(x)[1:],
+                      arguments={'scale': scale},
+                      name=name+'act_scaling')([x, filt_exp_1x1])
+    return final_lay
+
+def incresC(x,scale,name=None):
+    pad = 'same'
+    branch0 = conv2d(x,192,1,1,pad,True,name=name+'b0')
+    branch1 = conv2d(x,192,1,1,pad,True,name=name+'b1_1')
+    branch1 = conv2d(branch1,224,[1,3],1,pad,True,name=name+'b1_2')
+    branch1 = conv2d(branch1,256,[3,1],1,pad,True,name=name+'b1_3')
+    branches = [branch0,branch1]
+    mixed = Concatenate(axis=3, name=name + '_mixed')(branches)
+    filt_exp_1x1 = conv2d(mixed,2048,1,1,pad,False,name=name+'fin1x1')
+    final_lay = Lambda(lambda inputs, scale: inputs[0] + inputs[1] * scale,
+                      output_shape=backend.int_shape(x)[1:],
+                      arguments={'scale': scale},
+                      name=name+'act_saling')([x, filt_exp_1x1])
+    return final_lay
+
 unique_labels = {}
 unique_image_types = {}
 unique_drone_run_band_names = {}
@@ -73,7 +133,7 @@ with open(input_file) as csv_file:
         image_type = row[4]
         drone_run_band_name = row[5]
         image = Image.open(row[1])
-        image = np.array(image.resize((32,32))) / 255.0
+        image = np.array(image.resize((75,75))) / 255.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -115,7 +175,7 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    categorical_object = pd.cut(labels, 15)
+    categorical_object = pd.cut(labels, 25)
     labels_predict_codes = categorical_object.codes
     categories = categorical_object.categories
 
@@ -153,61 +213,127 @@ else:
     print("[INFO] splitting training set...")
     (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels_lb), test_size=0.2)
 
-    init = "he_normal"
-    reg = regularizers.l2(0.01)
-    chanDim = -1
+    img_input = Input(shape=(75,75,3))
 
-    model = Sequential()
-    model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(32, 32, 3)))
-    model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
+    #STEM
+    x = conv2d(img_input,32,3,2,'valid',True,name='conv1')
+    x = conv2d(x,32,3,1,'valid',True,name='conv2')
+    x = conv2d(x,64,3,1,'valid',True,name='conv3')
 
-    # stack two more CONV layers, keeping the size of each filter
-    # as 3x3 but increasing to 64 total learned filters
-    model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
+    x_11 = MaxPooling2D(3,strides=1,padding='valid',name='stem_br_11'+'_maxpool_1', data_format="channels_last")(x)
+    x_12 = conv2d(x,64,3,1,'valid',True,name='stem_br_12')
 
-    # increase the number of filters again, this time to 128
-    model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
+    x = Concatenate(axis=3, name = 'stem_concat_1')([x_11,x_12])
 
-    # fully-connected layer
-    model.add(Flatten())
-    model.add(Dense(512, kernel_initializer=init))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    x_21 = conv2d(x,64,1,1,'same',True,name='stem_br_211')
+    x_21 = conv2d(x_21,64,[1,7],1,'same',True,name='stem_br_212')
+    x_21 = conv2d(x_21,64,[7,1],1,'same',True,name='stem_br_213')
+    x_21 = conv2d(x_21,96,3,1,'valid',True,name='stem_br_214')
 
-    # softmax classifier
-    model.add(Dense(len(lb.classes_)))
-    model.add(Activation("softmax"))
+    x_22 = conv2d(x,64,1,1,'same',True,name='stem_br_221')
+    x_22 = conv2d(x_22,96,3,1,'valid',True,name='stem_br_222')
 
-    # model.add(Conv2D(8, (3, 3), padding="same", input_shape=(32, 32, 3)))
+    x = Concatenate(axis=3, name = 'stem_concat_2')([x_21,x_22])
+
+    x_31 = conv2d(x,192,3,1,'valid',True,name='stem_br_31')
+    x_32 = MaxPooling2D(3,strides=1,padding='valid',name='stem_br_32'+'_maxpool_2', data_format="channels_last")(x)
+    x = Concatenate(axis=3, name = 'stem_concat_3')([x_31,x_32])
+
+    #Inception-ResNet-A modules
+    x = incresA(x,0.15,name='incresA_1')
+    x = incresA(x,0.15,name='incresA_2')
+    x = incresA(x,0.15,name='incresA_3')
+    x = incresA(x,0.15,name='incresA_4')
+
+    #35 × 35 to 17 × 17 reduction module.
+    x_red_11 = MaxPooling2D(3,strides=2,padding='valid',name='red_maxpool_1', data_format="channels_last")(x)
+
+    x_red_12 = conv2d(x,384,3,2,'valid',True,name='x_red1_c1')
+
+    x_red_13 = conv2d(x,256,1,1,'same',True,name='x_red1_c2_1')
+    x_red_13 = conv2d(x_red_13,256,3,1,'same',True,name='x_red1_c2_2')
+    x_red_13 = conv2d(x_red_13,384,3,2,'valid',True,name='x_red1_c2_3')
+
+    x = Concatenate(axis=3, name='red_concat_1')([x_red_11,x_red_12,x_red_13])
+
+    #Inception-ResNet-B modules
+    x = incresB(x,0.1,name='incresB_1')
+    x = incresB(x,0.1,name='incresB_2')
+    x = incresB(x,0.1,name='incresB_3')
+    x = incresB(x,0.1,name='incresB_4')
+    x = incresB(x,0.1,name='incresB_5')
+    x = incresB(x,0.1,name='incresB_6')
+    x = incresB(x,0.1,name='incresB_7')
+
+    #17 × 17 to 8 × 8 reduction module.
+    x_red_21 = MaxPooling2D(3,strides=2,padding='valid',name='red_maxpool_2', data_format="channels_last")(x)
+
+    x_red_22 = conv2d(x,256,1,1,'same',True,name='x_red2_c11')
+    x_red_22 = conv2d(x_red_22,384,3,2,'valid',True,name='x_red2_c12')
+
+    x_red_23 = conv2d(x,256,1,1,'same',True,name='x_red2_c21')
+    x_red_23 = conv2d(x_red_23,256,3,2,'valid',True,name='x_red2_c22')
+
+    x_red_24 = conv2d(x,256,1,1,'same',True,name='x_red2_c31')
+    x_red_24 = conv2d(x_red_24,256,3,1,'same',True,name='x_red2_c32')
+    x_red_24 = conv2d(x_red_24,256,3,2,'valid',True,name='x_red2_c33')
+
+    x = Concatenate(axis=3, name='red_concat_2')([x_red_21,x_red_22,x_red_23,x_red_24])
+
+    #Inception-ResNet-C modules
+    x = incresC(x,0.2,name='incresC_1')
+    x = incresC(x,0.2,name='incresC_2')
+    x = incresC(x,0.2,name='incresC_3')
+
+    #TOP
+    x = GlobalAveragePooling2D(data_format='channels_last')(x)
+    x = Dropout(0.6)(x)
+    x = Dense(len(lb.classes_), activation='softmax')(x)
+
+    model = Model(img_input,x,name='inception_resnet_v2')
+
+    # init = "he_normal"
+    # reg = regularizers.l2(0.01)
+    # chanDim = -1
+
+    # model = Sequential()
+    # model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(75, 75, 3)))
+    # model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
     # model.add(Activation("relu"))
-    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    # model.add(Conv2D(16, (3, 3), padding="same"))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
     # model.add(Activation("relu"))
-    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    # model.add(Conv2D(32, (3, 3), padding="same"))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Dropout(0.25))
+    # 
+    # # stack two more CONV layers, keeping the size of each filter
+    # # as 3x3 but increasing to 64 total learned filters
+    # model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
     # model.add(Activation("relu"))
-    # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    # model.add(Activation("relu"))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Dropout(0.25))
+    # 
+    # # increase the number of filters again, this time to 128
+    # model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    # model.add(Activation("relu"))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
+    # model.add(Activation("relu"))
+    # model.add(BatchNormalization(axis=chanDim))
+    # model.add(Dropout(0.25))
+    # 
+    # # fully-connected layer
     # model.add(Flatten())
-    # model.add(Dense(3))
+    # model.add(Dense(512, kernel_initializer=init))
+    # model.add(Activation("relu"))
+    # model.add(BatchNormalization())
+    # model.add(Dropout(0.5))
+    # 
+    # # softmax classifier
+    # model.add(Dense(len(lb.classes_)))
     # model.add(Activation("softmax"))
 
     for layer in model.layers:
@@ -220,7 +346,7 @@ else:
     checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=8, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
 
     # print("[INFO] evaluating network...")
     # predictions = model.predict(testX, batch_size=32)

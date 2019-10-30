@@ -68,9 +68,9 @@ previous_labeled_data = []
 previous_labels = []
 unique_labels = {}
 
-image_size = 32
+image_size = 75
 if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
-    image_size = 32
+    image_size = 75
 elif keras_model_name == 'KerasCNNInceptionResNetV2':
     image_size = 75
 
