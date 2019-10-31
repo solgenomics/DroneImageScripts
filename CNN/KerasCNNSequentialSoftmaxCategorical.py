@@ -295,7 +295,7 @@ else:
     # init = "he_normal"
     # reg = regularizers.l2(0.01)
     # chanDim = -1
-
+    #
     # model = Sequential()
     # model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(75, 75, 3)))
     # model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
@@ -305,7 +305,7 @@ else:
     # model.add(Activation("relu"))
     # model.add(BatchNormalization(axis=chanDim))
     # model.add(Dropout(0.25))
-    # 
+    #
     # # stack two more CONV layers, keeping the size of each filter
     # # as 3x3 but increasing to 64 total learned filters
     # model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
@@ -315,7 +315,7 @@ else:
     # model.add(Activation("relu"))
     # model.add(BatchNormalization(axis=chanDim))
     # model.add(Dropout(0.25))
-    # 
+    #
     # # increase the number of filters again, this time to 128
     # model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
     # model.add(Activation("relu"))
@@ -324,14 +324,14 @@ else:
     # model.add(Activation("relu"))
     # model.add(BatchNormalization(axis=chanDim))
     # model.add(Dropout(0.25))
-    # 
+    #
     # # fully-connected layer
     # model.add(Flatten())
     # model.add(Dense(512, kernel_initializer=init))
     # model.add(Activation("relu"))
     # model.add(BatchNormalization())
     # model.add(Dropout(0.5))
-    # 
+    #
     # # softmax classifier
     # model.add(Dense(len(lb.classes_)))
     # model.add(Activation("softmax"))

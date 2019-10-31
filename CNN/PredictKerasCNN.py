@@ -9,6 +9,7 @@ import imutils
 import cv2
 import numpy as np
 import math
+import json
 from keras import models
 from keras.models import Sequential
 from keras.layers.convolutional import Conv2D
@@ -31,6 +32,8 @@ from keras.preprocessing.image import img_to_array
 from keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
 import matplotlib.backends.backend_pdf
+from numpy.polynomial.polynomial import polyfit
+import pandas as pd
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -41,7 +44,9 @@ ap.add_argument("-o", "--outfile_path", required=True, help="file path where the
 ap.add_argument("-e", "--outfile_activation_path", required=True, help="file path where the activation graph output will be saved")
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
-ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on the images. this will only work if the images already have phenotypes saved in the database.")
+ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on the images. this will only work if the plots already have true phenotypes saved in the database.")
+ap.add_argument("-c", "--class_map", help="whether to plot true vs prediction, provide a json encoded class map. this will only work if the plots already have true phenotypes saved in the database.")
+ap.add_argument("-p", "--plot_prediction_comparison", help="whether to plot true vs prediction. this will only work if the plots already have true phenotypes saved in the database.")
 
 args = vars(ap.parse_args())
 
@@ -53,6 +58,10 @@ outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 retrain_model = args["retrain_model"]
+plot_prediction_comparison = args["plot_prediction_comparison"]
+class_map = args["class_map"]
+if class_map is not None:
+    class_map = json.loads(class_map)
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -90,19 +99,18 @@ with open(input_file) as csv_file:
         data.append(image)
 
         previous_value = row[2]
-        if previous_value is not None and previous_value:
-            if isinstance(previous_value, int) or isinstance(previous_value, float):
-                if isinstance(previous_value, int):
-                    previous_value = int(previous_value)
-                if isinstance(previous_value, float):
-                    previous_value = float(previous_value)
-                previous_labels.append(previous_value)
-                previous_labeled_data.append(image)
+        if previous_value is not None:
+            if isinstance(previous_value, int):
+                previous_value = int(previous_value)
+            if isinstance(previous_value, float) or isinstance(previous_value, str):
+                previous_value = float(previous_value)
+            previous_labels.append(previous_value)
+            previous_labeled_data.append(image)
 
-                if previous_value in unique_labels.keys():
-                    unique_labels[previous_value] += 1
-                else:
-                    unique_labels[previous_value] = 1
+            if previous_value in unique_labels.keys():
+                unique_labels[previous_value] += 1
+            else:
+                unique_labels[previous_value] = 1
 
 #print(unique_labels)
 lines = []
@@ -113,6 +121,9 @@ else:
     print("[INFO] number of images: %d" % (len(data)))
     model = load_model(input_model_file_path)
 
+    for layer in model.layers:
+        print(layer.output_shape)
+
     vstack = []
     for img in data:
         x = img_to_array(img)
@@ -120,7 +131,7 @@ else:
         vstack.append(x)
 
     images = np.vstack(vstack)
-    prob_predictions = model.predict(images, batch_size=8)
+    prob_predictions = model.predict(images, batch_size=32)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
 
@@ -141,18 +152,11 @@ else:
         iterator += 1
 
     print("[INFO] Getting model activations for each images and each layer")
-    layer_outputs = None
-    images_per_row = 16
     layer_names = []
-    if len(model.layers) > 20:
-        layer_outputs = [layer.output for layer in model.layers[:20]][1:] # Extracts the outputs of the top 20 layers
-        for layer in model.layers[:20]:
-            layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
-    else:
-        layer_outputs = [layer.output for layer in model.layers[:8]][1:]
-        images_per_row = len(model.layers)
-        for layer in model.layers[:8]:
-            layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
+    # layer_outputs = [layer.output for layer in model.layers[:20]][1:] # Extracts the outputs of the top 20 layers
+    layer_outputs = [layer.output for layer in model.layers[:]][1:] # Extracts the outputs of the top 20 layers
+    for layer in model.layers[:]:
+        layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
     activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     
@@ -176,14 +180,10 @@ else:
             num_img_below_median += 1
 
         for layer_name, layer_activation in zip(layer_names, activations): # Displays the feature maps
-            n_features = layer_activation.shape[-1] # Number of features in the feature map
-            size = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
-            n_cols = n_features // images_per_row # Tiles the activation channels in this matrix
-            for col in range(n_cols): # Tiles each filter into a big horizontal grid
-                for row in range(images_per_row):
-                    channel_image = layer_activation[0,
-                                                     :, :,
-                                                     col * images_per_row + row]
+            if (len(layer_activation.shape) == 4):
+                n_features = layer_activation.shape[-1] # Number of features in the feature map
+                for n in range(n_features):
+                    channel_image = layer_activation[0, :, :, n]
                     channel_image -= channel_image.mean() # Post-processes the feature to make it visually palatable
                     channel_image /= channel_image.std()
                     channel_image *= 64
@@ -248,51 +248,33 @@ else:
         fig = plt.gcf()
         activation_figures.append(fig)
 
-    pdf = matplotlib.backends.backend_pdf.PdfPages(outfile_activation_path)
-    for fig in activation_figures:
-        pdf.savefig(fig)
-    pdf.close()
-
     if retrain_model == True:
         if len(unique_labels.keys()) < 2:
             lines = ["Number of previous labels is less than 2, so will not evaluate model performance!"]
         else:
-            labels_predict = []
-            unique_labels_predict = {}
-            if len(unique_labels.keys()) == len(previous_labeled_data):
-                print("Number of unique labels is equal to number of data points, so dividing number of labels by roughly 3")
-                all_labels_decimal = 1
-                for l in previous_labels:
-                    if l > 1 or l < 0:
-                        all_labels_decimal = 0
-                if all_labels_decimal == 1:
-                    for l in previous_labels:
-                        labels_predict.append(str(math.ceil(float(l*100) / 3.)*3/100))
-                else:
-                    for l in previous_labels:
-                        labels_predict.append(str(math.ceil(float(l) / 3.)*3))
-            elif len(unique_labels.keys())/len(previous_labeled_data) > 0.6:
-                print("Number of unique labels is greater than 60% the number of data points, so dividing number of labels by roughly 2")
-                all_labels_decimal = 1
-                for l in previous_labels:
-                    if l > 1 or l < 0:
-                        all_labels_decimal = 0
-                if all_labels_decimal == 1:
-                    for l in previous_labels:
-                        labels_predict.append(str(math.ceil(float(l*100) / 2.)*2/100))
-                else:
-                    for l in previous_labels:
-                        labels_predict.append(str(math.ceil(float(l) / 2.)*2))
-            else:
-                for l in previous_labels:
-                    labels_predict.append(str(l))
+            categorical_object = pd.cut(previous_labels, 25)
+            labels_predict_codes = categorical_object.codes
+            categories = categorical_object.categories
 
+            labels_predict_map = {}
+            labels_predict_unique = {}
+            for index in range(len(previous_labels)):
+                label = previous_labels[index]
+                label_code = labels_predict_codes[index]
+                cat_mid = categories[label_code].mid
+                labels_predict_map[str(label_code)] = cat_mid
+                if str(label_code) in labels_predict_unique.keys():
+                    labels_predict_unique[str(label_code)] += 1
+                else:
+                    labels_predict_unique[str(label_code)] = 1
+
+            #labels_predict = preprocessing.normalize([labels_predict], norm='l2')
+            #labels_predict = labels_predict[0]
+            labels_predict = labels_predict_codes.astype(str)
             lb = LabelBinarizer()
-            labels = lb.fit_transform(labels_predict)
-            print(len(lb.classes_))
-            print(lb.classes_)
+            labels_lb = lb.fit_transform(labels_predict)
 
-            (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels), test_size=0.25)
+            (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels_lb), test_size=0.25)
 
             checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
             callbacks_list = [checkpoint]
@@ -308,6 +290,43 @@ else:
             separator = ""
             for l in report_lines:
                 evaluation_lines.append(separator.join(l))
+
+    if plot_prediction_comparison == "True":
+        vstack_previous = []
+        for img in previous_labeled_data:
+            x = img_to_array(img)
+            x = np.expand_dims(x, axis=0)
+            vstack_previous.append(x)
+
+        previous_images = np.vstack(vstack_previous)
+        previous_prob_predictions = model.predict(previous_images, batch_size=32)
+        previous_predictions = np.argmax(previous_prob_predictions, axis=1)
+        prediction_converted = []
+        for p in previous_predictions:
+            prediction_converted.append(class_map[str(p)]['label'])
+
+        prediction_converted = np.array(prediction_converted, dtype=np.float32)
+        b, m = polyfit(previous_labels, prediction_converted, 1)
+
+        regressed_predictions = []
+        for p in previous_labels:
+            r = b + (m * p)
+            regressed_predictions.append(r)
+
+        plt.figure()
+        plt.title("Prediction vs True Values")
+        plt.grid(True)
+        plt.plot(previous_labels, prediction_converted, 'bo')
+        plt.plot(previous_labels, regressed_predictions, '-')
+        plt.xlabel("True")
+        plt.ylabel("Predicted")
+        fig = plt.gcf()
+        activation_figures.append(fig)
+
+    pdf = matplotlib.backends.backend_pdf.PdfPages(outfile_activation_path)
+    for fig in activation_figures:
+        pdf.savefig(fig)
+    pdf.close()
 
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
