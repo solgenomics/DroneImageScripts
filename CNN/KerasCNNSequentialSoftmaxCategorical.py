@@ -9,32 +9,32 @@ import imutils
 import cv2
 import numpy as np
 import math
-from keras.models import Sequential
-from keras.models import Model
-from keras.layers.convolutional import Conv2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.layers.core import Activation
-from keras.layers.core import Flatten
-from keras.layers.core import Dense
-from keras.layers.core import Dropout
-from keras.layers import Concatenate
-from keras.layers.core import Lambda
-from keras.layers import GlobalAveragePooling2D
-from keras.engine.input_layer import Input
-from keras.optimizers import Adam
-from keras import backend
+import pandas as pd
+from PIL import Image
 from sklearn import preprocessing
+from tensorflow.keras import Sequential
+from tensorflow.keras import Model
+from tensorflow.keras import Input
+from tensorflow.keras import backend
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from keras import regularizers
-from keras.layers.normalization import BatchNormalization
-from PIL import Image
-from keras.models import load_model
-from keras.utils import to_categorical
-from keras.callbacks import ModelCheckpoint
-import pandas as pd
-from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
@@ -346,7 +346,7 @@ else:
     checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=150, batch_size=32, callbacks=callbacks_list)
 
     # print("[INFO] evaluating network...")
     # predictions = model.predict(testX, batch_size=32)

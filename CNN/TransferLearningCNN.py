@@ -9,27 +9,33 @@ import imutils
 import cv2
 import numpy as np
 import math
-from keras.models import Sequential
-from keras.layers.convolutional import Conv2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.layers.core import Activation
-from keras.layers.core import Flatten
-from keras.layers.core import Dense
-from keras.layers import Input
-from keras.optimizers import Adam
+from PIL import Image
+import pandas as pd
 from sklearn import preprocessing
+from tensorflow.keras import Sequential
+from tensorflow.keras import Model
+from tensorflow.keras import Input
+from tensorflow.keras import backend
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from keras import regularizers
-from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Dropout
-from PIL import Image
-from keras.models import load_model
-from keras.models import Model
-from keras.applications.inception_resnet_v2 import InceptionResNetV2
-from keras.callbacks import ModelCheckpoint
-import pandas as pd
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()

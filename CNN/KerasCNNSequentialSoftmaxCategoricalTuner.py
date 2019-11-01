@@ -9,37 +9,38 @@ import imutils
 import cv2
 import numpy as np
 import math
-from keras.models import Sequential
-from keras.models import Model
-from keras.layers.convolutional import Conv2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.layers.core import Activation
-from keras.layers.core import Flatten
-from keras.layers.core import Dense
-from keras.layers.core import Dropout
-from keras.layers import Concatenate
-from keras.layers.core import Lambda
-from keras.layers import GlobalAveragePooling2D
-from keras.engine.input_layer import Input
-from keras.optimizers import Adam
-from keras import backend
+import pandas as pd
+from PIL import Image
 from sklearn import preprocessing
+from tensorflow.keras import Sequential
+from tensorflow.keras import Model
+from tensorflow.keras import Input
+from tensorflow.keras import backend
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from keras import regularizers
-from keras.layers.normalization import BatchNormalization
-from PIL import Image
-from keras.models import load_model
-from keras.utils import to_categorical
-from keras.callbacks import ModelCheckpoint
-import pandas as pd
-from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from kerastuner.tuners import RandomSearch
+from tensorflow.keras.datasets import fashion_mnist
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -68,30 +69,31 @@ def eprint(*args, **kwargs):
 def build_model(hp):
     model = Sequential()
     model.add(Conv2D(
-        filters=hp.Range('conv_1_filter', min_value=64, max_value=128, step=16),
+        filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
         kernel_size=hp.Choice('conv_1_kernel', values = [3,5]),
         activation='relu',
-        input_shape=(28,28,1)
+        input_shape=(75,75,1)
     ))
-    model.add(Conv2D(
-        filters=hp.Range('conv_2_filter', min_value=32, max_value=64, step=16),
-        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
-        activation='relu'
-    ))
+    # model.add(Conv2D(
+    #     filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+    #     kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+    #     activation='relu'
+    # ))
     model.add(Flatten())
     model.add(Dense(
-        units=hp.Range('dense_1_units', min_value=32, max_value=128, step=16),
+        units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
         activation='relu'
     ))
-    model.add(Dense(len(lb.classes_), activation='softmax'))
+    model.add(Dense(7, activation='softmax'))
 
     model.compile(
-        optimizer=keras.optimizers.Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
-        loss='sparse_categorical_crossentropy',
+        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
+        loss='categorical_crossentropy',
         metrics=['accuracy']
     )
     return model
 
+unique_labels = {}
 unique_image_types = {}
 unique_drone_run_band_names = {}
 labels = []
@@ -107,10 +109,11 @@ with open(input_file) as csv_file:
         drone_run_band_name = row[5]
         image = Image.open(row[1])
         image = np.array(image.resize((75,75))) / 255.0
+        print(image.shape)
 
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
+        # if (len(image.shape) == 2):
+        #     empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+        #     image = cv2.merge((image, empty_mat, empty_mat))
 
         #print(image.shape)
         data.append(image)
@@ -184,8 +187,18 @@ else:
     print("[INFO] number of images: %d" % (len(data)))
 
     print("[INFO] splitting training set...")
-    (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels_lb), test_size=0.2)
+    (train_images, test_images, train_labels, test_labels) = train_test_split(np.array(data), np.array(labels_lb), test_size=0.2)
 
+    # (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
+    # train_images = train_images / 255.0
+    # test_images = test_images / 255.0
+    # print(train_images.shape)
+    # train_images = train_images.reshape(len(train_images), 28, 28, 1)
+    # test_images = test_images.reshape(len(test_images), 28, 28, 1)
+    # print(train_images.shape)
+
+    train_images = train_images.reshape(len(train_images), 75, 75, 1)
+    test_images = test_images.reshape(len(test_images), 75, 75, 1)
 
     tuner = RandomSearch(
         build_model,
@@ -194,9 +207,14 @@ else:
         directory='output',
         project_name='FashionMNIST'
     )
-    tuner.search(trainX, trainY, epochs=2, validation_split=0.1)
-
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+    tuner.search(train_images, train_labels, epochs=2, validation_split=0.1)
+    # tuner.search(trainX, trainY, epochs=2)
+    model = tuner.get_best_models(num_models=1)[0]
+    print(tuner.results_summary())
+    
+    checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+    # H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=10, initial_epoch=2, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:
