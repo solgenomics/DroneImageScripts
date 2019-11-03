@@ -49,6 +49,8 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
+ap.add_argument("-t", "--output_random_search_result_dir", required=True, help="file path dir where the keras tuner random search results output will be saved")
+ap.add_argument("-p", "--output_random_search_result_project", required=True, help="project dir name where the keras tuner random search results output will be saved")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
@@ -56,6 +58,8 @@ input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
+output_random_search_result_dir = args["output_random_search_result_dir"]
+output_random_search_result_project = args["output_random_search_result_project"]
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -66,6 +70,8 @@ if log_file_path is not None:
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+NUM_LABELS = 0
+
 def build_model(hp):
     model = Sequential()
     model.add(Conv2D(
@@ -74,17 +80,17 @@ def build_model(hp):
         activation='relu',
         input_shape=(75,75,1)
     ))
-    # model.add(Conv2D(
-    #     filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
-    #     kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
-    #     activation='relu'
-    # ))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu'
+    ))
     model.add(Flatten())
     model.add(Dense(
         units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
         activation='relu'
     ))
-    model.add(Dense(7, activation='softmax'))
+    model.add(Dense(NUM_LABELS, activation='softmax'))
 
     model.compile(
         optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
@@ -182,6 +188,7 @@ else:
 
     separator = ", "
     lines.append("Predicted Labels: " + separator.join(lb.classes_))
+    NUM_LABELS = len(lb.classes_)
 
     print("[INFO] number of labels: %d" % (len(labels_lb)))
     print("[INFO] number of images: %d" % (len(data)))
@@ -203,18 +210,19 @@ else:
     tuner = RandomSearch(
         build_model,
         objective='val_accuracy',
-        max_trials=5,
-        directory='output',
-        project_name='FashionMNIST'
+        max_trials=2,
+        directory=output_random_search_result_project,
+        project_name=output_random_search_result_project
     )
     tuner.search(train_images, train_labels, epochs=2, validation_split=0.1)
     # tuner.search(trainX, trainY, epochs=2)
     model = tuner.get_best_models(num_models=1)[0]
     print(tuner.results_summary())
     
-    checkpoint = ModelCheckpoint(output_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
+    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=0, save_best_only=True, mode='max', save_frequency=5)
     callbacks_list = [checkpoint]
-    # H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=10, initial_epoch=2, callbacks=callbacks_list)
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=5, initial_epoch=2, callbacks=callbacks_list)
+    model.save(output_model_file_path)
 
     iterator = 0
     for c in lb.classes_:
