@@ -94,6 +94,10 @@ if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
     image_size = 75
 elif keras_model_name == 'KerasCNNInceptionResNetV2':
     image_size = 75
+elif keras_model_name == 'SimpleKerasCNNSequentialSoftmaxCategorical':
+    image_size = 75
+elif keras_model_name == 'KerasCNNInceptionResNetV2ImageNetWeights':
+    image_size = 75
 
 print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:

@@ -40,7 +40,10 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from kerastuner.tuners import RandomSearch
-from tensorflow.keras.datasets import fashion_mnist
+# from tensorflow.keras.datasets import fashion_mnist
+from kerastuner.applications import HyperResNet
+from kerastuner.tuners import Hyperband
+
 import getpass
 
 print(getpass.getuser())
@@ -52,17 +55,21 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
+ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: simple, simple_1, inceptionresnetv2")
 ap.add_argument("-t", "--output_random_search_result_dir", required=True, help="file path dir where the keras tuner random search results output will be saved")
 ap.add_argument("-p", "--output_random_search_result_project", required=True, help="project dir name where the keras tuner random search results output will be saved")
+ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
+keras_model_type = args["keras_model_type"]
 output_class_map = args["output_class_map"]
 output_random_search_result_dir = args["output_random_search_result_dir"]
 output_random_search_result_project = args["output_random_search_result_project"]
+keras_model_weights = args["keras_model_weights"]
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -75,7 +82,7 @@ def eprint(*args, **kwargs):
 
 NUM_LABELS = 0
 
-def build_model(hp):
+def build_simple_model(hp):
     model = Sequential()
     model.add(Conv2D(
         filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
@@ -93,6 +100,98 @@ def build_model(hp):
         units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
         activation='relu'
     ))
+    model.add(Dense(NUM_LABELS, activation='softmax'))
+
+    model.compile(
+        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    return model
+
+def build_simple_1_model(hp):
+    init = "he_normal"
+    reg = regularizers.l2(0.01)
+    chanDim = -1
+
+    model = Sequential()
+    model.add(Conv2D(
+        filters=hp.Int('conv_1_filter', min_value=16, max_value=32, step=16),
+        kernel_size=hp.Choice('conv_1_kernel', values = [3,5,7]),
+        activation='relu',
+        strides=(2, 2),
+        padding="valid",
+        kernel_initializer=init,
+        kernel_regularizer=reg,
+        input_shape=(75,75,1)
+    ))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(
+        units=hp.Int('dense_1_units', min_value=256, max_value=512, step=64),
+        activation='relu'
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.5))
     model.add(Dense(NUM_LABELS, activation='softmax'))
 
     model.compile(
@@ -210,21 +309,41 @@ else:
     train_images = train_images.reshape(len(train_images), 75, 75, 1)
     test_images = test_images.reshape(len(test_images), 75, 75, 1)
 
-    tuner = RandomSearch(
-        build_model,
-        objective='val_accuracy',
-        max_trials=100,
-        directory=output_random_search_result_project,
-        project_name=output_random_search_result_project
-    )
+    tuner = None
+    if keras_model_type == 'simple':
+        tuner = RandomSearch(
+            build_simple_model,
+            objective='val_accuracy',
+            max_trials=2,
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project
+        )
+    if keras_model_type == 'simple_1':
+        tuner = RandomSearch(
+            build_simple_1_model,
+            objective='val_accuracy',
+            max_trials=2,
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project
+        )
+    if keras_model_type == 'inceptionresnetv2':
+        # hypermodel = HyperResNet(input_shape=(75, 75, 1), classes=NUM_LABELS, weights=keras_model_weights)
+        hypermodel = HyperResNet(input_shape=(75, 75, 1), classes=NUM_LABELS)
+        tuner = Hyperband(
+            hypermodel,
+            objective='val_accuracy',
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project,
+            max_epochs=2
+        )
+
     tuner.search(train_images, train_labels, epochs=5, validation_split=0.1)
-    # tuner.search(trainX, trainY, epochs=2)
     model = tuner.get_best_models(num_models=1)[0]
     print(tuner.results_summary())
     
     checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=0, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
     callbacks_list = [checkpoint]
-    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=80, initial_epoch=5, callbacks=callbacks_list)
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=3, initial_epoch=2, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:
