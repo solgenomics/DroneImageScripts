@@ -41,6 +41,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from kerastuner.tuners import RandomSearch
 from tensorflow.keras.datasets import fashion_mnist
+import getpass
+
+print(getpass.getuser())
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -210,19 +213,18 @@ else:
     tuner = RandomSearch(
         build_model,
         objective='val_accuracy',
-        max_trials=2,
+        max_trials=100,
         directory=output_random_search_result_project,
         project_name=output_random_search_result_project
     )
-    tuner.search(train_images, train_labels, epochs=2, validation_split=0.1)
+    tuner.search(train_images, train_labels, epochs=5, validation_split=0.1)
     # tuner.search(trainX, trainY, epochs=2)
     model = tuner.get_best_models(num_models=1)[0]
     print(tuner.results_summary())
     
-    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=0, save_best_only=True, mode='max', save_frequency=5)
+    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=0, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
     callbacks_list = [checkpoint]
-    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=5, initial_epoch=2, callbacks=callbacks_list)
-    model.save(output_model_file_path)
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=80, initial_epoch=5, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:

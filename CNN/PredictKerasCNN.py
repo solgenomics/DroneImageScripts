@@ -10,30 +10,42 @@ import cv2
 import numpy as np
 import math
 import json
-from keras import models
-from keras.models import Sequential
-from keras.layers.convolutional import Conv2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.layers.core import Activation
-from keras.layers.core import Flatten
-from keras.layers.core import Dense
-from keras.optimizers import Adam
+import pandas as pd
+from PIL import Image
 from sklearn import preprocessing
+from tensorflow.keras import Sequential
+from tensorflow.keras import Model
+from tensorflow.keras import Input
+from tensorflow.keras import backend
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.preprocessing.image import img_to_array
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from keras import regularizers
-from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Dropout
-from PIL import Image
-from keras.models import load_model
-from keras.utils import to_categorical
-from keras.preprocessing.image import img_to_array
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from kerastuner.tuners import RandomSearch
 from keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
 import matplotlib.backends.backend_pdf
 from numpy.polynomial.polynomial import polyfit
-import pandas as pd
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -91,10 +103,6 @@ with open(input_file) as csv_file:
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
 
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
-
         #print(image.shape)
         data.append(image)
 
@@ -124,13 +132,9 @@ else:
     for layer in model.layers:
         print(layer.output_shape)
 
-    vstack = []
-    for img in data:
-        x = img_to_array(img)
-        x = np.expand_dims(x, axis=0)
-        vstack.append(x)
+    data = np.array(data)
+    images = data.reshape(len(data), 75, 75, 1)
 
-    images = np.vstack(vstack)
     prob_predictions = model.predict(images, batch_size=32)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
@@ -158,7 +162,7 @@ else:
     for layer in model.layers[:]:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
-    activation_model = models.Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
+    activation_model = Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     
     layer_displays_above_median = {}
     layer_displays_below_median = {}
@@ -167,9 +171,9 @@ else:
     num_img_above_median = 0
     num_img_below_median = 0
     itera = 0
-    for img in vstack:
+    for img in images:
         image = data[itera]
-        activations = activation_model.predict(img/255) # Returns a list of five Numpy arrays: one array per layer activation
+        activations = activation_model.predict(np.array([img]))
         pred = predictions[itera]
 
         if pred > median_prediction:
