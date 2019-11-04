@@ -30,7 +30,7 @@ from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
@@ -56,7 +56,6 @@ ap.add_argument("-m", "--output_model_file_path", required=True, help="file path
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
 ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: simple, simple_1, inceptionresnetv2")
-ap.add_argument("-t", "--output_random_search_result_dir", required=True, help="file path dir where the keras tuner random search results output will be saved")
 ap.add_argument("-p", "--output_random_search_result_project", required=True, help="project dir name where the keras tuner random search results output will be saved")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 args = vars(ap.parse_args())
@@ -67,7 +66,6 @@ output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 keras_model_type = args["keras_model_type"]
 output_class_map = args["output_class_map"]
-output_random_search_result_dir = args["output_random_search_result_dir"]
 output_random_search_result_project = args["output_random_search_result_project"]
 keras_model_weights = args["keras_model_weights"]
 
@@ -314,7 +312,7 @@ else:
         tuner = RandomSearch(
             build_simple_model,
             objective='val_accuracy',
-            max_trials=2,
+            max_trials=50,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
@@ -322,7 +320,7 @@ else:
         tuner = RandomSearch(
             build_simple_1_model,
             objective='val_accuracy',
-            max_trials=2,
+            max_trials=50,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
@@ -334,16 +332,17 @@ else:
             objective='val_accuracy',
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project,
-            max_epochs=2
+            max_epochs=50
         )
 
-    tuner.search(train_images, train_labels, epochs=5, validation_split=0.1)
+    tuner.search(train_images, train_labels, epochs=10, validation_split=0.1)
     model = tuner.get_best_models(num_models=1)[0]
     print(tuner.results_summary())
     
-    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=0, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
-    callbacks_list = [checkpoint]
-    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=3, initial_epoch=2, callbacks=callbacks_list)
+    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
+    es = EarlyStopping(monitor='loss', mode='min', min_delta=0.001, patience=35, verbose=1)
+    callbacks_list = [es, checkpoint]
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=100, initial_epoch=10, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:
