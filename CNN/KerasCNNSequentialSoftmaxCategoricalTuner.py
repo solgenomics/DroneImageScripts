@@ -312,7 +312,7 @@ else:
         tuner = RandomSearch(
             build_simple_model,
             objective='val_accuracy',
-            max_trials=50,
+            max_trials=1500,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
@@ -320,7 +320,7 @@ else:
         tuner = RandomSearch(
             build_simple_1_model,
             objective='val_accuracy',
-            max_trials=50,
+            max_trials=1500,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
@@ -335,14 +335,14 @@ else:
             max_epochs=50
         )
 
-    tuner.search(train_images, train_labels, epochs=10, validation_split=0.1)
+    tuner.search(train_images, train_labels, epochs=5, validation_split=0.1)
     model = tuner.get_best_models(num_models=1)[0]
     print(tuner.results_summary())
     
     checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
-    es = EarlyStopping(monitor='loss', mode='min', min_delta=0.001, patience=35, verbose=1)
+    es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
-    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=100, initial_epoch=10, callbacks=callbacks_list)
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=100, initial_epoch=5, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:
