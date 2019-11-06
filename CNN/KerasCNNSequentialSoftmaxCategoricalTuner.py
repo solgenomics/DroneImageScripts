@@ -312,7 +312,7 @@ else:
         tuner = RandomSearch(
             build_simple_model,
             objective='val_accuracy',
-            max_trials=1500,
+            max_trials=500,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
@@ -320,7 +320,7 @@ else:
         tuner = RandomSearch(
             build_simple_1_model,
             objective='val_accuracy',
-            max_trials=1500,
+            max_trials=500,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
