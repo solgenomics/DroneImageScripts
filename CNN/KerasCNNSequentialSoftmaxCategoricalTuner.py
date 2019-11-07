@@ -86,7 +86,7 @@ def build_simple_model(hp):
         filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
         kernel_size=hp.Choice('conv_1_kernel', values = [3,5]),
         activation='relu',
-        input_shape=(75,75,1)
+        input_shape=(image_size,image_size,3)
     ))
     model.add(Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
@@ -121,7 +121,7 @@ def build_simple_1_model(hp):
         padding="valid",
         kernel_initializer=init,
         kernel_regularizer=reg,
-        input_shape=(75,75,1)
+        input_shape=(image_size,image_size,3)
     ))
     model.add(Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
@@ -205,6 +205,14 @@ unique_drone_run_band_names = {}
 labels = []
 data = []
 
+image_size = 75
+if keras_model_type == 'simple':
+    image_size = 32
+if keras_model_type == 'simple_1':
+    image_size = 32
+if keras_model_type == 'inceptionresnetv2':
+    image_size = 75
+
 print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
@@ -214,12 +222,12 @@ with open(input_file) as csv_file:
         image_type = row[4]
         drone_run_band_name = row[5]
         image = Image.open(row[1])
-        image = np.array(image.resize((75,75))) / 255.0
+        image = np.array(image.resize((image_size,image_size))) / 255.0
         print(image.shape)
 
-        # if (len(image.shape) == 2):
-        #     empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-        #     image = cv2.merge((image, empty_mat, empty_mat))
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
 
         #print(image.shape)
         data.append(image)
@@ -304,8 +312,8 @@ else:
     # test_images = test_images.reshape(len(test_images), 28, 28, 1)
     # print(train_images.shape)
 
-    train_images = train_images.reshape(len(train_images), 75, 75, 1)
-    test_images = test_images.reshape(len(test_images), 75, 75, 1)
+    train_images = train_images.reshape(len(train_images), image_size, image_size, 3)
+    test_images = test_images.reshape(len(test_images), image_size, image_size, 3)
 
     tuner = None
     if keras_model_type == 'simple':
@@ -325,8 +333,8 @@ else:
             project_name=output_random_search_result_project
         )
     if keras_model_type == 'inceptionresnetv2':
-        # hypermodel = HyperResNet(input_shape=(75, 75, 1), classes=NUM_LABELS, weights=keras_model_weights)
-        hypermodel = HyperResNet(input_shape=(75, 75, 1), classes=NUM_LABELS)
+        # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS, weights=keras_model_weights)
+        hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS)
         tuner = Hyperband(
             hypermodel,
             objective='val_accuracy',
@@ -342,7 +350,7 @@ else:
     checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
-    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=100, initial_epoch=5, callbacks=callbacks_list)
+    H = model.fit(train_images, train_labels, validation_data=(test_images, test_labels), epochs=100, batch_size=8, initial_epoch=5, callbacks=callbacks_list)
 
     iterator = 0
     for c in lb.classes_:

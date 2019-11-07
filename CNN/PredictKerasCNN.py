@@ -91,11 +91,11 @@ unique_labels = {}
 
 image_size = 75
 if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
-    image_size = 75
+    image_size = 32
 elif keras_model_name == 'KerasCNNInceptionResNetV2':
     image_size = 75
 elif keras_model_name == 'SimpleKerasCNNSequentialSoftmaxCategorical':
-    image_size = 75
+    image_size = 32
 elif keras_model_name == 'KerasCNNInceptionResNetV2ImageNetWeights':
     image_size = 75
 
@@ -107,11 +107,15 @@ with open(input_file) as csv_file:
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
 
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
         #print(image.shape)
         data.append(image)
 
         previous_value = row[2]
-        if previous_value is not None:
+        if previous_value is not None and previous_value != '' and previous_value != ' ':
             if isinstance(previous_value, int):
                 previous_value = int(previous_value)
             if isinstance(previous_value, float) or isinstance(previous_value, str):
@@ -137,9 +141,9 @@ else:
         print(layer.output_shape)
 
     data = np.array(data)
-    images = data.reshape(len(data), 75, 75, 1)
+    images = data.reshape(len(data), image_size, image_size, 3)
 
-    prob_predictions = model.predict(images, batch_size=32)
+    prob_predictions = model.predict(images, batch_size=8)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
 
@@ -287,7 +291,7 @@ else:
             checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
             callbacks_list = [checkpoint]
 
-            H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=32, callbacks=callbacks_list)
+            H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=8, callbacks=callbacks_list)
 
             print("[INFO] evaluating network...")
             predictions = model.predict(testX, batch_size=32)
@@ -307,7 +311,7 @@ else:
             vstack_previous.append(x)
 
         previous_images = np.vstack(vstack_previous)
-        previous_prob_predictions = model.predict(previous_images, batch_size=32)
+        previous_prob_predictions = model.predict(previous_images, batch_size=8)
         previous_predictions = np.argmax(previous_prob_predictions, axis=1)
         prediction_converted = []
         for p in previous_predictions:
