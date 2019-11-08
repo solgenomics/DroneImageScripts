@@ -51,7 +51,7 @@ print(getpass.getuser())
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the plots and the time points in ascending order. The number of time points is only useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
@@ -220,7 +220,7 @@ with open(input_file) as csv_file:
         stock_id = row[0]
         trait_name = row[3]
         image_type = row[4]
-        drone_run_band_name = row[5]
+        time_days = row[5]
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
         print(image.shape)

@@ -84,18 +84,30 @@ if log_file_path is not None:
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+unique_stock_ids = {}
+unique_time_days = {}
+unique_image_types = {}
 data = []
 previous_labeled_data = []
 previous_labels = []
 unique_labels = {}
+previous_unique_image_types = {}
+previous_unique_stock_ids = {}
+previous_unique_time_days = {}
 
 image_size = 75
 if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
     image_size = 32
+if keras_model_name == 'SimpleKerasTunerCNNSequentialSoftmaxCategorical':
+    image_size = 32
+elif keras_model_name == 'KerasTunerCNNInceptionResNetV2':
+    image_size = 75
+elif keras_model_name == 'KerasTunerCNNSequentialSoftmaxCategorical':
+    image_size = 32
 elif keras_model_name == 'KerasCNNInceptionResNetV2':
     image_size = 75
-elif keras_model_name == 'SimpleKerasCNNSequentialSoftmaxCategorical':
-    image_size = 32
+elif keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights':
+    image_size = 75
 elif keras_model_name == 'KerasCNNInceptionResNetV2ImageNetWeights':
     image_size = 75
 
@@ -104,6 +116,8 @@ with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         stock_id = row[0]
+        image_type = row[3]
+        time_days = row[4]
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
 
@@ -128,6 +142,52 @@ with open(input_file) as csv_file:
             else:
                 unique_labels[previous_value] = 1
 
+            if image_type in previous_unique_image_types.keys():
+                previous_unique_image_types[image_type] += 1
+            else:
+                previous_unique_image_types[image_type] = 1
+
+            if stock_id in previous_unique_stock_ids.keys():
+                previous_unique_stock_ids[stock_id] += 1
+            else:
+                previous_unique_stock_ids[stock_id] = 1
+
+            if time_days in previous_unique_time_days.keys():
+                previous_unique_time_days[time_days] += 1
+            else:
+                previous_unique_time_days[time_days] = 1
+
+        if image_type in unique_image_types.keys():
+            unique_image_types[image_type] += 1
+        else:
+            unique_image_types[image_type] = 1
+
+        if stock_id in unique_stock_ids.keys():
+            unique_stock_ids[stock_id] += 1
+        else:
+            unique_stock_ids[stock_id] = 1
+
+        if time_days in unique_time_days.keys():
+            unique_time_days[time_days] += 1
+        else:
+            unique_time_days[time_days] = 1
+
+num_unique_stock_ids = len(unique_stock_ids.keys())
+num_unique_image_types = len(unique_image_types.keys())
+num_unique_time_days = len(unique_time_days.keys())
+num_unique_stock_ids = len(unique_stock_ids.keys())
+num_unique_image_types = len(unique_image_types.keys())
+num_previous_unique_time_days = len(previous_unique_time_days.keys())
+num_previous_unique_stock_ids = len(previous_unique_stock_ids.keys())
+num_previous_unique_image_types = len(previous_unique_image_types.keys())
+if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
+    print(num_unique_stock_ids)
+    print(num_unique_time_days)
+    print(num_unique_image_types)
+    print(len(data))
+    print(len(labels))
+    raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
+
 #print(unique_labels)
 lines = []
 evaluation_lines = []
@@ -141,7 +201,10 @@ else:
         print(layer.output_shape)
 
     data = np.array(data)
-    images = data.reshape(len(data), image_size, image_size, 3)
+    if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights':
+        images = data.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
+    else:
+        images = data.reshape(len(data), image_size, image_size, 3)
 
     prob_predictions = model.predict(images, batch_size=8)
     predictions = np.argmax(prob_predictions, axis=1)
@@ -166,8 +229,8 @@ else:
     print("[INFO] Getting model activations for each images and each layer")
     layer_names = []
     # layer_outputs = [layer.output for layer in model.layers[:20]][1:] # Extracts the outputs of the top 20 layers
-    layer_outputs = [layer.output for layer in model.layers[:]][1:] # Extracts the outputs of the top 20 layers
-    for layer in model.layers[:]:
+    layer_outputs = [layer.output for layer in model.layers[:30]][1:] # Extracts the outputs of the top 20 layers
+    for layer in model.layers[:30]:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
     activation_model = Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
@@ -304,14 +367,13 @@ else:
                 evaluation_lines.append(separator.join(l))
 
     if plot_prediction_comparison == "True":
-        vstack_previous = []
-        for img in previous_labeled_data:
-            x = img_to_array(img)
-            x = np.expand_dims(x, axis=0)
-            vstack_previous.append(x)
+        previous_labeled_data = np.array(previous_labeled_data)
+        if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights':
+            images = previous_labeled_data.reshape(num_previous_unique_stock_ids * num_previous_unique_image_types, num_previous_unique_time_days, image_size, image_size, 3)
+        else:
+            images = previous_labeled_data.reshape(len(previous_labeled_data), image_size, image_size, 3)
 
-        previous_images = np.vstack(vstack_previous)
-        previous_prob_predictions = model.predict(previous_images, batch_size=8)
+        previous_prob_predictions = model.predict(images, batch_size=8)
         previous_predictions = np.argmax(previous_prob_predictions, axis=1)
         prediction_converted = []
         for p in previous_predictions:
