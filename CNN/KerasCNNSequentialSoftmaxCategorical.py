@@ -133,7 +133,6 @@ unique_stock_ids = {}
 unique_time_days = {}
 unique_labels = {}
 unique_image_types = {}
-unique_drone_run_band_names = {}
 labels = []
 data = []
 labels_time_series = []
@@ -158,8 +157,8 @@ with open(input_file) as csv_file:
         stock_id = row[0]
         trait_name = row[3]
         image_type = row[4]
-        time_days = row[6]
-        
+        time_days = row[5]
+
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
 
@@ -183,11 +182,6 @@ with open(input_file) as csv_file:
         else:
             unique_image_types[image_type] = 1
 
-        if drone_run_band_name in unique_drone_run_band_names.keys():
-            unique_drone_run_band_names[drone_run_band_name] += 1
-        else:
-            unique_drone_run_band_names[drone_run_band_name] = 1
-
         if stock_id in unique_stock_ids.keys():
             unique_stock_ids[stock_id] += 1
         else:
@@ -200,13 +194,11 @@ with open(input_file) as csv_file:
 
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
-num_unique_drone_run_band_names = len(unique_drone_run_band_names.keys())
 num_unique_time_days = len(unique_time_days.keys())
 if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
     print(num_unique_stock_ids)
     print(num_unique_time_days)
     print(num_unique_image_types)
-    print(num_unique_drone_run_band_names)
     print(len(data))
     print(len(labels))
     raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
