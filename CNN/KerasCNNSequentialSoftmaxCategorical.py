@@ -200,14 +200,75 @@ with open(input_file) as csv_file:
         else:
             unique_time_days[time_days] = 1
 
-        rotated = data_augment_rotate(90, image)
-        rotated = data_augment_rotate(180, image)
-        rotated = data_augment_rotate(270, image)
+print("[INFO] augmenting data by rotating 90, 180, 270 degrees...")
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
 
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(90, image)
+        data.append(rotated)
+
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(180, image)
+        data.append(rotated)
+
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(270, image)
+        data.append(rotated)
+
+data_augmentation = 4
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
-if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
+if data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
     print(num_unique_stock_ids)
     print(num_unique_time_days)
     print(num_unique_image_types)
@@ -275,8 +336,8 @@ else:
     # For LSTM CNN model the images across time points for a single entity are held together, but that stack of images is trained against a single label
     if keras_model_type == 'densenet121_lstm':
         data = np.array(data)
-        data = data.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-        labels_lb = labels_lb.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
+        data = data.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
+        labels_lb = labels_lb.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
         labels = []
         for l in labels_lb:
             labels.append(l[0])

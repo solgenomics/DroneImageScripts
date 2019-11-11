@@ -221,6 +221,7 @@ with open(input_file) as csv_file:
         trait_name = row[3]
         image_type = row[4]
         time_days = row[5]
+
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
         print(image.shape)
@@ -249,6 +250,70 @@ with open(input_file) as csv_file:
             unique_drone_run_band_names[drone_run_band_name] += 1
         else:
             unique_drone_run_band_names[drone_run_band_name] = 1
+
+print("[INFO] augmenting data by rotating 90, 180, 270 degrees...")
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(90, image)
+        data.append(rotated)
+
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(180, image)
+        data.append(rotated)
+
+with open(input_file) as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        stock_id = row[0]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+
+        image = Image.open(row[1])
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        value = float(row[2])
+        labels.append(value)
+
+        rotated = data_augment_rotate(270, image)
+        data.append(rotated)
 
 lines = []
 class_map_lines = []
