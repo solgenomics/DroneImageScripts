@@ -138,6 +138,14 @@ data = []
 labels_time_series = []
 data_time_series = []
 
+def data_augment_rotate(angle, image):
+    (h, w) = image.shape[:2]
+    center = (w / 2, h / 2)
+    scale = 1.0
+    M = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated = cv2.warpAffine(image, M, (h, w))
+    return rotated
+
 image_size = 75
 if keras_model_type == 'simple_1':
     image_size = 32
@@ -191,6 +199,10 @@ with open(input_file) as csv_file:
             unique_time_days[time_days] += 1
         else:
             unique_time_days[time_days] = 1
+
+        rotated = data_augment_rotate(90, image)
+        rotated = data_augment_rotate(180, image)
+        rotated = data_augment_rotate(270, image)
 
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
@@ -496,7 +508,7 @@ else:
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=15, batch_size=8, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=150, batch_size=8, callbacks=callbacks_list)
 
     # print("[INFO] evaluating network...")
     # predictions = model.predict(testX, batch_size=32)
