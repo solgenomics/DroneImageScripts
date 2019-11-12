@@ -34,6 +34,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -42,7 +43,9 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.applications import inception_resnet_v2
 from tensorflow.keras.applications import DenseNet121
+from tensorflow.keras.applications import densenet
 from tensorflow.keras.applications import VGG16
 
 # construct the argument parse and parse the arguments
@@ -52,7 +55,7 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
-ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121")
+ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 ap.add_argument("-n", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
 args = vars(ap.parse_args())
@@ -138,18 +141,18 @@ data = []
 labels_time_series = []
 data_time_series = []
 
-def data_augment_rotate(angle, image):
-    (h, w) = image.shape[:2]
-    center = (w / 2, h / 2)
-    scale = 1.0
-    M = cv2.getRotationMatrix2D(center, angle, scale)
-    rotated = cv2.warpAffine(image, M, (h, w))
-    return rotated
+# def data_augment_rotate(angle, image):
+#     (h, w) = image.shape[:2]
+#     center = (w / 2, h / 2)
+#     scale = 1.0
+#     M = cv2.getRotationMatrix2D(center, angle, scale)
+#     rotated = cv2.warpAffine(image, M, (h, w))
+#     return rotated
 
 image_size = 75
 if keras_model_type == 'simple_1':
     image_size = 32
-if keras_model_type == 'densenet121_lstm':
+if keras_model_type == 'densenet121_lstm_imagenet':
     image_size = 75
 if keras_model_type == 'inceptionresnetv2':
     image_size = 75
@@ -200,71 +203,71 @@ with open(input_file) as csv_file:
         else:
             unique_time_days[time_days] = 1
 
-print("[INFO] augmenting data by rotating 90, 180, 270 degrees...")
-with open(input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
+# print("[INFO] augmenting data by rotating 90, 180, 270 degrees...")
+# with open(input_file) as csv_file:
+#     csv_reader = csv.reader(csv_file, delimiter=',')
+#     for row in csv_reader:
+#         stock_id = row[0]
+#         trait_name = row[3]
+#         image_type = row[4]
+#         time_days = row[5]
+# 
+#         image = Image.open(row[1])
+#         image = np.array(image.resize((image_size,image_size))) / 255.0
+# 
+#         if (len(image.shape) == 2):
+#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+#             image = cv2.merge((image, empty_mat, empty_mat))
+# 
+#         value = float(row[2])
+#         labels.append(value)
+# 
+#         rotated = data_augment_rotate(90, image)
+#         data.append(rotated)
+# 
+# with open(input_file) as csv_file:
+#     csv_reader = csv.reader(csv_file, delimiter=',')
+#     for row in csv_reader:
+#         stock_id = row[0]
+#         trait_name = row[3]
+#         image_type = row[4]
+#         time_days = row[5]
+# 
+#         image = Image.open(row[1])
+#         image = np.array(image.resize((image_size,image_size))) / 255.0
+# 
+#         if (len(image.shape) == 2):
+#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+#             image = cv2.merge((image, empty_mat, empty_mat))
+# 
+#         value = float(row[2])
+#         labels.append(value)
+# 
+#         rotated = data_augment_rotate(180, image)
+#         data.append(rotated)
+# 
+# with open(input_file) as csv_file:
+#     csv_reader = csv.reader(csv_file, delimiter=',')
+#     for row in csv_reader:
+#         stock_id = row[0]
+#         trait_name = row[3]
+#         image_type = row[4]
+#         time_days = row[5]
+# 
+#         image = Image.open(row[1])
+#         image = np.array(image.resize((image_size,image_size))) / 255.0
+# 
+#         if (len(image.shape) == 2):
+#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+#             image = cv2.merge((image, empty_mat, empty_mat))
+# 
+#         value = float(row[2])
+#         labels.append(value)
+# 
+#         rotated = data_augment_rotate(270, image)
+#         data.append(rotated)
 
-        image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
-
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
-
-        value = float(row[2])
-        labels.append(value)
-
-        rotated = data_augment_rotate(90, image)
-        data.append(rotated)
-
-with open(input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
-
-        image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
-
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
-
-        value = float(row[2])
-        labels.append(value)
-
-        rotated = data_augment_rotate(180, image)
-        data.append(rotated)
-
-with open(input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
-
-        image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
-
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
-
-        value = float(row[2])
-        labels.append(value)
-
-        rotated = data_augment_rotate(270, image)
-        data.append(rotated)
-
-data_augmentation = 4
+data_augmentation = 1
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
@@ -327,23 +330,55 @@ else:
     print("[INFO] number of labels: %d" % (len(labels_lb)))
     print("[INFO] number of images: %d" % (len(data)))
 
-    print("[INFO] splitting training set...")
+    print("[INFO] augmenting data and splitting training set...")
 
-    trainX = []
-    testX = []
-    trainY = []
-    testY = []
+    #Data Generation uses the same settings during prediction!
+    datagen = ImageDataGenerator(
+        featurewise_center=True,
+        featurewise_std_normalization=True,
+        #rotation_range=20,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        horizontal_flip=True,
+        # vertical_flip=True,
+        brightness_range=[0.8,1.2]
+    )
+
+    data = np.array(data)
+    labels_lb = np.array(labels_lb)
+
+    datagen.fit(data)
+    data_augmentation = 16
+    augmented_data = []
+    augmented_labels = []
+    augmented = datagen.flow(data, labels_lb, batch_size=len(data))
+    for i in range(0, data_augmentation):
+        X, y = augmented.next()
+        for x_aug in X:
+            augmented_data.append(x_aug)
+        for y_aug in y:
+            augmented_labels.append(y_aug)
+    augmented_data = np.array(augmented_data)
+    augmented_labels = np.array(augmented_labels)
+
+    if data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(augmented_data) or data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(augmented_labels):
+        print(num_unique_stock_ids)
+        print(num_unique_time_days)
+        print(num_unique_image_types)
+        print(len(augmented_data))
+        print(len(augmented_labels))
+        raise Exception('Number of augmented data (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types time the data augmentation. This means the input data in uneven')
+
     # For LSTM CNN model the images across time points for a single entity are held together, but that stack of images is trained against a single label
-    if keras_model_type == 'densenet121_lstm':
-        data = np.array(data)
-        data = data.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-        labels_lb = labels_lb.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
+    if keras_model_type == 'densenet121_lstm_imagenet':
+        augmented_data = augmented_data.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
+        labels_lb = augmented_labels.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
         labels = []
         for l in labels_lb:
             labels.append(l[0])
-        (trainX, testX, trainY, testY) = train_test_split(data, np.array(labels), test_size=0.2)
-    else:
-        (trainX, testX, trainY, testY) = train_test_split(np.array(data), np.array(labels_lb), test_size=0.2)
+        augmented_labels = np.array(labels)
+
+    (trainX, testX, trainY, testY) = train_test_split(augmented_data, augmented_labels, test_size=0.2)
 
     model = None
     if keras_model_type == 'inceptionresnetv2':
@@ -473,6 +508,9 @@ else:
         model.add(Activation("softmax"))
 
     if keras_model_type == 'densenet121application':
+        trainX = densenet.preprocess_input(trainX)
+        testX = densenet.preprocess_input(testX)
+
         input_tensor = Input(shape=(image_size,image_size,3))
         base_model = DenseNet121(
             include_top = False,
@@ -502,6 +540,9 @@ else:
         model = Model(inputs=input_tensor, outputs=output_tensor)
 
     if keras_model_type == 'inceptionresnetv2application':
+        trainX = inception_resnet_v2.preprocess_input(trainX)
+        testX = inception_resnet_v2.preprocess_input(testX)
+
         input_tensor = Input(shape=(image_size,image_size,3))
         base_model = InceptionResNetV2(
             include_top = False,
@@ -531,10 +572,13 @@ else:
 
         model = Model(inputs=input_tensor, outputs=output_tensor)
 
-    if keras_model_type == 'densenet121_lstm':
+    if keras_model_type == 'densenet121_lstm_imagenet':
+        trainX = densenet.preprocess_input(trainX)
+        testX = densenet.preprocess_input(testX)
+
         n = DenseNet121(
             include_top=False,
-            weights=keras_model_weights,
+            weights='imagenet',
             input_shape=(image_size, image_size, 3),
             pooling = 'avg'
         )
@@ -569,7 +613,15 @@ else:
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=150, batch_size=8, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=100, batch_size=16, callbacks=callbacks_list)
+
+    # H = model.fit_generator(
+    #     generator = datagen.flow(trainX, trainY, batch_size=batch_size),
+    #     validation_data = (testX, testY),
+    #     steps_per_epoch = len(trainX) // (batch_size / 8),
+    #     epochs = 150,
+    #     callbacks = callbacks_list
+    # )
 
     # print("[INFO] evaluating network...")
     # predictions = model.predict(testX, batch_size=32)

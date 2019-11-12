@@ -32,6 +32,11 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.applications import inception_resnet_v2
+from tensorflow.keras.applications import DenseNet121
+from tensorflow.keras.applications import densenet
+from tensorflow.keras.applications import VGG16
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -398,6 +403,9 @@ else:
             project_name=output_random_search_result_project
         )
     if keras_model_type == 'inceptionresnetv2':
+        train_images = inception_resnet_v2.preprocess_input(train_images)
+        test_images = inception_resnet_v2.preprocess_input(test_images)
+
         # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS, weights=keras_model_weights)
         hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS)
         tuner = Hyperband(
