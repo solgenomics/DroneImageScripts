@@ -11,6 +11,7 @@ import numpy as np
 import math
 import json
 import pandas as pd
+import CNNProcessData
 from PIL import Image
 from sklearn import preprocessing
 from tensorflow.keras import Sequential
@@ -48,6 +49,8 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from kerastuner.tuners import RandomSearch
+from kerastuner.applications import HyperResNet
+from kerastuner.tuners import Hyperband
 from keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
 import matplotlib.backends.backend_pdf
@@ -61,7 +64,7 @@ ap.add_argument("-m", "--input_model_file_path", required=True, help="file path 
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-e", "--outfile_activation_path", required=True, help="file path where the activation graph output will be saved")
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
-ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
+ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. KerasCNNSequentialSoftmaxCategorical, SimpleKerasTunerCNNSequentialSoftmaxCategorical, KerasTunerCNNInceptionResNetV2, KerasTunerCNNSequentialSoftmaxCategorical, KerasCNNInceptionResNetV2, KerasCNNLSTMDenseNet121ImageNetWeights, KerasCNNInceptionResNetV2ImageNetWeights")
 ap.add_argument("-t", "--training_data_input_file", required=True, help="The input data file used to train the model previously. this file should have the image file paths and labels used during training")
 ap.add_argument("-c", "--class_map", help="whether to plot true vs prediction, provide a json encoded class map. this will only work if the plots already have true phenotypes saved in the database.")
 
@@ -78,6 +81,9 @@ training_data_input_file = args["training_data_input_file"]
 class_map = args["class_map"]
 if class_map is not None:
     class_map = json.loads(class_map)
+
+input_image_size = 75
+image_size = 48
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -96,23 +102,11 @@ previous_labeled_data = []
 previous_labels = []
 unique_labels = {}
 
-image_size = 75
-if keras_model_name == 'KerasCNNSequentialSoftmaxCategorical':
-    image_size = 32
-if keras_model_name == 'SimpleKerasTunerCNNSequentialSoftmaxCategorical':
-    image_size = 32
-elif keras_model_name == 'KerasTunerCNNInceptionResNetV2':
-    image_size = 75
-elif keras_model_name == 'KerasTunerCNNSequentialSoftmaxCategorical':
-    image_size = 32
-elif keras_model_name == 'KerasCNNInceptionResNetV2':
-    image_size = 75
-elif keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights':
-    image_size = 75
-elif keras_model_name == 'KerasCNNInceptionResNetV2ImageNetWeights':
-    image_size = 75
+if log_file_path is not None:
+    eprint("[INFO] reading labels and image data...")
+else:
+    print("[INFO] reading labels and image data...")
 
-print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
@@ -120,7 +114,7 @@ with open(input_file) as csv_file:
         image_type = row[3]
         time_days = row[4]
         image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
+        image = np.array(image.resize((input_image_size, input_image_size))) / 1.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -150,7 +144,11 @@ with open(input_file) as csv_file:
 trained_image_data = []
 trained_labels = []
 
-print("[INFO] reading labels and image data used to train model previously...")
+if log_file_path is not None:
+    eprint("[INFO] reading labels and image data used to train model previously...")
+else:
+    print("[INFO] reading labels and image data used to train model previously...")
+
 with open(training_data_input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
@@ -175,72 +173,42 @@ with open(training_data_input_file) as csv_file:
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
-num_unique_stock_ids = len(unique_stock_ids.keys())
-num_unique_image_types = len(unique_image_types.keys())
+print(num_unique_stock_ids)
+print(num_unique_time_days)
+print(num_unique_image_types)
+print(len(data))
 if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
-    print(num_unique_stock_ids)
-    print(num_unique_time_days)
-    print(num_unique_image_types)
-    print(len(data))
-    print(len(labels))
     raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
 
-print("[INFO] augmenting test images...")
 
-#Data Generation uses the same settings during training!
-datagen = ImageDataGenerator(
-    featurewise_center=True,
-    featurewise_std_normalization=True,
-    #rotation_range=20,
-    # width_shift_range=0.2,
-    # height_shift_range=0.2,
-    horizontal_flip=True,
-    #vertical_flip=True,
-    brightness_range=[0.9,1.1],
-    zoom_range=[0.95,1.05],
-    # shear_range=10
-)
+data_augmentation = 5
+if log_file_path is not None:
+    eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
+else:
+    print("[INFO] augmenting test images by %d..." % (data_augmentation))
 
 data = np.array(data)
 trained_image_data = np.array(trained_image_data)
 trained_labels = np.array(trained_labels)
 
-datagen.fit(trained_image_data)
+process_data = CNNProcessData.CNNProcessData()
+augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_name, trained_image_data)
 
-data_augmentation = 4
-augmented_data = []
-augmented = datagen.flow(data, None, batch_size=len(data))
-for i in range(0, data_augmentation):
-    for x_aug in augmented.next():
-        augmented_data.append(x_aug)
-augmented_data = np.array(augmented_data)
-
-if data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(augmented_data):
-    print(num_unique_stock_ids)
-    print(num_unique_time_days)
-    print(num_unique_image_types)
-    print(len(augmented_data))
-    raise Exception('Number of augmented images is not equal to the number of unique stocks times the number of unique time points times the number of unique image types time the augmentation. This means the input data in uneven')
-
-#print(unique_labels)
 lines = []
 evaluation_lines = []
 if len(augmented_data) < 1:
     lines = ["No images, so nothing to predict!"]
 else:
-    print("[INFO] number of images: %d" % (len(data)))
-    print("[INFO] number of augmented images: %d" % (len(augmented_data)))
+    if log_file_path is not None:
+        eprint("[INFO] number of images: %d" % (len(data)))
+        eprint("[INFO] number of augmented images: %d" % (len(augmented_data)))
+    else:
+        print("[INFO] number of images: %d" % (len(data)))
+        print("[INFO] number of augmented images: %d" % (len(augmented_data)))
     model = load_model(input_model_file_path)
 
     for layer in model.layers:
         print(layer.output_shape)
-
-    if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights':
-        data = data.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-        augmented_data = augmented_data.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-    else:
-        data = data.reshape(len(data), image_size, image_size, 3)
-        augmented_data = augmented_data.reshape(len(augmented_data), image_size, image_size, 3)
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = np.argmax(prob_predictions, axis=1)
@@ -249,11 +217,16 @@ else:
     predictions_converted = []
     for p in predictions:
         predictions_converted.append(float(class_map[str(p)]['label']))
-    predictions_converted = np.array(predictions_converted)
+    predictions_converted_original = np.array(predictions_converted)
 
-    predictions_converted = predictions_converted.reshape(data_augmentation, int(len(predictions_converted)/data_augmentation))
+    predictions_converted = predictions_converted_original.reshape(data_augmentation, int(len(predictions_converted_original)/data_augmentation))
     print(predictions_converted)
     averaged_predictions = np.mean(predictions_converted, axis=0)
+    print(averaged_predictions)
+    averaged_predictions = averaged_predictions.reshape(num_unique_image_types, int(len(averaged_predictions)/(num_unique_image_types)))
+    print(averaged_predictions)
+    averaged_predictions = np.mean(averaged_predictions, axis=0)
+    print(averaged_predictions)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
@@ -277,7 +250,8 @@ else:
     activation_model = Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     activation_figures = []
 
-    if len(augmented_data[0].shape) == 3:
+    get_activations = 0
+    if len(augmented_data[0].shape) == 3 and get_activations == 1:
         layer_displays_above_median = {}
         layer_displays_below_median = {}
         average_img_above_median = np.zeros_like(augmented_data[0])
@@ -285,9 +259,9 @@ else:
         num_img_above_median = 0
         num_img_below_median = 0
         itera = 0
-        for image in data:
+        for image in augmented_data:
             activations = activation_model.predict(np.array([image]))
-            pred_label = averaged_predictions[itera]
+            pred_label = predictions_converted_original[itera]
 
             if pred_label > mean_prediction_label:
                 average_img_above_median += image

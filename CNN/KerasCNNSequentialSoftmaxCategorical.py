@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import math
 import pandas as pd
+import CNNProcessData
 from PIL import Image
 from sklearn import preprocessing
 from tensorflow.keras import Sequential
@@ -55,9 +56,10 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
-ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121")
+ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner, inceptionresnetv2application_tuner")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 ap.add_argument("-n", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
+ap.add_argument("-p", "--output_random_search_result_project", required=False, help="project dir name where the keras tuner random search results output will be saved. only required for tuner models")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
@@ -65,9 +67,13 @@ input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
+output_random_search_result_project = args["output_random_search_result_project"]
 keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
 keras_model_layers = args["keras_model_layers"]
+
+input_image_size = 75
+image_size = 48
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -132,6 +138,124 @@ def incresC(x,scale,name=None):
                       name=name+'act_saling')([x, filt_exp_1x1])
     return final_lay
 
+def build_simple_model(hp):
+    model = Sequential()
+    model.add(Conv2D(
+        filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
+        kernel_size=hp.Choice('conv_1_kernel', values = [3,5]),
+        activation='relu',
+        input_shape=(image_size,image_size,3)
+    ))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu'
+    ))
+    model.add(Flatten())
+    model.add(Dense(
+        units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
+        activation='relu'
+    ))
+    model.add(Dense(NUM_LABELS, activation='softmax'))
+
+    model.compile(
+        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    return model
+
+def build_simple_1_model(hp):
+    init = "he_normal"
+    reg = regularizers.l2(0.01)
+    chanDim = -1
+
+    model = Sequential()
+    model.add(Conv2D(
+        filters=hp.Int('conv_1_filter', min_value=16, max_value=32, step=16),
+        kernel_size=hp.Choice('conv_1_kernel', values = [3,5,7]),
+        activation='relu',
+        strides=(2, 2),
+        padding="valid",
+        kernel_initializer=init,
+        kernel_regularizer=reg,
+        input_shape=(image_size,image_size,3)
+    ))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(
+        filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
+        kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
+        strides=(2, 2),
+        activation='relu',
+        padding="same",
+        kernel_initializer=init,
+        kernel_regularizer=reg
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(
+        units=hp.Int('dense_1_units', min_value=256, max_value=512, step=64),
+        activation='relu'
+    ))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.5))
+    model.add(Dense(NUM_LABELS, activation='softmax'))
+
+    model.compile(
+        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
 unique_stock_ids = {}
 unique_time_days = {}
 unique_labels = {}
@@ -149,18 +273,6 @@ data_time_series = []
 #     rotated = cv2.warpAffine(image, M, (h, w))
 #     return rotated
 
-image_size = 75
-if keras_model_type == 'simple_1':
-    image_size = 32
-if keras_model_type == 'densenet121_lstm_imagenet':
-    image_size = 75
-if keras_model_type == 'inceptionresnetv2':
-    image_size = 75
-if keras_model_type == 'inceptionresnetv2application':
-    image_size = 75
-if keras_model_type == 'densenet121application':
-    image_size = 75
-
 print("[INFO] reading labels and image data...")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
@@ -171,7 +283,7 @@ with open(input_file) as csv_file:
         time_days = row[5]
 
         image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
+        image = np.array(image.resize((input_image_size,input_image_size))) / 1.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -203,75 +315,10 @@ with open(input_file) as csv_file:
         else:
             unique_time_days[time_days] = 1
 
-# print("[INFO] augmenting data by rotating 90, 180, 270 degrees...")
-# with open(input_file) as csv_file:
-#     csv_reader = csv.reader(csv_file, delimiter=',')
-#     for row in csv_reader:
-#         stock_id = row[0]
-#         trait_name = row[3]
-#         image_type = row[4]
-#         time_days = row[5]
-# 
-#         image = Image.open(row[1])
-#         image = np.array(image.resize((image_size,image_size))) / 255.0
-# 
-#         if (len(image.shape) == 2):
-#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-#             image = cv2.merge((image, empty_mat, empty_mat))
-# 
-#         value = float(row[2])
-#         labels.append(value)
-# 
-#         rotated = data_augment_rotate(90, image)
-#         data.append(rotated)
-# 
-# with open(input_file) as csv_file:
-#     csv_reader = csv.reader(csv_file, delimiter=',')
-#     for row in csv_reader:
-#         stock_id = row[0]
-#         trait_name = row[3]
-#         image_type = row[4]
-#         time_days = row[5]
-# 
-#         image = Image.open(row[1])
-#         image = np.array(image.resize((image_size,image_size))) / 255.0
-# 
-#         if (len(image.shape) == 2):
-#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-#             image = cv2.merge((image, empty_mat, empty_mat))
-# 
-#         value = float(row[2])
-#         labels.append(value)
-# 
-#         rotated = data_augment_rotate(180, image)
-#         data.append(rotated)
-# 
-# with open(input_file) as csv_file:
-#     csv_reader = csv.reader(csv_file, delimiter=',')
-#     for row in csv_reader:
-#         stock_id = row[0]
-#         trait_name = row[3]
-#         image_type = row[4]
-#         time_days = row[5]
-# 
-#         image = Image.open(row[1])
-#         image = np.array(image.resize((image_size,image_size))) / 255.0
-# 
-#         if (len(image.shape) == 2):
-#             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-#             image = cv2.merge((image, empty_mat, empty_mat))
-# 
-#         value = float(row[2])
-#         labels.append(value)
-# 
-#         rotated = data_augment_rotate(270, image)
-#         data.append(rotated)
-
-data_augmentation = 1
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
-if data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
+if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
     print(num_unique_stock_ids)
     print(num_unique_time_days)
     print(num_unique_image_types)
@@ -294,7 +341,7 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    categorical_object = pd.cut(labels, 25)
+    categorical_object = pd.cut(labels, 15)
     labels_predict_codes = categorical_object.codes
     categories = categorical_object.categories
 
@@ -310,8 +357,6 @@ else:
         else:
             labels_predict_unique[str(label_code)] = 1
 
-    #labels_predict = preprocessing.normalize([labels_predict], norm='l2')
-    #labels_predict = labels_predict[0]
     labels_predict = labels_predict_codes.astype(str)
     lb = LabelBinarizer()
     labels_lb = lb.fit_transform(labels_predict)
@@ -327,62 +372,36 @@ else:
     separator = ", "
     lines.append("Predicted Labels: " + separator.join(lb.classes_))
 
-    print("[INFO] number of labels: %d" % (len(labels_lb)))
-    print("[INFO] number of images: %d" % (len(data)))
-
-    print("[INFO] augmenting data and splitting training set...")
-
-    #Data Generation uses the same settings during prediction!
-    datagen = ImageDataGenerator(
-        featurewise_center=True,
-        featurewise_std_normalization=True,
-        #rotation_range=20,
-        width_shift_range=0.05,
-        height_shift_range=0.05,
-        horizontal_flip=True,
-        # vertical_flip=True,
-        brightness_range=[0.8,1.2]
-    )
+    if log_file_path is not None:
+        eprint("[INFO] number of labels: %d" % (len(labels_lb)))
+        eprint("[INFO] number of images: %d" % (len(data)))
+        eprint("[INFO] augmenting data and splitting training set...")
+    else:
+        print("[INFO] number of labels: %d" % (len(labels_lb)))
+        print("[INFO] number of images: %d" % (len(data)))
+        print("[INFO] augmenting data and splitting training set...")
 
     data = np.array(data)
     labels_lb = np.array(labels_lb)
 
-    datagen.fit(data)
-    data_augmentation = 6
-    augmented_data = []
-    augmented_labels = []
-    augmented = datagen.flow(data, labels_lb, batch_size=len(data))
-    for i in range(0, data_augmentation):
-        X, y = augmented.next()
-        for x_aug in X:
-            augmented_data.append(x_aug)
-        for y_aug in y:
-            augmented_labels.append(y_aug)
-    augmented_data = np.array(augmented_data)
-    augmented_labels = np.array(augmented_labels)
+    data_augmentation = 10
+    process_data = CNNProcessData.CNNProcessData()
+    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation)
 
-    if data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(augmented_data) or data_augmentation * num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(augmented_labels):
-        print(num_unique_stock_ids)
-        print(num_unique_time_days)
-        print(num_unique_image_types)
-        print(len(augmented_data))
-        print(len(augmented_labels))
-        raise Exception('Number of augmented data (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types time the data augmentation. This means the input data in uneven')
-
-    # For LSTM CNN model the images across time points for a single entity are held together, but that stack of images is trained against a single label
-    if keras_model_type == 'densenet121_lstm_imagenet':
-        augmented_data = augmented_data.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-        labels_lb = augmented_labels.reshape(data_augmentation * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
-        labels = []
-        for l in labels_lb:
-            labels.append(l[0])
-        augmented_labels = np.array(labels)
-
-        #Dont do random data gen for validation data!
-
-    (trainX, testX, trainY, testY) = train_test_split(augmented_data, augmented_labels, test_size=0.2)
+    if log_file_path is not None:
+        eprint("[INFO] number of augmented training images: %d" % (len(trainX)))
+        eprint("[INFO] number of augmented testing images: %d" % (len(testX)))
+        eprint("[INFO] number of augmented training labels: %d" % (len(trainY)))
+        eprint("[INFO] number of augmented testing labels: %d" % (len(testY)))
+    else:
+        print("[INFO] number of augmented training images: %d" % (len(trainX)))
+        print("[INFO] number of augmented testing images: %d" % (len(testX)))
+        print("[INFO] number of augmented training labels: %d" % (len(trainY)))
+        print("[INFO] number of augmented testing labels: %d" % (len(testY)))
 
     model = None
+    opt = Adam(lr=1e-3, decay=1e-3 / 50)
+
     if keras_model_type == 'inceptionresnetv2':
         img_input = Input(shape=(image_size,image_size,3))
 
@@ -462,6 +481,7 @@ else:
         x = Dense(number_labels, activation='softmax')(x)
 
         model = Model(img_input, x, name='inception_resnet_v2')
+        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     if keras_model_type == 'simple_1':
 
@@ -508,6 +528,7 @@ else:
         # softmax classifier
         model.add(Dense(number_labels))
         model.add(Activation("softmax"))
+        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     if keras_model_type == 'densenet121application':
         trainX = densenet.preprocess_input(trainX)
@@ -540,6 +561,7 @@ else:
         output_tensor = Dense(number_labels, activation='softmax')(op)
 
         model = Model(inputs=input_tensor, outputs=output_tensor)
+        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     if keras_model_type == 'inceptionresnetv2application':
         trainX = inception_resnet_v2.preprocess_input(trainX)
@@ -573,6 +595,7 @@ else:
         output_tensor = Dense(number_labels, activation='softmax')(op)
 
         model = Model(inputs=input_tensor, outputs=output_tensor)
+        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     if keras_model_type == 'densenet121_lstm_imagenet':
         trainX = densenet.preprocess_input(trainX)
@@ -587,8 +610,8 @@ else:
 
         # do not train first layers, I want to only train
         # the 4 last layers (my own choice, up to you)
-        for layer in n.layers[:-4]:
-            layer.trainable = False
+        # for layer in n.layers[:-4]:
+        #     layer.trainable = False
 
         model = Sequential()
         model.add(
@@ -603,13 +626,50 @@ else:
         model.add(Dense(64, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(number_labels, activation='softmax'))
+        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+
+    if keras_model_type == 'simple_tuner':
+        tuner = RandomSearch(
+            build_simple_model,
+            objective='val_accuracy',
+            max_trials=500,
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project
+        )
+        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
+        model = tuner.get_best_models(num_models=1)[0]
+
+    if keras_model_type == 'simple_1_tuner':
+        tuner = RandomSearch(
+            build_simple_1_model,
+            objective='val_accuracy',
+            max_trials=500,
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project
+        )
+        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
+        model = tuner.get_best_models(num_models=1)[0]
+
+    if keras_model_type == 'inceptionresnetv2application_tuner':
+        train_images = inception_resnet_v2.preprocess_input(train_images)
+        test_images = inception_resnet_v2.preprocess_input(test_images)
+
+        # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS, weights=keras_model_weights)
+        hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS)
+        tuner = Hyperband(
+            hypermodel,
+            objective='val_accuracy',
+            directory=output_random_search_result_project,
+            project_name=output_random_search_result_project,
+            max_epochs=50
+        )
+        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
+        model = tuner.get_best_models(num_models=1)[0]
 
     for layer in model.layers:
         print(layer.output_shape)
 
     print("[INFO] training network...")
-    opt = Adam(lr=1e-3, decay=1e-3 / 50)
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
     checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
