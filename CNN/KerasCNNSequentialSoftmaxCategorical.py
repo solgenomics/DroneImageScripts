@@ -348,7 +348,7 @@ else:
     labels_lb = np.array(labels_lb)
 
     datagen.fit(data)
-    data_augmentation = 16
+    data_augmentation = 6
     augmented_data = []
     augmented_labels = []
     augmented = datagen.flow(data, labels_lb, batch_size=len(data))
@@ -377,6 +377,8 @@ else:
         for l in labels_lb:
             labels.append(l[0])
         augmented_labels = np.array(labels)
+
+        #Dont do random data gen for validation data!
 
     (trainX, testX, trainY, testY) = train_test_split(augmented_data, augmented_labels, test_size=0.2)
 

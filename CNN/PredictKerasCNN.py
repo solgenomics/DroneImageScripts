@@ -63,9 +63,7 @@ ap.add_argument("-e", "--outfile_activation_path", required=True, help="file pat
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. InceptionResNetV2")
 ap.add_argument("-t", "--training_data_input_file", required=True, help="The input data file used to train the model previously. this file should have the image file paths and labels used during training")
-ap.add_argument("-r", "--retrain_model", help="whether to retrain the model on the images. this will only work if the plots already have true phenotypes saved in the database.")
 ap.add_argument("-c", "--class_map", help="whether to plot true vs prediction, provide a json encoded class map. this will only work if the plots already have true phenotypes saved in the database.")
-ap.add_argument("-p", "--plot_prediction_comparison", help="whether to plot true vs prediction. this will only work if the plots already have true phenotypes saved in the database.")
 
 args = vars(ap.parse_args())
 
@@ -77,8 +75,6 @@ outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 training_data_input_file = args["training_data_input_file"]
-retrain_model = args["retrain_model"]
-plot_prediction_comparison = args["plot_prediction_comparison"]
 class_map = args["class_map"]
 if class_map is not None:
     class_map = json.loads(class_map)
@@ -181,9 +177,6 @@ num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
-num_previous_unique_time_days = len(previous_unique_time_days.keys())
-num_previous_unique_stock_ids = len(previous_unique_stock_ids.keys())
-num_previous_unique_image_types = len(previous_unique_image_types.keys())
 if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
     print(num_unique_stock_ids)
     print(num_unique_time_days)
@@ -201,10 +194,10 @@ datagen = ImageDataGenerator(
     #rotation_range=20,
     # width_shift_range=0.2,
     # height_shift_range=0.2,
-    # horizontal_flip=True,
+    horizontal_flip=True,
     #vertical_flip=True,
-    # brightness_range=[0.5,1.5],
-    # zoom_range=[0.8,1.2],
+    brightness_range=[0.9,1.1],
+    zoom_range=[0.95,1.05],
     # shear_range=10
 )
 
@@ -252,13 +245,15 @@ else:
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = np.argmax(prob_predictions, axis=1)
     print(predictions)
+    
+    predictions_converted = []
+    for p in predictions:
+        predictions_converted.append(float(class_map[str(p)]['label']))
+    predictions_converted = np.array(predictions_converted)
 
-    predictions = predictions.reshape(data_augmentation, int(len(augmented_data)/data_augmentation))
-    print(predictions)
-    averaged_predictions = np.mean(predictions, axis=0)
-    print(averaged_predictions)
-    averaged_predictions = [int(round(elem)) for elem in averaged_predictions]
-    print(averaged_predictions)
+    predictions_converted = predictions_converted.reshape(data_augmentation, int(len(predictions_converted)/data_augmentation))
+    print(predictions_converted)
+    averaged_predictions = np.mean(predictions_converted, axis=0)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
@@ -293,8 +288,7 @@ else:
         itera = 0
         for image in data:
             activations = activation_model.predict(np.array([image]))
-            pred = averaged_predictions[itera]
-            pred_label = float(class_map[str(pred)]['label'])
+            pred_label = averaged_predictions[itera]
 
             if pred_label > mean_prediction_label:
                 average_img_above_median += image
@@ -370,85 +364,6 @@ else:
             plt.imshow(avg_activation, aspect='auto', cmap='viridis')
             fig = plt.gcf()
             activation_figures.append(fig)
-
-    if retrain_model == True:
-        if len(unique_labels.keys()) < 2:
-            lines = ["Number of previous labels is less than 2, so will not evaluate model performance!"]
-        else:
-            categorical_object = pd.cut(previous_labels, 25)
-            labels_predict_codes = categorical_object.codes
-            categories = categorical_object.categories
-
-            labels_predict_map = {}
-            labels_predict_unique = {}
-            for index in range(len(previous_labels)):
-                label = previous_labels[index]
-                label_code = labels_predict_codes[index]
-                cat_mid = categories[label_code].mid
-                labels_predict_map[str(label_code)] = cat_mid
-                if str(label_code) in labels_predict_unique.keys():
-                    labels_predict_unique[str(label_code)] += 1
-                else:
-                    labels_predict_unique[str(label_code)] = 1
-
-            #labels_predict = preprocessing.normalize([labels_predict], norm='l2')
-            #labels_predict = labels_predict[0]
-            labels_predict = labels_predict_codes.astype(str)
-            lb = LabelBinarizer()
-            labels_lb = lb.fit_transform(labels_predict)
-
-            (trainX, testX, trainY, testY) = train_test_split(np.array(previous_labeled_data), np.array(labels_lb), test_size=0.25)
-
-            checkpoint = ModelCheckpoint(input_model_file_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
-            callbacks_list = [checkpoint]
-
-            H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=8, callbacks=callbacks_list)
-
-            print("[INFO] evaluating network...")
-            predictions = model.predict(testX, batch_size=32)
-            report = classification_report(testY.argmax(axis=1), predictions.argmax(axis=1), target_names=lb.classes_)
-            print(report)
-
-            report_lines = report.split('\n')
-            separator = ""
-            for l in report_lines:
-                evaluation_lines.append(separator.join(l))
-
-    if plot_prediction_comparison == "True":
-        previous_labeled_data_no_missing = []
-        predictions_no_missing = []
-        for iterator in range(0,len(previous_labels)):
-            previous_value = previous_labels[iterator]
-            prediction = averaged_predictions[iterator]
-            if previous_value is not None and previous_value != '' and previous_value != ' ':
-                if isinstance(previous_value, int):
-                    previous_value = int(previous_value)
-                if isinstance(previous_value, float) or isinstance(previous_value, str):
-                    previous_value = float(previous_value)
-                previous_labeled_data_no_missing.append(previous_value)
-                predictions_no_missing.append(prediction)
-        
-        prediction_converted = []
-        for p in predictions_no_missing:
-            prediction_converted.append(class_map[str(p)]['label'])
-
-        prediction_converted = np.array(prediction_converted, dtype=np.float32)
-        b, m = polyfit(previous_labeled_data_no_missing, prediction_converted, 1)
-
-        regressed_predictions = []
-        for p in previous_labeled_data_no_missing:
-            r = b + (m * p)
-            regressed_predictions.append(r)
-
-        plt.figure()
-        plt.title("Prediction vs True Values")
-        plt.grid(True)
-        plt.plot(previous_labeled_data_no_missing, prediction_converted, 'bo')
-        plt.plot(previous_labeled_data_no_missing, regressed_predictions, '-')
-        plt.xlabel("True")
-        plt.ylabel("Predicted")
-        fig = plt.gcf()
-        activation_figures.append(fig)
 
     pdf = matplotlib.backends.backend_pdf.PdfPages(outfile_activation_path)
     for fig in activation_figures:
