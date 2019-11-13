@@ -23,14 +23,16 @@ class CNNProcessData:
         return datagen
 
     def generate_croppings(self, testX, testY, image_size, number):
-        if number != 5:
-            raise Exception("Only implemented for number = 5 right now")
+        if number != 7:
+            raise Exception("Only implemented for number = 7 right now")
 
         augmented_testX_1 = []
         augmented_testX_2 = []
         augmented_testX_3 = []
         augmented_testX_4 = []
         augmented_testX_5 = []
+        augmented_testX_6 = []
+        augmented_testX_7 = []
         mid_image_size = int(round(image_size/2))
         for img in testX:
             height = img.shape[0]
@@ -42,18 +44,24 @@ class CNNProcessData:
             crop_img3 = img[0:image_size, width-image_size:width]
             crop_img4 = img[0:image_size, 0:image_size]
             crop_img5 = img[mid_height-mid_image_size:mid_height+mid_image_size, mid_width-mid_image_size:mid_width+mid_image_size]
+            crop_img6 = img[mid_height-mid_image_size:mid_height+mid_image_size, 0:image_size]
+            crop_img7 = img[mid_height-mid_image_size:mid_height+mid_image_size, width-image_size:width]
             augmented_testX_1.append(crop_img1)
             augmented_testX_2.append(crop_img2)
             augmented_testX_3.append(crop_img3)
             augmented_testX_4.append(crop_img4)
             augmented_testX_5.append(crop_img5)
+            augmented_testX_6.append(crop_img6)
+            augmented_testX_7.append(crop_img7)
 
         augmented_testX_1 = np.array(augmented_testX_1)
         augmented_testX_2 = np.array(augmented_testX_2)
         augmented_testX_3 = np.array(augmented_testX_3)
         augmented_testX_4 = np.array(augmented_testX_4)
         augmented_testX_5 = np.array(augmented_testX_5)
-        testX = np.concatenate((augmented_testX_1, augmented_testX_2, augmented_testX_3, augmented_testX_4, augmented_testX_5))
+        augmented_testX_6 = np.array(augmented_testX_6)
+        augmented_testX_7 = np.array(augmented_testX_7)
+        testX = np.concatenate((augmented_testX_1, augmented_testX_2, augmented_testX_3, augmented_testX_4, augmented_testX_5, augmented_testX_6, augmented_testX_7))
         testY = np.repeat(testY, number)
         return (testX, testY)
 
@@ -67,7 +75,7 @@ class CNNProcessData:
 
         datagen.fit(data)
 
-        data_augmentation_test = 5
+        data_augmentation_test = 7
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
@@ -148,7 +156,7 @@ class CNNProcessData:
         datagen.fit(training_data)
         data = datagen.standardize(data)
 
-        data_augmentation_test = 5
+        data_augmentation_test = 7
         augmented_data = []
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
