@@ -262,8 +262,7 @@ else:
     else:
         print("Predictions: " + prediction_string)
 
-    mean_prediction = int(round(sum(averaged_predictions)/len(averaged_predictions)))
-    mean_prediction_label = float(class_map[str(mean_prediction)]['label'])
+    mean_prediction_label = sum(averaged_predictions)/len(averaged_predictions)
     for p in averaged_predictions:
         line = [p]
         lines.append(line)
