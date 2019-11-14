@@ -107,6 +107,7 @@ if log_file_path is not None:
 else:
     print("[INFO] reading labels and image data...")
 
+print("[INFO] input data shuold be ordered by stock_id, image_type, and time_point in a nested fashion")
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
@@ -227,6 +228,9 @@ else:
     print(averaged_predictions)
     averaged_predictions = np.mean(averaged_predictions, axis=0)
     print(averaged_predictions)
+    averaged_predictions = averaged_predictions.reshape(num_unique_time_days, int(len(averaged_predictions)/(num_unique_time_days)))
+    print(averaged_predictions)
+    averaged_predictions = np.mean(averaged_predictions, axis=0)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
