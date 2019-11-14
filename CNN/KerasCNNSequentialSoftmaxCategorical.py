@@ -384,9 +384,10 @@ else:
     data = np.array(data)
     labels_lb = np.array(labels_lb)
 
-    data_augmentation = 10
+    data_augmentation = 12
+    data_augmentation_test = 11
     process_data = CNNProcessData.CNNProcessData()
-    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation)
+    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation, data_augmentation_test)
 
     if log_file_path is not None:
         eprint("[INFO] number of augmented training images: %d" % (len(trainX)))
@@ -610,8 +611,8 @@ else:
 
         # do not train first layers, I want to only train
         # the 4 last layers (my own choice, up to you)
-        for layer in n.layers[:-2]:
-            layer.trainable = False
+        # for layer in n.layers[:-2]:
+        #     layer.trainable = False
 
         model = Sequential()
         model.add(
@@ -675,7 +676,7 @@ else:
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=10, batch_size=16, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=16, callbacks=callbacks_list)
 
     # H = model.fit_generator(
     #     generator = datagen.flow(trainX, trainY, batch_size=batch_size),

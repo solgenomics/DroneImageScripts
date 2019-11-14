@@ -182,7 +182,7 @@ if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(d
     raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
 
 
-data_augmentation = 7
+data_augmentation = 11
 if log_file_path is not None:
     eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
 else:
@@ -193,7 +193,7 @@ trained_image_data = np.array(trained_image_data)
 trained_labels = np.array(trained_labels)
 
 process_data = CNNProcessData.CNNProcessData()
-augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_name, trained_image_data)
+augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_name, trained_image_data, data_augmentation)
 
 lines = []
 evaluation_lines = []

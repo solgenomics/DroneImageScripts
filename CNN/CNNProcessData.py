@@ -23,8 +23,8 @@ class CNNProcessData:
         return datagen
 
     def generate_croppings(self, testX, testY, image_size, number):
-        if number != 7:
-            raise Exception("Only implemented for number = 7 right now")
+        if number != 11:
+            raise Exception("Only implemented for number = 11 right now")
 
         augmented_testX_1 = []
         augmented_testX_2 = []
@@ -33,9 +33,14 @@ class CNNProcessData:
         augmented_testX_5 = []
         augmented_testX_6 = []
         augmented_testX_7 = []
+        augmented_testX_8 = []
+        augmented_testX_9 = []
+        augmented_testX_10 = []
+        augmented_testX_11 = []
         mid_image_size = int(round(image_size/2))
         for img in testX:
             height = img.shape[0]
+            small_height = int(round(height*0.1))
             mid_height = int(round(height/2))
             width = img.shape[1]
             mid_width = int(round(width/2))
@@ -46,6 +51,10 @@ class CNNProcessData:
             crop_img5 = img[mid_height-mid_image_size:mid_height+mid_image_size, mid_width-mid_image_size:mid_width+mid_image_size]
             crop_img6 = img[mid_height-mid_image_size:mid_height+mid_image_size, 0:image_size]
             crop_img7 = img[mid_height-mid_image_size:mid_height+mid_image_size, width-image_size:width]
+            crop_img8 = img[mid_height+small_height-mid_image_size:mid_height+small_height+mid_image_size, 0:image_size]
+            crop_img9 = img[mid_height+small_height-mid_image_size:mid_height+small_height+mid_image_size, width-image_size:width]
+            crop_img10 = img[mid_height-small_height-mid_image_size:mid_height-small_height+mid_image_size, 0:image_size]
+            crop_img11 = img[mid_height-small_height-mid_image_size:mid_height-small_height+mid_image_size, width-image_size:width]
             augmented_testX_1.append(crop_img1)
             augmented_testX_2.append(crop_img2)
             augmented_testX_3.append(crop_img3)
@@ -53,6 +62,10 @@ class CNNProcessData:
             augmented_testX_5.append(crop_img5)
             augmented_testX_6.append(crop_img6)
             augmented_testX_7.append(crop_img7)
+            augmented_testX_8.append(crop_img8)
+            augmented_testX_9.append(crop_img9)
+            augmented_testX_10.append(crop_img10)
+            augmented_testX_11.append(crop_img11)
 
         augmented_testX_1 = np.array(augmented_testX_1)
         augmented_testX_2 = np.array(augmented_testX_2)
@@ -61,11 +74,21 @@ class CNNProcessData:
         augmented_testX_5 = np.array(augmented_testX_5)
         augmented_testX_6 = np.array(augmented_testX_6)
         augmented_testX_7 = np.array(augmented_testX_7)
-        testX = np.concatenate((augmented_testX_1, augmented_testX_2, augmented_testX_3, augmented_testX_4, augmented_testX_5, augmented_testX_6, augmented_testX_7))
+        augmented_testX_8 = np.array(augmented_testX_8)
+        augmented_testX_9 = np.array(augmented_testX_9)
+        augmented_testX_10 = np.array(augmented_testX_10)
+        augmented_testX_11 = np.array(augmented_testX_11)
+        testX = np.concatenate((augmented_testX_1, augmented_testX_2, augmented_testX_3, augmented_testX_4, augmented_testX_5, augmented_testX_6, augmented_testX_7, augmented_testX_8, augmented_testX_9, augmented_testX_10, augmented_testX_11))
+        # testXflipped = []
+        # for img in testX:
+        #     horizontal_flip = cv2.flip( img, 0 )
+        #     testXflipped.append(horizontal_flip)
+        # testXflipped = np.array(testXflipped)
+        # testX = np.concatenate((testX, testXflipped))
         testY = np.repeat(testY, number)
         return (testX, testY)
 
-    def process_cnn_data(self, data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation):
+    def process_cnn_data(self, data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation, data_augmentation_test):
         trainX = []
         testX = []
         trainY = []
@@ -74,8 +97,6 @@ class CNNProcessData:
         datagen = self.get_imagedatagenerator()
 
         datagen.fit(data)
-
-        data_augmentation_test = 7
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
@@ -172,7 +193,7 @@ class CNNProcessData:
         
         return (testX, testY, trainX, trainY)
 
-    def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, training_data):
+    def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, training_data, data_augmentation_test):
         trainX = []
         testX = []
         trainY = []
@@ -183,16 +204,12 @@ class CNNProcessData:
         datagen.fit(training_data)
         data = datagen.standardize(data)
 
-        data_augmentation_test = 7
         augmented_data = []
+        ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
+        augmented_data = ret[0]
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'KerasCNNLSTMDenseNet121ImageNetWeights':
-            ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
-            augmented_data = ret[0]
             augmented_data = augmented_data.reshape(data_augmentation_test * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-        else:
-            ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
-            augmented_data = ret[0]
             
         return augmented_data
