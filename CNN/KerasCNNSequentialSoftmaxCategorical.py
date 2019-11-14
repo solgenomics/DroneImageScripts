@@ -341,7 +341,7 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    categorical_object = pd.cut(labels, 15)
+    categorical_object = pd.cut(labels, 21)
     labels_predict_codes = categorical_object.codes
     categories = categorical_object.categories
 
@@ -610,8 +610,8 @@ else:
 
         # do not train first layers, I want to only train
         # the 4 last layers (my own choice, up to you)
-        # for layer in n.layers[:-4]:
-        #     layer.trainable = False
+        for layer in n.layers[:-2]:
+            layer.trainable = False
 
         model = Sequential()
         model.add(
@@ -675,7 +675,7 @@ else:
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     callbacks_list = [es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=100, batch_size=16, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=10, batch_size=16, callbacks=callbacks_list)
 
     # H = model.fit_generator(
     #     generator = datagen.flow(trainX, trainY, batch_size=batch_size),

@@ -181,7 +181,7 @@ if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(d
     raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
 
 
-data_augmentation = 5
+data_augmentation = 7
 if log_file_path is not None:
     eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
 else:
