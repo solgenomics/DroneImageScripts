@@ -11,6 +11,7 @@ import numpy as np
 import math
 import pandas as pd
 import CNNProcessData
+import tensorflow
 from PIL import Image
 from sklearn import preprocessing
 from tensorflow.keras import Sequential
@@ -56,6 +57,7 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
+ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
 ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner, inceptionresnetv2application_tuner")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 ap.add_argument("-n", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
@@ -67,6 +69,7 @@ input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_class_map = args["output_class_map"]
+output_loss_history = args["output_loss_history"]
 output_random_search_result_project = args["output_random_search_result_project"]
 keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
@@ -256,6 +259,13 @@ def build_simple_1_model(hp):
         metrics=['accuracy']
     )
 
+class LossHistory(tensorflow.keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
+
 unique_stock_ids = {}
 unique_time_days = {}
 unique_labels = {}
@@ -328,6 +338,8 @@ if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(d
 
 lines = []
 class_map_lines = []
+history_loss_lines = []
+
 if len(unique_labels.keys()) < 2:
     lines = ["Number of labels is less than 2, so nothing to predict!"]
 else:
@@ -674,9 +686,13 @@ else:
 
     checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
-    callbacks_list = [es, checkpoint]
+    history = LossHistory()
+    callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=16, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=5, batch_size=16, callbacks=callbacks_list)
+
+    for h in history.losses:
+        history_loss_lines.append([h])
 
     # H = model.fit_generator(
     #     generator = datagen.flow(trainX, trainY, batch_size=batch_size),
@@ -711,4 +727,9 @@ writeFile.close()
 with open(output_class_map, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerows(class_map_lines)
+writeFile.close()
+
+with open(output_loss_history, 'w') as writeFile:
+    writer = csv.writer(writeFile)
+    writer.writerows(history_loss_lines)
 writeFile.close()
