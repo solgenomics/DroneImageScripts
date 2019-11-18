@@ -655,25 +655,25 @@ else:
         tuner = RandomSearch(
             build_simple_model,
             objective='loss',
-            max_trials=5,
+            max_trials=100,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
-        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
-        model = tuner.get_best_models(num_models=1)[0]
         initial_epoch = 5
+        tuner.search(trainX, trainY, epochs=initial_epoch, validation_split=0.1)
+        model = tuner.get_best_models(num_models=1)[0]
 
     if keras_model_type == 'simple_1_tuner':
         tuner = RandomSearch(
             build_simple_1_model,
             objective='loss',
-            max_trials=5,
+            max_trials=100,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
-        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
-        model = tuner.get_best_models(num_models=1)[0]
         initial_epoch = 5
+        tuner.search(trainX, trainY, epochs=initial_epoch, validation_split=0.1)
+        model = tuner.get_best_models(num_models=1)[0]
 
     # if keras_model_type == 'inceptionresnetv2application_tuner':
         # train_images = inception_resnet_v2.preprocess_input(train_images)
@@ -701,7 +701,7 @@ else:
     history = LossHistory()
     callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=5, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=100, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
 
     for h in history.losses:
         history_loss_lines.append([h])
