@@ -66,7 +66,6 @@ ap.add_argument("-e", "--outfile_activation_path", required=True, help="file pat
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. KerasCNNSequentialSoftmaxCategorical, SimpleKerasTunerCNNSequentialSoftmaxCategorical, KerasTunerCNNInceptionResNetV2, KerasTunerCNNSequentialSoftmaxCategorical, KerasCNNInceptionResNetV2, KerasCNNLSTMDenseNet121ImageNetWeights, KerasCNNInceptionResNetV2ImageNetWeights")
 ap.add_argument("-t", "--training_data_input_file", required=True, help="The input data file used to train the model previously. this file should have the image file paths and labels used during training")
-ap.add_argument("-c", "--class_map", help="whether to plot true vs prediction, provide a json encoded class map. this will only work if the plots already have true phenotypes saved in the database.")
 
 args = vars(ap.parse_args())
 
@@ -78,9 +77,6 @@ outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 training_data_input_file = args["training_data_input_file"]
-class_map = args["class_map"]
-if class_map is not None:
-    class_map = json.loads(class_map)
 
 input_image_size = 75
 image_size = 48
@@ -115,7 +111,7 @@ with open(input_file) as csv_file:
         image_type = row[3]
         time_days = row[4]
         image = Image.open(row[1])
-        image = np.array(image.resize((input_image_size, input_image_size))) / 1.0
+        image = np.array(image.resize((input_image_size, input_image_size))) / 255.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -182,7 +178,7 @@ if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(d
     raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
 
 
-data_augmentation = 11
+data_augmentation = 1
 if log_file_path is not None:
     eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
 else:
@@ -191,6 +187,8 @@ else:
 data = np.array(data)
 trained_image_data = np.array(trained_image_data)
 trained_labels = np.array(trained_labels)
+max_label = np.amax(trained_labels)
+trained_labels = trained_labels/max_label
 
 process_data = CNNProcessData.CNNProcessData()
 augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_name, trained_image_data, data_augmentation)
@@ -212,15 +210,12 @@ else:
         print(layer.output_shape)
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
-    predictions = np.argmax(prob_predictions, axis=1)
+    predictions = prob_predictions.flatten() 
     print(predictions)
-    
-    predictions_converted = []
-    for p in predictions:
-        predictions_converted.append(float(class_map[str(p)]['label']))
-    predictions_converted_original = np.array(predictions_converted)
+    predictions = predictions * max_label
+    print(predictions)
 
-    predictions_converted = predictions_converted_original.reshape(data_augmentation, int(len(predictions_converted_original)/data_augmentation))
+    predictions_converted = predictions.reshape(data_augmentation, int(len(predictions)/data_augmentation))
     print(predictions_converted)
     averaged_predictions = np.mean(predictions_converted, axis=0)
     print(averaged_predictions)
@@ -228,9 +223,11 @@ else:
     print(averaged_predictions)
     averaged_predictions = np.mean(averaged_predictions, axis=0)
     print(averaged_predictions)
-    averaged_predictions = averaged_predictions.reshape(num_unique_time_days, int(len(averaged_predictions)/(num_unique_time_days)))
-    print(averaged_predictions)
-    averaged_predictions = np.mean(averaged_predictions, axis=0)
+    
+    if keras_model_name != 'KerasCNNLSTMDenseNet121ImageNetWeights':
+        averaged_predictions = averaged_predictions.reshape(num_unique_time_days, int(len(averaged_predictions)/(num_unique_time_days)))
+        print(averaged_predictions)
+        averaged_predictions = np.mean(averaged_predictions, axis=0)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
@@ -265,7 +262,7 @@ else:
         itera = 0
         for image in augmented_data:
             activations = activation_model.predict(np.array([image]))
-            pred_label = predictions_converted_original[itera]
+            pred_label = predictions[itera]
 
             if pred_label > mean_prediction_label:
                 average_img_above_median += image

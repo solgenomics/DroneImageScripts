@@ -49,6 +49,7 @@ from tensorflow.keras.applications import inception_resnet_v2
 from tensorflow.keras.applications import DenseNet121
 from tensorflow.keras.applications import densenet
 from tensorflow.keras.applications import VGG16
+from kerastuner.tuners import RandomSearch
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -56,7 +57,6 @@ ap.add_argument("-l", "--log_file_path", required=False, help="file path to writ
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the plots and the time points in ascending order. The number of time points is only useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
-ap.add_argument("-c", "--output_class_map", required=True, help="file path where the output for class map will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
 ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner, inceptionresnetv2application_tuner")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
@@ -68,7 +68,6 @@ log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
-output_class_map = args["output_class_map"]
 output_loss_history = args["output_loss_history"]
 output_random_search_result_project = args["output_random_search_result_project"]
 keras_model_type = args["keras_model_type"]
@@ -159,13 +158,22 @@ def build_simple_model(hp):
         units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
         activation='relu'
     ))
-    model.add(Dense(NUM_LABELS, activation='softmax'))
 
-    model.compile(
-        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
+    # flatten the volume, then FC => RELU => BN => DROPOUT
+    model.add(Flatten())
+    model.add(Dense(16))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+
+    # apply another FC layer, this one to match the number of nodes
+    # coming out of the MLP
+    model.add(Dense(4))
+    model.add(Activation("relu"))
+
+    model.add(Dense(1, activation="linear"))
+
+    model.compile(loss="mean_absolute_percentage_error",optimizer=Adam(hp.Choice('learning_rate', values=[1e-3])))
     return model
 
 def build_simple_1_model(hp):
@@ -251,13 +259,22 @@ def build_simple_1_model(hp):
     ))
     model.add(BatchNormalization(axis=chanDim))
     model.add(Dropout(0.5))
-    model.add(Dense(NUM_LABELS, activation='softmax'))
+    
+    # flatten the volume, then FC => RELU => BN => DROPOUT
+    model.add(Flatten())
+    model.add(Dense(16))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Dropout(0.5))
 
-    model.compile(
-        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3])),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
+    # apply another FC layer, this one to match the number of nodes
+    # coming out of the MLP
+    model.add(Dense(4))
+    model.add(Activation("relu"))
+
+    model.add(Dense(1, activation="linear"))
+
+    model.compile(loss="mean_absolute_percentage_error", optimizer=Adam(hp.Choice('learning_rate', values=[1e-3])))
 
 class LossHistory(tensorflow.keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
@@ -293,7 +310,7 @@ with open(input_file) as csv_file:
         time_days = row[5]
 
         image = Image.open(row[1])
-        image = np.array(image.resize((input_image_size,input_image_size))) / 1.0
+        image = np.array(image.resize((input_image_size,input_image_size))) / 255.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
@@ -353,53 +370,24 @@ else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
         print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
 
-    categorical_object = pd.cut(labels, 21)
-    labels_predict_codes = categorical_object.codes
-    categories = categorical_object.categories
-
-    labels_predict_map = {}
-    labels_predict_unique = {}
-    for index in range(len(labels)):
-        label = labels[index]
-        label_code = labels_predict_codes[index]
-        cat_mid = categories[label_code].mid
-        labels_predict_map[str(label_code)] = cat_mid
-        if str(label_code) in labels_predict_unique.keys():
-            labels_predict_unique[str(label_code)] += 1
-        else:
-            labels_predict_unique[str(label_code)] = 1
-
-    labels_predict = labels_predict_codes.astype(str)
-    lb = LabelBinarizer()
-    labels_lb = lb.fit_transform(labels_predict)
-    number_labels = len(lb.classes_)
-
-    separator = ","
-    lb_classes_string = separator.join([str(x) for x in lb.classes_])
     if log_file_path is not None:
-        eprint("Classes " + str(len(lb.classes_)) + ": " + lb_classes_string)
-    else:
-        print("Classes " + str(len(lb.classes_)) + ": " + lb_classes_string)
-
-    separator = ", "
-    lines.append("Predicted Labels: " + separator.join(lb.classes_))
-
-    if log_file_path is not None:
-        eprint("[INFO] number of labels: %d" % (len(labels_lb)))
+        eprint("[INFO] number of labels: %d" % (len(labels)))
         eprint("[INFO] number of images: %d" % (len(data)))
         eprint("[INFO] augmenting data and splitting training set...")
     else:
-        print("[INFO] number of labels: %d" % (len(labels_lb)))
+        print("[INFO] number of labels: %d" % (len(labels)))
         print("[INFO] number of images: %d" % (len(data)))
         print("[INFO] augmenting data and splitting training set...")
 
     data = np.array(data)
-    labels_lb = np.array(labels_lb)
+    labels = np.array(labels)
+    max_label = np.amax(labels)
+    labels = labels/max_label
 
-    data_augmentation = 12
-    data_augmentation_test = 11
+    data_augmentation = 1
+    data_augmentation_test = 1
     process_data = CNNProcessData.CNNProcessData()
-    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation, data_augmentation_test)
+    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test)
 
     if log_file_path is not None:
         eprint("[INFO] number of augmented training images: %d" % (len(trainX)))
@@ -413,7 +401,8 @@ else:
         print("[INFO] number of augmented testing labels: %d" % (len(testY)))
 
     model = None
-    opt = Adam(lr=1e-3, decay=1e-3 / 50)
+    opt = Adam(lr=1e-3, decay=1e-3 / 200)
+    initial_epoch = 0
 
     if keras_model_type == 'inceptionresnetv2':
         img_input = Input(shape=(image_size,image_size,3))
@@ -488,13 +477,21 @@ else:
         x = incresC(x,0.2,name='incresC_2')
         x = incresC(x,0.2,name='incresC_3')
 
-        #TOP
-        x = GlobalAveragePooling2D(data_format='channels_last')(x)
-        x = Dropout(0.6)(x)
-        x = Dense(number_labels, activation='softmax')(x)
+        # flatten the volume, then FC => RELU => BN => DROPOUT
+        x = Flatten()(x)
+        x = Dense(16)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=3)(x)
+        x = Dropout(0.5)(x)
 
-        model = Model(img_input, x, name='inception_resnet_v2')
-        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+        # apply another FC layer, this one to match the number of nodes
+        # coming out of the MLP
+        x = Dense(4)(x)
+        x = Activation("relu")(x)
+
+        x = Dense(1, activation="linear")(x)
+        model = Model(img_input, x)
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'simple_1':
 
@@ -538,10 +535,21 @@ else:
         model.add(BatchNormalization())
         model.add(Dropout(0.5))
 
-        # softmax classifier
-        model.add(Dense(number_labels))
-        model.add(Activation("softmax"))
-        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+        # flatten the volume, then FC => RELU => BN => DROPOUT
+        model.add(Flatten())
+        model.add(Dense(16))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.5))
+
+        # apply another FC layer, this one to match the number of nodes
+        # coming out of the MLP
+        model.add(Dense(4))
+        model.add(Activation("relu"))
+
+        model.add(Dense(1, activation="linear"))
+
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'densenet121application':
         trainX = densenet.preprocess_input(trainX)
@@ -555,26 +563,21 @@ else:
             input_shape = (image_size,image_size,3)
         )
 
-        new_model = Sequential()
-        layer_num = 0
-        for layer in base_model.layers:
-            layer.trainable = True
+        # flatten the volume, then FC => RELU => BN => DROPOUT
+        x = Flatten()(base_model.output)
+        x = Dense(16)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
 
-            if keras_model_layers is not None and layer_num < keras_model_layers:
-                new_model.add(layer)
-            
-            layer_num += 1
+        # apply another FC layer, this one to match the number of nodes
+        # coming out of the MLP
+        x = Dense(4)(x)
+        x = Activation("relu")(x)
 
-        if keras_model_layers is not None:
-            new_model.add(Flatten())
-            base_model = new_model
-
-        op = Dense(256, activation='relu')(base_model.output)
-        op = Dropout(0.25)(op)
-        output_tensor = Dense(number_labels, activation='softmax')(op)
-
-        model = Model(inputs=input_tensor, outputs=output_tensor)
-        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+        x = Dense(1, activation="linear")(x)
+        model = Model(input_tensor, x)
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'inceptionresnetv2application':
         trainX = inception_resnet_v2.preprocess_input(trainX)
@@ -589,26 +592,21 @@ else:
             pooling = 'avg'
         )
 
-        new_model = Sequential()
-        layer_num = 0
-        for layer in base_model.layers:
-            layer.trainable = True
+        # flatten the volume, then FC => RELU => BN => DROPOUT
+        x = Flatten()(base_model.output)
+        x = Dense(16)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
 
-            if keras_model_layers is not None and layer_num < keras_model_layers:
-                new_model.add(layer)
-            
-            layer_num += 1
+        # apply another FC layer, this one to match the number of nodes
+        # coming out of the MLP
+        x = Dense(4)(x)
+        x = Activation("relu")(x)
 
-        if keras_model_layers is not None:
-            new_model.add(Flatten())
-            base_model = new_model
-
-        op = Dense(256, activation='relu')(base_model.output)
-        op = Dropout(0.25)(op)
-        output_tensor = Dense(number_labels, activation='softmax')(op)
-
-        model = Model(inputs=input_tensor, outputs=output_tensor)
-        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+        x = Dense(1, activation="linear")(x)
+        model = Model(input_tensor, x)
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'densenet121_lstm_imagenet':
         trainX = densenet.preprocess_input(trainX)
@@ -623,8 +621,8 @@ else:
 
         # do not train first layers, I want to only train
         # the 4 last layers (my own choice, up to you)
-        # for layer in n.layers[:-2]:
-        #     layer.trainable = False
+        for layer in n.layers[:-2]:
+            layer.trainable = False
 
         model = Sequential()
         model.add(
@@ -636,60 +634,74 @@ else:
             )
         )
         model.add(LSTM(256, activation='relu', return_sequences=False))
-        model.add(Dense(64, activation='relu'))
+
+        # flatten the volume, then FC => RELU => BN => DROPOUT
+        model.add(Flatten())
+        model.add(Dense(16))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization())
         model.add(Dropout(0.5))
-        model.add(Dense(number_labels, activation='softmax'))
-        model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+
+        # apply another FC layer, this one to match the number of nodes
+        # coming out of the MLP
+        model.add(Dense(4))
+        model.add(Activation("relu"))
+
+        model.add(Dense(1, activation="linear"))
+
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'simple_tuner':
         tuner = RandomSearch(
             build_simple_model,
-            objective='val_accuracy',
-            max_trials=500,
+            objective='loss',
+            max_trials=5,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
         tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
         model = tuner.get_best_models(num_models=1)[0]
+        initial_epoch = 5
 
     if keras_model_type == 'simple_1_tuner':
         tuner = RandomSearch(
             build_simple_1_model,
-            objective='val_accuracy',
-            max_trials=500,
+            objective='loss',
+            max_trials=5,
             directory=output_random_search_result_project,
             project_name=output_random_search_result_project
         )
         tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
         model = tuner.get_best_models(num_models=1)[0]
+        initial_epoch = 5
 
-    if keras_model_type == 'inceptionresnetv2application_tuner':
-        train_images = inception_resnet_v2.preprocess_input(train_images)
-        test_images = inception_resnet_v2.preprocess_input(test_images)
-
-        # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS, weights=keras_model_weights)
-        hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS)
-        tuner = Hyperband(
-            hypermodel,
-            objective='val_accuracy',
-            directory=output_random_search_result_project,
-            project_name=output_random_search_result_project,
-            max_epochs=50
-        )
-        tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
-        model = tuner.get_best_models(num_models=1)[0]
+    # if keras_model_type == 'inceptionresnetv2application_tuner':
+        # train_images = inception_resnet_v2.preprocess_input(train_images)
+        # test_images = inception_resnet_v2.preprocess_input(test_images)
+        # 
+        # # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS, weights=keras_model_weights)
+        # hypermodel = HyperResNet(input_shape=(image_size, image_size, 3), classes=NUM_LABELS)
+        # tuner = Hyperband(
+        #     hypermodel,
+        #     objective='val_accuracy',
+        #     directory=output_random_search_result_project,
+        #     project_name=output_random_search_result_project,
+        #     max_epochs=50
+        # )
+        # tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
+        # model = tuner.get_best_models(num_models=1)[0]
 
     for layer in model.layers:
         print(layer.output_shape)
 
     print("[INFO] training network...")
 
-    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='accuracy', verbose=1, save_best_only=True, mode='max', save_frequency=1, save_weights_only=False)
+    checkpoint = ModelCheckpoint(filepath=output_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
     es = EarlyStopping(monitor='loss', mode='min', min_delta=0.01, patience=35, verbose=1)
     history = LossHistory()
     callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=50, batch_size=8, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=5, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
 
     for h in history.losses:
         history_loss_lines.append([h])
@@ -712,21 +724,10 @@ else:
     # for l in report_lines:
     #     lines.append(separator.join(l))
 
-    iterator = 0
-    for c in lb.classes_:
-        class_map_lines.append([iterator, labels_predict_map[str(c)], labels_predict_unique[str(c)]])
-        iterator += 1
-
 #print(lines)
 with open(outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerows(lines)
-writeFile.close()
-
-#print(class_map_lines)
-with open(output_class_map, 'w') as writeFile:
-    writer = csv.writer(writeFile)
-    writer.writerows(class_map_lines)
 writeFile.close()
 
 with open(output_loss_history, 'w') as writeFile:

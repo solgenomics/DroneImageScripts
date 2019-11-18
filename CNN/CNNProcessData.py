@@ -14,11 +14,11 @@ class CNNProcessData:
             featurewise_center=True,
             featurewise_std_normalization=True,
             #rotation_range=20,
-            width_shift_range=0.05,
-            height_shift_range=0.05,
-            horizontal_flip=True,
+            #width_shift_range=0.05,
+            #height_shift_range=0.05,
+            #horizontal_flip=True,
             # vertical_flip=True,
-            brightness_range=[0.8,1.2]
+            #brightness_range=[0.8,1.2]
         )
         return datagen
 
@@ -88,7 +88,7 @@ class CNNProcessData:
         testY = np.repeat(testY, number)
         return (testX, testY)
 
-    def process_cnn_data(self, data, labels_lb, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, number_labels, keras_model_type, data_augmentation, data_augmentation_test):
+    def process_cnn_data(self, data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test):
         trainX = []
         testX = []
         trainY = []
@@ -101,66 +101,89 @@ class CNNProcessData:
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
             data = data.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, input_image_size, input_image_size, 3)
-            labels_lb = labels_lb.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, number_labels)
+            labels = labels.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, 1)
 
-            (trainX, testX, trainY, testY) = train_test_split(data, labels_lb, test_size=0.2)
+            (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2)
             trainX_length = len(trainX) 
             trainY_length = len(trainY)
             testX_length = len(testX)
             testY_length = len(testY)
             trainX = trainX.reshape(trainX_length * num_unique_time_days, input_image_size, input_image_size, 3)
-            trainY = trainY.reshape(trainY_length * num_unique_time_days, number_labels)
+            trainY = trainY.reshape(trainY_length * num_unique_time_days, 1)
             testX = testX.reshape(testX_length * num_unique_time_days, input_image_size, input_image_size, 3)
-            testY = testY.reshape(testY_length * num_unique_time_days, number_labels)
+            testY = testY.reshape(testY_length * num_unique_time_days, 1)
             trainX_length_flat = len(trainX)
             trainY_length_flat = len(trainY)
 
             testX = datagen.standardize(testX)
 
-            (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
+            # (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
+            testX_resized = []
+            for img in testX:
+                testX_resized.append(cv2.resize(img, (image_size, image_size)))
+            testX = np.array(testX_resized)
 
             testX = testX.reshape(data_augmentation_test * testX_length, num_unique_time_days, image_size, image_size, 3)
-            testY = testY.reshape(data_augmentation_test * testY_length, num_unique_time_days, number_labels)
+            testY = testY.reshape(data_augmentation_test * testY_length, num_unique_time_days, 1)
 
             labels = []
             for l in testY:
                 labels.append(l[0])
             testY = np.array(labels)
 
+            trainX_aug = []
+            trainY_aug = []
             augmented = datagen.flow(trainX, trainY, batch_size=trainX_length_flat)
-            for i in range(0, data_augmentation-1):
+            for i in range(0, data_augmentation):
                 X, y = augmented.next()
-                trainX = np.concatenate((trainX, X))
-                trainY = np.concatenate((trainY, y))
+                if len(trainX_aug) == 0:
+                    trainX_aug = X
+                    trainY_aug = y
+                else:
+                    trainX_aug = np.concatenate((trainX_aug, X))
+                    trainY_aug = np.concatenate((trainY_aug, y))
 
+            trainX = trainX_aug
+            trainY = trainY_aug
             trainX_resized = []
             for img in trainX:
                 trainX_resized.append(cv2.resize(img, (image_size, image_size)))
             trainX = np.array(trainX_resized)
 
             trainX = trainX.reshape(data_augmentation * trainX_length, num_unique_time_days, image_size, image_size, 3)
-            trainY = trainY.reshape(data_augmentation * trainY_length, num_unique_time_days, number_labels)
+            trainY = trainY.reshape(data_augmentation * trainY_length, num_unique_time_days, 1)
 
             labels = []
             for l in trainY:
                 labels.append(l[0])
             trainY = np.array(labels)
         else:
-            (trainX, testX, trainY, testY) = train_test_split(data, labels_lb, test_size=0.2)
+            (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2)
             testY_length = len(testY)
             
             testX = datagen.standardize(testX)
             
-            (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
-            
-            testY = testY.reshape(data_augmentation_test * testY_length, number_labels)
+            # (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
+            testX_resized = []
+            for img in testX:
+                testX_resized.append(cv2.resize(img, (image_size, image_size)))
+            testX = np.array(testX_resized)
+            testY = testY.reshape(data_augmentation_test * testY_length, 1)
 
+            trainX_aug = []
+            trainY_aug = []
             augmented = datagen.flow(trainX, trainY, batch_size=len(trainX))
-            for i in range(0, data_augmentation-1):
+            for i in range(0, data_augmentation):
                 X, y = augmented.next()
-                trainX = np.concatenate((trainX, X))
-                trainY = np.concatenate((trainY, y))
+                if len(trainX_aug) == 0:
+                    trainX_aug = X
+                    trainY_aug = y
+                else:
+                    trainX_aug = np.concatenate((trainX_aug, X))
+                    trainY_aug = np.concatenate((trainY_aug, y))
 
+            trainX = trainX_aug
+            trainY = trainY_aug
             trainX_resized = []
             for img in trainX:
                 trainX_resized.append(cv2.resize(img, (image_size, image_size)))
@@ -180,8 +203,11 @@ class CNNProcessData:
         data = datagen.standardize(data)
 
         augmented_data = []
-        ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
-        augmented_data = ret[0]
+        #ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
+        #augmented_data = ret[0]
+        for img in data:
+            augmented_data.append(cv2.resize(img, (image_size, image_size)))
+        augmented_data = np.array(augmented_data)
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'KerasCNNLSTMDenseNet121ImageNetWeights':
