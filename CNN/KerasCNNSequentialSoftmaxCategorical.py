@@ -58,7 +58,7 @@ ap.add_argument("-i", "--input_image_label_file", required=True, help="file path
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
-ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner, inceptionresnetv2application_tuner")
+ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner")
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 ap.add_argument("-n", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
 ap.add_argument("-p", "--output_random_search_result_project", required=False, help="project dir name where the keras tuner random search results output will be saved. only required for tuner models")
