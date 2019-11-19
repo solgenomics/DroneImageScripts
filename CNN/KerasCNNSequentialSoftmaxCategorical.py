@@ -38,6 +38,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.model_selection import cross_val_score
@@ -54,7 +55,7 @@ from kerastuner.tuners import RandomSearch
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the plots and the time points in ascending order. The number of time points is only useful when using time-series (LSTM) CNNs.")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the drone runs, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points is only actively useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
@@ -275,6 +276,48 @@ def build_simple_1_model(hp):
     model.add(Dense(1, activation="linear"))
 
     model.compile(loss="mean_absolute_percentage_error", optimizer=Adam(hp.Choice('learning_rate', values=[1e-3])))
+    return model
+
+def create_mlp(dim, regress = False):
+    model = Sequential()
+    model.add(Dense(8, input_dim=dim, activation="relu"))
+    model.add(Dense(4, activation="relu"))
+    if regress:
+        model.add(Dense(1, activation="linear"))
+    return model
+
+def create_cnn_example(width, height, depth, filters=(16, 32, 64), regress=False):
+    # TensorFlow/channels-last ordering
+    inputShape = (height, width, depth)
+    chanDim = -1
+
+    inputs = Input(shape=inputShape)
+
+    for (i, f) in enumerate(filters):
+        if i == 0:
+            x = inputs
+
+        x = Conv2D(f, (3, 3), padding="same")(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = MaxPooling2D(pool_size=(2, 2))(x)
+
+    x = Flatten()(x)
+    x = Dense(16)(x)
+    x = Activation("relu")(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.5)(x)
+
+    # apply another FC layer, this one to match the number of nodes
+    # coming out of the MLP
+    x = Dense(4)(x)
+    x = Activation("relu")(x)
+
+    if regress:
+        x = Dense(1, activation="linear")(x)
+
+    model = Model(inputs, x)
+    return model
 
 class LossHistory(tensorflow.keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
@@ -287,6 +330,8 @@ unique_stock_ids = {}
 unique_time_days = {}
 unique_labels = {}
 unique_image_types = {}
+unique_germplasm = {}
+unique_drone_run_project_ids = {}
 labels = []
 data = []
 labels_time_series = []
@@ -301,13 +346,26 @@ data_time_series = []
 #     return rotated
 
 print("[INFO] reading labels and image data...")
+
+data_structure = {}
+aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
+    row_index = 0
     for row in csv_reader:
         stock_id = row[0]
         trait_name = row[3]
         image_type = row[4]
         time_days = row[5]
+        drone_run_project_id = row[6]
+        field_trial_id = row[7]
+        germplasm = row[8]
+
+        for i in range(9,len(row)):
+            if i in aux_tabular_data.keys():
+                aux_tabular_data[i].append(row[i])
+            else:
+                aux_tabular_data[i] = [row[i]]
 
         image = Image.open(row[1])
         image = np.array(image.resize((input_image_size,input_image_size))) / 255.0
@@ -342,16 +400,31 @@ with open(input_file) as csv_file:
         else:
             unique_time_days[time_days] = 1
 
+        if germplasm in unique_germplasm.keys():
+            unique_germplasm[germplasm] += 1
+        else:
+            unique_germplasm[germplasm] = 1
+
+        if drone_run_project_id in unique_drone_run_project_ids.keys():
+            unique_drone_run_project_ids[drone_run_project_id] += 1
+        else:
+            unique_drone_run_project_ids[drone_run_project_id] = 1
+
+        row_index += 1
+
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
 num_unique_time_days = len(unique_time_days.keys())
-if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels):
+num_unique_drone_run_project_ids = len(unique_drone_run_project_ids.keys())
+if len(data) % num_unique_stock_ids or len(labels) % num_unique_stock_ids:
+    raise Exception('Number of images or labels does not divide evenly among stock_ids. This means the input data is uneven.')
+if keras_model_type == 'densenet121_lstm_imagenet' and ( num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels) ):
     print(num_unique_stock_ids)
     print(num_unique_time_days)
     print(num_unique_image_types)
     print(len(data))
     print(len(labels))
-    raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
+    raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for a LSTM model')
 
 lines = []
 class_map_lines = []

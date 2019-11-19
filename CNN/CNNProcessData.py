@@ -88,7 +88,7 @@ class CNNProcessData:
         testY = np.repeat(testY, number)
         return (testX, testY)
 
-    def process_cnn_data(self, data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test):
+    def process_cnn_data(self, data, labels, num_unique_stock_ids, images_per_stock, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test):
         trainX = []
         testX = []
         trainY = []

@@ -59,7 +59,7 @@ from numpy.polynomial.polynomial import polyfit
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model. It is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points is only actively useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-e", "--outfile_activation_path", required=True, help="file path where the activation graph output will be saved")
@@ -93,6 +93,8 @@ def eprint(*args, **kwargs):
 unique_stock_ids = {}
 unique_time_days = {}
 unique_image_types = {}
+unique_germplasm = {}
+unique_drone_run_project_ids = {}
 data = []
 previous_labeled_data = []
 previous_labels = []
@@ -104,12 +106,22 @@ else:
     print("[INFO] reading labels and image data...")
 
 print("[INFO] input data shuold be ordered by stock_id, image_type, and time_point in a nested fashion")
+aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         stock_id = row[0]
         image_type = row[3]
         time_days = row[4]
+        drone_run_project_id = row[5]
+        germplasm = row[6]
+
+        for i in range(7,len(row)):
+            if i in aux_tabular_data.keys():
+                aux_tabular_data[i].append(row[i])
+            else:
+                aux_tabular_data[i] = [row[i]]
+
         image = Image.open(row[1])
         image = np.array(image.resize((input_image_size, input_image_size))) / 255.0
 
@@ -138,6 +150,16 @@ with open(input_file) as csv_file:
         else:
             unique_time_days[time_days] = 1
 
+        if germplasm in unique_germplasm.keys():
+            unique_germplasm[germplasm] += 1
+        else:
+            unique_germplasm[germplasm] = 1
+
+        if drone_run_project_id in unique_drone_run_project_ids.keys():
+            unique_drone_run_project_ids[drone_run_project_id] += 1
+        else:
+            unique_drone_run_project_ids[drone_run_project_id] = 1
+
 trained_image_data = []
 trained_labels = []
 
@@ -153,6 +175,8 @@ with open(training_data_input_file) as csv_file:
         trait_name = row[3]
         image_type = row[4]
         time_days = row[5]
+        drone_run_project_id = row[6]
+        germplasm = row[7]
 
         image = Image.open(row[1])
         image = np.array(image.resize((image_size,image_size))) / 255.0
@@ -174,8 +198,10 @@ print(num_unique_stock_ids)
 print(num_unique_time_days)
 print(num_unique_image_types)
 print(len(data))
-if num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
-    raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven')
+if len(data) % num_unique_stock_ids:
+    raise Exception('Number of images does not divide evenly among stock_ids. This means the input data is uneven.')
+if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
+    raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for an LSTM model')
 
 
 data_augmentation = 1
@@ -215,19 +241,20 @@ else:
     predictions = predictions * max_label
     print(predictions)
 
-    predictions_converted = predictions.reshape(data_augmentation, int(len(predictions)/data_augmentation))
-    print(predictions_converted)
-    averaged_predictions = np.mean(predictions_converted, axis=0)
-    print(averaged_predictions)
-    averaged_predictions = averaged_predictions.reshape(num_unique_image_types, int(len(averaged_predictions)/(num_unique_image_types)))
-    print(averaged_predictions)
-    averaged_predictions = np.mean(averaged_predictions, axis=0)
-    print(averaged_predictions)
-    
     if keras_model_name != 'KerasCNNLSTMDenseNet121ImageNetWeights':
-        averaged_predictions = averaged_predictions.reshape(num_unique_time_days, int(len(averaged_predictions)/(num_unique_time_days)))
-        print(averaged_predictions)
-        averaged_predictions = np.mean(averaged_predictions, axis=0)
+        predictions = predictions.reshape(num_unique_time_days, int(len(predictions)/(num_unique_time_days)))
+        print(predictions)
+        predictions = np.mean(predictions, axis=0)
+
+    predictions = predictions.reshape(num_unique_image_types, int(len(predictions)/(num_unique_image_types)))
+    print(predictions)
+    predictions = np.mean(predictions, axis=0)
+    print(predictions)
+
+    predictions = predictions.reshape(data_augmentation, int(len(predictions)/data_augmentation))
+    print(predictions)
+    averaged_predictions = np.mean(predictions, axis=0)
+    print(averaged_predictions)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
