@@ -55,7 +55,7 @@ from kerastuner.tuners import RandomSearch
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the drone runs, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points is only actively useful when using time-series (LSTM) CNNs.")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
@@ -351,9 +351,10 @@ data_structure = {}
 aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
-    row_index = 0
     for row in csv_reader:
         stock_id = row[0]
+        image = Image.open(row[1])
+        value = float(row[2])
         trait_name = row[3]
         image_type = row[4]
         time_days = row[5]
@@ -367,7 +368,6 @@ with open(input_file) as csv_file:
             else:
                 aux_tabular_data[i] = [row[i]]
 
-        image = Image.open(row[1])
         image = np.array(image.resize((input_image_size,input_image_size))) / 255.0
 
         if (len(image.shape) == 2):
@@ -377,7 +377,6 @@ with open(input_file) as csv_file:
         #print(image.shape)
         data.append(image)
 
-        value = float(row[2])
         labels.append(value)
 
         if value in unique_labels.keys():
@@ -409,8 +408,6 @@ with open(input_file) as csv_file:
             unique_drone_run_project_ids[drone_run_project_id] += 1
         else:
             unique_drone_run_project_ids[drone_run_project_id] = 1
-
-        row_index += 1
 
 num_unique_stock_ids = len(unique_stock_ids.keys())
 num_unique_image_types = len(unique_image_types.keys())
