@@ -55,7 +55,7 @@ from kerastuner.tuners import RandomSearch
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs.")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs.")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
@@ -75,8 +75,8 @@ keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
 keras_model_layers = args["keras_model_layers"]
 
-input_image_size = 75
 image_size = 48
+montage_image_size = image_size*3
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -147,7 +147,7 @@ def build_simple_model(hp):
         filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
         kernel_size=hp.Choice('conv_1_kernel', values = [3,5]),
         activation='relu',
-        input_shape=(image_size,image_size,3)
+        input_shape=(montage_image_size,montage_image_size,3)
     ))
     model.add(Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
@@ -191,7 +191,7 @@ def build_simple_1_model(hp):
         padding="valid",
         kernel_initializer=init,
         kernel_regularizer=reg,
-        input_shape=(image_size,image_size,3)
+        input_shape=(montage_image_size,montage_image_size,3)
     ))
     model.add(Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
@@ -347,7 +347,6 @@ data_time_series = []
 
 print("[INFO] reading labels and image data...")
 
-data_structure = {}
 aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
@@ -368,15 +367,15 @@ with open(input_file) as csv_file:
             else:
                 aux_tabular_data[i] = [row[i]]
 
-        image = np.array(image.resize((input_image_size,input_image_size))) / 255.0
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+        # cv2.imshow("Result", image)
+        # cv2.waitKey(0)
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
             image = cv2.merge((image, empty_mat, empty_mat))
 
-        #print(image.shape)
         data.append(image)
-
         labels.append(value)
 
         if value in unique_labels.keys():
@@ -456,8 +455,13 @@ else:
 
     data_augmentation = 1
     data_augmentation_test = 1
+    montage_image_number = 9 # Implemented to combine 9 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
-    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test)
+    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size)
+    print(testX.shape)
+    print(testY.shape)
+    print(trainX.shape)
+    print(trainY.shape)
 
     if log_file_path is not None:
         eprint("[INFO] number of augmented training images: %d" % (len(trainX)))
@@ -475,7 +479,7 @@ else:
     initial_epoch = 0
 
     if keras_model_type == 'inceptionresnetv2':
-        img_input = Input(shape=(image_size,image_size,3))
+        img_input = Input(shape=(montage_image_size,montage_image_size,3))
 
         #STEM
         x = conv2d(img_input,32,3,2,'valid',True,name='conv1')
@@ -570,7 +574,7 @@ else:
         chanDim = -1
 
         model = Sequential()
-        model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(image_size, image_size, 3)))
+        model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(montage_image_size, montage_image_size, 3)))
         model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
         model.add(Activation("relu"))
         model.add(BatchNormalization(axis=chanDim))
@@ -625,12 +629,12 @@ else:
         trainX = densenet.preprocess_input(trainX)
         testX = densenet.preprocess_input(testX)
 
-        input_tensor = Input(shape=(image_size,image_size,3))
+        input_tensor = Input(shape=(montage_image_size,montage_image_size,3))
         base_model = DenseNet121(
             include_top = False,
             weights = keras_model_weights,
             input_tensor = input_tensor,
-            input_shape = (image_size,image_size,3)
+            input_shape = (montage_image_size,montage_image_size,3)
         )
 
         # flatten the volume, then FC => RELU => BN => DROPOUT
@@ -653,12 +657,12 @@ else:
         trainX = inception_resnet_v2.preprocess_input(trainX)
         testX = inception_resnet_v2.preprocess_input(testX)
 
-        input_tensor = Input(shape=(image_size,image_size,3))
+        input_tensor = Input(shape=(montage_image_size,montage_image_size,3))
         base_model = InceptionResNetV2(
             include_top = False,
             weights = keras_model_weights,
             input_tensor = input_tensor,
-            input_shape = (image_size,image_size,3),
+            input_shape = (montage_image_size,montage_image_size,3),
             pooling = 'avg'
         )
 
@@ -685,7 +689,7 @@ else:
         n = DenseNet121(
             include_top=False,
             weights='imagenet',
-            input_shape=(image_size, image_size, 3),
+            input_shape=(montage_image_size, montage_image_size, 3),
             pooling = 'avg'
         )
 
@@ -696,7 +700,7 @@ else:
 
         model = Sequential()
         model.add(
-            TimeDistributed(n, input_shape=(num_unique_time_days, image_size, image_size, 3))
+            TimeDistributed(n, input_shape=(num_unique_time_days, montage_image_size, montage_image_size, 3))
         )
         model.add(
             TimeDistributed(

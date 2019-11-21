@@ -88,7 +88,43 @@ class CNNProcessData:
         testY = np.repeat(testY, number)
         return (testX, testY)
 
-    def process_cnn_data(self, data, labels, num_unique_stock_ids, images_per_stock, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, data_augmentation, data_augmentation_test):
+    def create_montages(self, data, labels, montage_image_number, image_size, full_montage_image_size):
+        output = []
+        label_output = []
+        if montage_image_number == 9:
+            data = data.reshape(int(len(data)/montage_image_number), montage_image_number, image_size, image_size, 3)
+            if labels is not None:
+                labels = labels.reshape(int(len(labels)/montage_image_number), montage_image_number)
+
+            for iter in range(len(data)):
+                img_set = data[iter]
+                outputImage = np.zeros((full_montage_image_size, full_montage_image_size, 3))
+
+                outputImage[0:image_size, 0:image_size, :] = img_set[0]
+                outputImage[0:image_size, image_size:2*image_size, :] = img_set[1]
+                outputImage[0:image_size, 2*image_size:3*image_size, :] = img_set[2]
+                outputImage[image_size:2*image_size, 0:image_size, :] = img_set[3]
+                outputImage[image_size:2*image_size, image_size:2*image_size, :] = img_set[4]
+                outputImage[image_size:2*image_size, 2*image_size:3*image_size, :] = img_set[5]
+                outputImage[2*image_size:3*image_size, 0:image_size, :] = img_set[6]
+                outputImage[2*image_size:3*image_size, image_size:2*image_size, :] = img_set[7]
+                outputImage[2*image_size:3*image_size, 2*image_size:3*image_size, :] = img_set[8]
+
+                # cv2.imshow("Result", outputImage)
+                # cv2.waitKey(0)
+
+                output.append(outputImage)
+                
+                if labels is not None:
+                    label_set = labels[iter]
+                    label_output.append(label_set[0])
+
+        else:
+            raise Exception('Only implemented to montage 9 images into one image')
+
+        return (np.array(output), np.array(label_output))
+
+    def process_cnn_data(self, data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
         testX = []
         trainY = []
@@ -97,6 +133,7 @@ class CNNProcessData:
         datagen = self.get_imagedatagenerator()
 
         datagen.fit(data)
+        data = datagen.standardize(data)
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
@@ -158,59 +195,37 @@ class CNNProcessData:
                 labels.append(l[0])
             trainY = np.array(labels)
         else:
+            (data, labels) = self.create_montages(data, labels, montage_image_number, image_size, full_montage_image_size)
+
             (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2)
-            testY_length = len(testY)
-            
-            testX = datagen.standardize(testX)
-            
+            # testY_length = len(testY)
+
             # (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
-            testX_resized = []
-            for img in testX:
-                testX_resized.append(cv2.resize(img, (image_size, image_size)))
-            testX = np.array(testX_resized)
-            testY = testY.reshape(data_augmentation_test * testY_length, 1)
+            # testY = testY.reshape(data_augmentation_test * testY_length, 1)
 
-            trainX_aug = []
-            trainY_aug = []
-            augmented = datagen.flow(trainX, trainY, batch_size=len(trainX))
-            for i in range(0, data_augmentation):
-                X, y = augmented.next()
-                if len(trainX_aug) == 0:
-                    trainX_aug = X
-                    trainY_aug = y
-                else:
-                    trainX_aug = np.concatenate((trainX_aug, X))
-                    trainY_aug = np.concatenate((trainY_aug, y))
+            # augmented = datagen.flow(trainX, trainY, batch_size=len(trainX))
+            # for i in range(0, data_augmentation):
+            #     X, y = augmented.next()
 
-            trainX = trainX_aug
-            trainY = trainY_aug
-            trainX_resized = []
-            for img in trainX:
-                trainX_resized.append(cv2.resize(img, (image_size, image_size)))
-            trainX = np.array(trainX_resized)
-        
         return (testX, testY, trainX, trainY)
 
-    def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_type, training_data, data_augmentation_test):
+    def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
         testX = []
         trainY = []
         testY = []
 
         datagen = self.get_imagedatagenerator()
-
         datagen.fit(training_data)
+
+        (data, labels) = self.create_montages(data, None, montage_image_number, image_size, full_montage_image_size)
         data = datagen.standardize(data)
 
-        augmented_data = []
         #ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
         #augmented_data = ret[0]
-        for img in data:
-            augmented_data.append(cv2.resize(img, (image_size, image_size)))
-        augmented_data = np.array(augmented_data)
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'KerasCNNLSTMDenseNet121ImageNetWeights':
-            augmented_data = augmented_data.reshape(data_augmentation_test * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
+            data = data.reshape(data_augmentation_test * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
             
-        return augmented_data
+        return data

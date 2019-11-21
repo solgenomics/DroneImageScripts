@@ -78,8 +78,8 @@ outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 training_data_input_file = args["training_data_input_file"]
 
-input_image_size = 75
 image_size = 48
+montage_image_size = image_size*3
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -105,35 +105,36 @@ if log_file_path is not None:
 else:
     print("[INFO] reading labels and image data...")
 
-print("[INFO] input data shuold be ordered by stock_id, image_type, and time_point in a nested fashion")
 aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         stock_id = row[0]
-        image_type = row[3]
-        time_days = row[4]
-        drone_run_project_id = row[5]
-        germplasm = row[6]
+        image = Image.open(row[1])
+        value = row[2]
+        trait_name = row[3]
+        image_type = row[4]
+        time_days = row[5]
+        drone_run_project_id = row[6]
+        field_trial_id = row[7]
+        germplasm = row[8]
 
-        for i in range(7,len(row)):
+        for i in range(9,len(row)):
             if i in aux_tabular_data.keys():
                 aux_tabular_data[i].append(row[i])
             else:
                 aux_tabular_data[i] = [row[i]]
 
-        image = Image.open(row[1])
-        image = np.array(image.resize((input_image_size, input_image_size))) / 255.0
+        image = np.array(image.resize((image_size,image_size))) / 255.0
+        # cv2.imshow("Result", image)
+        # cv2.waitKey(0)
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
             image = cv2.merge((image, empty_mat, empty_mat))
 
-        #print(image.shape)
         data.append(image)
-
-        previous_value = row[2]
-        previous_labels.append(previous_value)
+        previous_labels.append(value)
 
         if image_type in unique_image_types.keys():
             unique_image_types[image_type] += 1
@@ -205,6 +206,7 @@ if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and num_unique_s
 
 
 data_augmentation = 1
+montage_image_number = 9
 if log_file_path is not None:
     eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
 else:
@@ -217,7 +219,7 @@ max_label = np.amax(trained_labels)
 trained_labels = trained_labels/max_label
 
 process_data = CNNProcessData.CNNProcessData()
-augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, input_image_size, image_size, keras_model_name, trained_image_data, data_augmentation)
+augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
 
 lines = []
 evaluation_lines = []
@@ -237,24 +239,19 @@ else:
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = prob_predictions.flatten() 
-    print(predictions)
+    #print(predictions)
     predictions = predictions * max_label
-    print(predictions)
+    #print(predictions)
 
     if keras_model_name != 'KerasCNNLSTMDenseNet121ImageNetWeights':
         predictions = predictions.reshape(num_unique_time_days, int(len(predictions)/(num_unique_time_days)))
         print(predictions)
         predictions = np.mean(predictions, axis=0)
 
-    predictions = predictions.reshape(num_unique_image_types, int(len(predictions)/(num_unique_image_types)))
-    print(predictions)
-    predictions = np.mean(predictions, axis=0)
-    print(predictions)
-
     predictions = predictions.reshape(data_augmentation, int(len(predictions)/data_augmentation))
-    print(predictions)
+    #print(predictions)
     averaged_predictions = np.mean(predictions, axis=0)
-    print(averaged_predictions)
+    #print(averaged_predictions)
 
     separator = ","
     prediction_string = separator.join([str(x) for x in averaged_predictions])
