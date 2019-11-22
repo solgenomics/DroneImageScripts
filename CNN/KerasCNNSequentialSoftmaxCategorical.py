@@ -367,7 +367,7 @@ with open(input_file) as csv_file:
             else:
                 aux_tabular_data[i] = [row[i]]
 
-        image = cv2.resize(image, (image_size,image_size)) * 1.0
+        image = cv2.resize(image, (image_size,image_size)) / 255.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
