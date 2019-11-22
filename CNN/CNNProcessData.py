@@ -114,7 +114,7 @@ class CNNProcessData:
                 # cv2.waitKey(0)
 
                 output.append(outputImage)
-                
+
                 if labels is not None:
                     label_set = labels[iter]
                     label_output.append(label_set[0])

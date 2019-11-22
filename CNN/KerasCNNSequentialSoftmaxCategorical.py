@@ -75,7 +75,7 @@ keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
 keras_model_layers = args["keras_model_layers"]
 
-image_size = 48
+image_size = 64
 montage_image_size = image_size*3
 
 if sys.version_info[0] < 3:
@@ -352,7 +352,7 @@ with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         stock_id = row[0]
-        image = Image.open(row[1])
+        image = cv2.imread(row[1])
         value = float(row[2])
         trait_name = row[3]
         image_type = row[4]
@@ -367,14 +367,12 @@ with open(input_file) as csv_file:
             else:
                 aux_tabular_data[i] = [row[i]]
 
-        image = np.array(image.resize((image_size,image_size))) / 255.0
-        # cv2.imshow("Result", image)
-        # cv2.waitKey(0)
+        image = cv2.resize(image, (image_size,image_size)) * 1.0
 
         if (len(image.shape) == 2):
             empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
             image = cv2.merge((image, empty_mat, empty_mat))
-
+            
         data.append(image)
         labels.append(value)
 
