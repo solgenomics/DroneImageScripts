@@ -352,7 +352,7 @@ with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         stock_id = row[0]
-        image = cv2.imread(row[1])
+        image = cv2.imread(row[1], cv2.IMREAD_UNCHANGED)
         value = float(row[2])
         trait_name = row[3]
         image_type = row[4]
