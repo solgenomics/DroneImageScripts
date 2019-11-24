@@ -91,7 +91,7 @@ class CNNProcessData:
     def create_montages(self, data, labels, montage_image_number, image_size, full_montage_image_size):
         output = []
         label_output = []
-        if montage_image_number == 9:
+        if montage_image_number == 4:
             data = data.reshape(int(len(data)/montage_image_number), montage_image_number, image_size, image_size, 3)
             if labels is not None:
                 labels = labels.reshape(int(len(labels)/montage_image_number), montage_image_number)
@@ -99,19 +99,14 @@ class CNNProcessData:
             for iter in range(len(data)):
                 img_set = data[iter]
                 outputImage = np.zeros((full_montage_image_size, full_montage_image_size, 3))
-
                 outputImage[0:image_size, 0:image_size, :] = img_set[0]
                 outputImage[0:image_size, image_size:2*image_size, :] = img_set[1]
-                outputImage[0:image_size, 2*image_size:3*image_size, :] = img_set[2]
-                outputImage[image_size:2*image_size, 0:image_size, :] = img_set[3]
-                outputImage[image_size:2*image_size, image_size:2*image_size, :] = img_set[4]
-                outputImage[image_size:2*image_size, 2*image_size:3*image_size, :] = img_set[5]
-                outputImage[2*image_size:3*image_size, 0:image_size, :] = img_set[6]
-                outputImage[2*image_size:3*image_size, image_size:2*image_size, :] = img_set[7]
-                outputImage[2*image_size:3*image_size, 2*image_size:3*image_size, :] = img_set[8]
+                outputImage[image_size:2*image_size, 0:image_size, :] = img_set[2]
+                outputImage[image_size:2*image_size, image_size:2*image_size, :] = img_set[3]
 
                 # cv2.imshow("Result", outputImage)
                 # cv2.waitKey(0)
+                # raise Exception('Exit')
 
                 output.append(outputImage)
 

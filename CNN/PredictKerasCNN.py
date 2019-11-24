@@ -78,8 +78,8 @@ outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 training_data_input_file = args["training_data_input_file"]
 
-image_size = 48
-montage_image_size = image_size*3
+image_size = 96
+montage_image_size = image_size*2
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -206,7 +206,7 @@ if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and num_unique_s
 
 
 data_augmentation = 1
-montage_image_number = 9
+montage_image_number = 4
 if log_file_path is not None:
     eprint("[INFO] augmenting test images by %d..." % (data_augmentation))
 else:

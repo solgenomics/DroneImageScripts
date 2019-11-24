@@ -75,8 +75,8 @@ keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
 keras_model_layers = args["keras_model_layers"]
 
-image_size = 64
-montage_image_size = image_size*3
+image_size = 96
+montage_image_size = image_size*2
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -453,7 +453,7 @@ else:
 
     data_augmentation = 1
     data_augmentation_test = 1
-    montage_image_number = 9 # Implemented to combine 9 different image types of the same plot into a single montage image
+    montage_image_number = 4 # Implemented to combine 4 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
     (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size)
     print(testX.shape)
