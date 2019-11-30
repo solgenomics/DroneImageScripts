@@ -142,38 +142,39 @@ def incresC(x,scale,name=None):
     return final_lay
 
 def build_simple_model(hp):
-    model = Sequential()
-    model.add(Conv2D(
+    img_input = Input(shape=(montage_image_size,montage_image_size,3))
+
+    x = Conv2D(
         filters=hp.Int('conv_1_filter', min_value=32, max_value=128, step=16),
         kernel_size=hp.Choice('conv_1_kernel', values = [3,5]),
-        activation='relu',
-        input_shape=(montage_image_size,montage_image_size,3)
-    ))
-    model.add(Conv2D(
+        activation='relu'
+    )(img_input)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         activation='relu'
-    ))
-    model.add(Flatten())
-    model.add(Dense(
+    )(x)
+    x = Flatten()(x)
+    x = Dense(
         units=hp.Int('dense_1_units', min_value=32, max_value=128, step=16),
         activation='relu'
-    ))
+    )(x)
 
     # flatten the volume, then FC => RELU => BN => DROPOUT
-    model.add(Flatten())
-    model.add(Dense(16))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    x = Flatten()(x)
+    x = Dense(16)(x)
+    x = Activation("relu")(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.5)(x)
 
     # apply another FC layer, this one to match the number of nodes
     # coming out of the MLP
-    model.add(Dense(4))
-    model.add(Activation("relu"))
+    x = Dense(4)(x)
+    x = Activation("relu")(x)
 
-    model.add(Dense(1, activation="linear"))
+    x = Dense(1, activation="linear")(x)
 
+    model = Model(img_input, x)
     model.compile(loss="mean_absolute_percentage_error",optimizer=Adam(hp.Choice('learning_rate', values=[1e-3])))
     return model
 
@@ -182,27 +183,27 @@ def build_simple_1_model(hp):
     reg = regularizers.l2(0.01)
     chanDim = -1
 
-    model = Sequential()
-    model.add(Conv2D(
+    img_input = Input(shape=(montage_image_size,montage_image_size,3))
+
+    x = Conv2D(
         filters=hp.Int('conv_1_filter', min_value=16, max_value=32, step=16),
         kernel_size=hp.Choice('conv_1_kernel', values = [3,5,7]),
         activation='relu',
         strides=(2, 2),
         padding="valid",
         kernel_initializer=init,
-        kernel_regularizer=reg,
-        input_shape=(montage_image_size,montage_image_size,3)
-    ))
-    model.add(Conv2D(
+        kernel_regularizer=reg
+    )(img_input)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         activation='relu',
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=32, max_value=64, step=16),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         strides=(2, 2),
@@ -210,19 +211,19 @@ def build_simple_1_model(hp):
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.25)(x)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         activation='relu',
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=64, max_value=128, step=32),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         strides=(2, 2),
@@ -230,19 +231,19 @@ def build_simple_1_model(hp):
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.25)(x)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         activation='relu',
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Conv2D(
         filters=hp.Int('conv_2_filter', min_value=128, max_value=256, step=64),
         kernel_size=hp.Choice('conv_2_kernel', values = [3,5]),
         strides=(2, 2),
@@ -250,31 +251,32 @@ def build_simple_1_model(hp):
         padding="same",
         kernel_initializer=init,
         kernel_regularizer=reg
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.25)(x)
+    x = Flatten()(x)
+    x = Dense(
         units=hp.Int('dense_1_units', min_value=256, max_value=512, step=64),
         activation='relu'
-    ))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.5))
+    )(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.5)(x)
     
     # flatten the volume, then FC => RELU => BN => DROPOUT
-    model.add(Flatten())
-    model.add(Dense(16))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Dropout(0.5))
+    x = Flatten()(x)
+    x = Dense(16)(x)
+    x = Activation("relu")(x)
+    x = BatchNormalization(axis=chanDim)(x)
+    x = Dropout(0.5)(x)
 
     # apply another FC layer, this one to match the number of nodes
     # coming out of the MLP
-    model.add(Dense(4))
-    model.add(Activation("relu"))
+    x = Dense(4)(x)
+    x = Activation("relu")(x)
 
-    model.add(Dense(1, activation="linear"))
+    x = Dense(1, activation="linear")(x)
 
+    model = Model(img_input, x)
     model.compile(loss="mean_absolute_percentage_error", optimizer=Adam(hp.Choice('learning_rate', values=[1e-3])))
     return model
 
@@ -571,56 +573,58 @@ else:
         reg = regularizers.l2(0.01)
         chanDim = -1
 
-        model = Sequential()
-        model.add(Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg, input_shape=(montage_image_size, montage_image_size, 3)))
-        model.add(Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Dropout(0.25))
+        img_input = Input(shape=(montage_image_size,montage_image_size,3))
+
+        x = Conv2D(16, (7, 7), strides=(2, 2), padding="valid", kernel_initializer=init, kernel_regularizer=reg)(img_input)
+        x = Conv2D(32, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Conv2D(32, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Dropout(0.25)(x)
 
         # stack two more CONV layers, keeping the size of each filter
         # as 3x3 but increasing to 64 total learned filters
-        model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Dropout(0.25))
+        x = Conv2D(64, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Conv2D(64, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Dropout(0.25)(x)
 
         # increase the number of filters again, this time to 128
-        model.add(Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization(axis=chanDim))
-        model.add(Dropout(0.25))
+        x = Conv2D(128, (3, 3), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Conv2D(128, (3, 3), strides=(2, 2), padding="same", kernel_initializer=init, kernel_regularizer=reg)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization(axis=chanDim)(x)
+        x = Dropout(0.25)(x)
 
         # fully-connected layer
-        model.add(Flatten())
-        model.add(Dense(512, kernel_initializer=init))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.5))
+        x = Flatten()(x)
+        x = Dense(512, kernel_initializer=init)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
 
         # flatten the volume, then FC => RELU => BN => DROPOUT
-        model.add(Flatten())
-        model.add(Dense(16))
-        model.add(Activation("relu"))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.5))
+        x = Flatten()(x)
+        x = Dense(16)(x)
+        x = Activation("relu")(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
 
         # apply another FC layer, this one to match the number of nodes
         # coming out of the MLP
-        model.add(Dense(4))
-        model.add(Activation("relu"))
+        x = Dense(4)(x)
+        x = Activation("relu")(x)
 
-        model.add(Dense(1, activation="linear"))
+        x = Dense(1, activation="linear")(x)
 
+        model = Model(img_input, x)
         model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
     if keras_model_type == 'densenet121application':

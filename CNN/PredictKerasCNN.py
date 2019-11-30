@@ -41,6 +41,7 @@ from tensorflow.keras.applications import DenseNet121
 from tensorflow.keras.applications import densenet
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import plot_model
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -237,6 +238,8 @@ else:
     for layer in model.layers:
         print(layer.output_shape)
 
+    #plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = prob_predictions.flatten() 
     #print(predictions)
@@ -275,7 +278,7 @@ else:
     activation_model = Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     activation_figures = []
 
-    get_activations = 0
+    get_activations = 1
     if len(augmented_data[0].shape) == 3 and get_activations == 1:
         layer_displays_above_median = {}
         layer_displays_below_median = {}
