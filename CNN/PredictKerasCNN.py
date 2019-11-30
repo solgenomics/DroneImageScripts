@@ -242,9 +242,9 @@ else:
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = prob_predictions.flatten() 
-    #print(predictions)
     predictions = predictions * max_label
-    #print(predictions)
+
+    predictions_unshaped = predictions
 
     if keras_model_name != 'KerasCNNLSTMDenseNet121ImageNetWeights':
         predictions = predictions.reshape(num_unique_time_days, int(len(predictions)/(num_unique_time_days)))
@@ -289,7 +289,7 @@ else:
         itera = 0
         for image in augmented_data:
             activations = activation_model.predict(np.array([image]))
-            pred_label = averaged_predictions[itera]
+            pred_label = predictions_unshaped[itera]
 
             if pred_label > mean_prediction_label:
                 average_img_above_median += image
