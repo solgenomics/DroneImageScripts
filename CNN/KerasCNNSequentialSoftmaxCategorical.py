@@ -555,7 +555,7 @@ else:
         x = Flatten()(x)
         x = Dense(16)(x)
         x = Activation("relu")(x)
-        x = BatchNormalization(axis=3)(x)
+        x = BatchNormalization(axis=-1)(x)
         x = Dropout(0.5)(x)
 
         # apply another FC layer, this one to match the number of nodes
