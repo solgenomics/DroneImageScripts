@@ -264,7 +264,6 @@ else:
         print("Predictions: " + prediction_string)
 
     mean_prediction_label = sum(averaged_predictions)/len(averaged_predictions)
-    mean_mean_prediction_label = np.mean(mean_prediction_label)
     for p in averaged_predictions:
         line = [p]
         lines.append(line)
@@ -290,9 +289,9 @@ else:
         itera = 0
         for image in augmented_data:
             activations = activation_model.predict(np.array([image]))
-            pred_label = mean_prediction_label[itera]
+            pred_label = averaged_predictions[itera]
 
-            if pred_label > mean_mean_prediction_label:
+            if pred_label > mean_prediction_label:
                 average_img_above_median += image
                 num_img_above_median += 1
             else:
@@ -310,7 +309,7 @@ else:
                         channel_image += 128
                         channel_image = np.clip(channel_image, 0, 255).astype('uint8')
 
-                        if pred_label > mean_mean_prediction_label:
+                        if pred_label > mean_prediction_label:
                             if layer_name in layer_displays_above_median.keys():
                                 layer_displays_above_median[layer_name].append(channel_image)
                             else:
