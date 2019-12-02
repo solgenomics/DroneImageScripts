@@ -271,8 +271,8 @@ else:
     print("[INFO] Getting model activations for each images and each layer")
     layer_names = []
     # layer_outputs = [layer.output for layer in model.layers[:20]][1:] # Extracts the outputs of the top 20 layers
-    layer_outputs = [layer.output for layer in model.layers[:30]][1:] # Extracts the outputs of the top 20 layers
-    for layer in model.layers[:30]:
+    layer_outputs = [layer.output for layer in model.layers][1:] # Extracts the outputs of the top 20 layers
+    for layer in model.layers:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
 
     activation_model = Model(inputs=model.input, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
