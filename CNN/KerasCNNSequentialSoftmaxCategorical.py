@@ -777,7 +777,7 @@ else:
     history = LossHistory()
     callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=75, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
+    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=100, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
 
     for h in history.losses:
         history_loss_lines.append([h])
