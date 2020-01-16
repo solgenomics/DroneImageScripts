@@ -202,6 +202,10 @@ class CNNProcessData:
             # for i in range(0, data_augmentation):
             #     X, y = augmented.next()
 
+        max_label = np.amax(trainY)
+        trainY = trainY/max_label
+        testY = testY/max_label
+
         return (testX, testY, trainX, trainY)
 
     def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):

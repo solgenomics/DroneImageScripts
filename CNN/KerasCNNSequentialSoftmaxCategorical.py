@@ -63,6 +63,7 @@ ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras m
 ap.add_argument("-w", "--keras_model_weights", required=False, help="the name of the pre-trained Keras CNN model weights to use e.g. imagenet for the InceptionResNetV2 model. Leave empty to instantiate the model with random weights")
 ap.add_argument("-n", "--keras_model_layers", required=False, help="the first X layers to use from a pre-trained Keras CNN model e.g. 10 for the first 10 layers from the InceptionResNetV2 model")
 ap.add_argument("-p", "--output_random_search_result_project", required=False, help="project dir name where the keras tuner random search results output will be saved. only required for tuner models")
+ap.add_argument("-g", "--grm_input_file", required=False, help="file path input for the genetic relationship matrix to use")
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
@@ -74,6 +75,7 @@ output_random_search_result_project = args["output_random_search_result_project"
 keras_model_type = args["keras_model_type"]
 keras_model_weights = args["keras_model_weights"]
 keras_model_layers = args["keras_model_layers"]
+grm_input_file = args["grm_input_file"]
 
 image_size = 96
 montage_image_size = image_size*2
@@ -333,6 +335,8 @@ unique_time_days = {}
 unique_labels = {}
 unique_image_types = {}
 unique_germplasm = {}
+unique_female_parents = {}
+unique_male_parents = {}
 unique_drone_run_project_ids = {}
 labels = []
 data = []
@@ -349,7 +353,7 @@ data_time_series = []
 
 print("[INFO] reading labels and image data...")
 
-aux_tabular_data = {}
+aux_tabular_data = []
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
@@ -362,12 +366,15 @@ with open(input_file) as csv_file:
         drone_run_project_id = row[6]
         field_trial_id = row[7]
         germplasm = row[8]
+        female_stock_id = row[9]
+        male_stock_id = row[10]
 
-        for i in range(9,len(row)):
-            if i in aux_tabular_data.keys():
-                aux_tabular_data[i].append(row[i])
-            else:
-                aux_tabular_data[i] = [row[i]]
+        aux_data_row = [stock_id, image_type, time_days, drone_run_project_id, field_trial_id, germplasm, female_stock_id, male_stock_id]
+
+        for i in range(11,len(row)):
+            aux_data_row.append(row[i])
+
+        aux_tabular_data.append(aux_data_row)
 
         image = cv2.resize(image, (image_size,image_size)) / 255.0
 
@@ -403,6 +410,16 @@ with open(input_file) as csv_file:
         else:
             unique_germplasm[germplasm] = 1
 
+        if female_stock_id in unique_female_parents.keys():
+            unique_female_parents[female_stock_id] += 1
+        else:
+            unique_female_parents[female_stock_id] = 1
+
+        if male_stock_id in unique_male_parents.keys():
+            unique_male_parents[male_stock_id] += 1
+        else:
+            unique_male_parents[male_stock_id] = 1
+
         if drone_run_project_id in unique_drone_run_project_ids.keys():
             unique_drone_run_project_ids[drone_run_project_id] += 1
         else:
@@ -425,6 +442,9 @@ if keras_model_type == 'densenet121_lstm_imagenet' and ( num_unique_stock_ids * 
 lines = []
 class_map_lines = []
 history_loss_lines = []
+
+# germplasmBinarizer = LabelBinarizer().fit(unique_germplasm.keys())
+# trainCategorical = zipBinarizer.transform(train["zipcode"])
 
 if len(unique_labels.keys()) < 2:
     lines = ["Number of labels is less than 2, so nothing to predict!"]
@@ -450,8 +470,6 @@ else:
 
     data = np.array(data)
     labels = np.array(labels)
-    max_label = np.amax(labels)
-    labels = labels/max_label
 
     data_augmentation = 1
     data_augmentation_test = 1
