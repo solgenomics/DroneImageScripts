@@ -24,6 +24,10 @@ results_outfile_path = args["results_outfile_path"]
 
 image = cv2.imread(input_image_path, cv2.IMREAD_UNCHANGED)
 
+if (len(image.shape) == 2):
+    empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+    image = cv2.merge((image, empty_mat, empty_mat))
+
 # BGR
 lower = [180, 180, 180]
 upper = [255, 255, 255]

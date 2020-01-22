@@ -342,6 +342,7 @@ labels = []
 data = []
 labels_time_series = []
 data_time_series = []
+aux_tabular_data = []
 
 # def data_augment_rotate(angle, image):
 #     (h, w) = image.shape[:2]
@@ -353,7 +354,6 @@ data_time_series = []
 
 print("[INFO] reading labels and image data...")
 
-aux_tabular_data = []
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:

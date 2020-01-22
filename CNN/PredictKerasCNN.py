@@ -106,6 +106,8 @@ if log_file_path is not None:
 else:
     print("[INFO] reading labels and image data...")
 
+csv_data = pd.read_csv(input_file, sep=",", header=True)
+
 aux_tabular_data = {}
 with open(input_file) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
