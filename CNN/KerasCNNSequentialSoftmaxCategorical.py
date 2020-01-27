@@ -55,7 +55,8 @@ from kerastuner.tuners import RandomSearch
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs.")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs. Contains the following header: stock_id,image_path,image_type,day,drone_run_project_id")
+ap.add_argument("-a", "--input_aux_data_file", required=True, help="file path for aux data containing the following header: stock_id,phenotype_value,trait_name,field_trial_id,accession_id,female_id,male_id")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
@@ -68,6 +69,7 @@ args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
+input_aux_data_file = args["input_aux_data_file"]
 output_model_file_path = args["output_model_file_path"]
 outfile_path = args["outfile_path"]
 output_loss_history = args["output_loss_history"]
@@ -342,7 +344,6 @@ labels = []
 data = []
 labels_time_series = []
 data_time_series = []
-aux_tabular_data = []
 
 # def data_augment_rotate(angle, image):
 #     (h, w) = image.shape[:2]
@@ -354,81 +355,42 @@ aux_tabular_data = []
 
 print("[INFO] reading labels and image data...")
 
-with open(input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        image = cv2.imread(row[1], cv2.IMREAD_UNCHANGED)
-        value = float(row[2])
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
-        drone_run_project_id = row[6]
-        field_trial_id = row[7]
-        germplasm = row[8]
-        female_stock_id = row[9]
-        male_stock_id = row[10]
+csv_data = pd.read_csv(input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id'])
+for index, row in csv_data.iterrows():
+    image = cv2.imread(row['image_path'], cv2.IMREAD_UNCHANGED)
+    # value = float(row['phenotype_value'])
 
-        aux_data_row = [stock_id, image_type, time_days, drone_run_project_id, field_trial_id, germplasm, female_stock_id, male_stock_id]
+    image = cv2.resize(image, (image_size,image_size)) / 255.0
 
-        for i in range(11,len(row)):
-            aux_data_row.append(row[i])
+    if (len(image.shape) == 2):
+        empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+        image = cv2.merge((image, empty_mat, empty_mat))
 
-        aux_tabular_data.append(aux_data_row)
+    data.append(image)
 
-        image = cv2.resize(image, (image_size,image_size)) / 255.0
+unique_stock_ids = csv_data.stock_id.unique()
+unique_time_days = csv_data.day.unique()
+unique_drone_run_project_ids = csv_data.drone_run_project_id.unique()
+unique_image_types = csv_data.image_type.unique()
 
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
-            
-        data.append(image)
-        labels.append(value)
+aux_data_cols = ["stock_id","phenotype_value","trait_name","field_trial_id","accession_id","female_id","male_id"]
+aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
+aux_data_cols.extend(aux_data_trait_cols)
+aux_data = pd.read_csv(input_aux_data_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
 
-        if value in unique_labels.keys():
-            unique_labels[str(value)] += 1
-        else:
-            unique_labels[str(value)] = 1
+print(aux_data)
+unique_labels = aux_data.phenotype_value.unique()
+print(unique_labels)
+unique_germplasm = aux_data.accession_id.unique()
+unique_female_parents = aux_data.female_id.unique()
+unique_male_parents = aux_data.male_id.unique()
 
-        if image_type in unique_image_types.keys():
-            unique_image_types[image_type] += 1
-        else:
-            unique_image_types[image_type] = 1
+labels = aux_data["phenotype_value"].tolist()
 
-        if stock_id in unique_stock_ids.keys():
-            unique_stock_ids[stock_id] += 1
-        else:
-            unique_stock_ids[stock_id] = 1
-
-        if time_days in unique_time_days.keys():
-            unique_time_days[time_days] += 1
-        else:
-            unique_time_days[time_days] = 1
-
-        if germplasm in unique_germplasm.keys():
-            unique_germplasm[germplasm] += 1
-        else:
-            unique_germplasm[germplasm] = 1
-
-        if female_stock_id in unique_female_parents.keys():
-            unique_female_parents[female_stock_id] += 1
-        else:
-            unique_female_parents[female_stock_id] = 1
-
-        if male_stock_id in unique_male_parents.keys():
-            unique_male_parents[male_stock_id] += 1
-        else:
-            unique_male_parents[male_stock_id] = 1
-
-        if drone_run_project_id in unique_drone_run_project_ids.keys():
-            unique_drone_run_project_ids[drone_run_project_id] += 1
-        else:
-            unique_drone_run_project_ids[drone_run_project_id] = 1
-
-num_unique_stock_ids = len(unique_stock_ids.keys())
-num_unique_image_types = len(unique_image_types.keys())
-num_unique_time_days = len(unique_time_days.keys())
-num_unique_drone_run_project_ids = len(unique_drone_run_project_ids.keys())
+num_unique_stock_ids = len(unique_stock_ids)
+num_unique_image_types = len(unique_image_types)
+num_unique_time_days = len(unique_time_days)
+num_unique_drone_run_project_ids = len(unique_drone_run_project_ids)
 if len(data) % num_unique_stock_ids or len(labels) % num_unique_stock_ids:
     raise Exception('Number of images or labels does not divide evenly among stock_ids. This means the input data is uneven.')
 if keras_model_type == 'densenet121_lstm_imagenet' and ( num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(labels) ):
@@ -443,21 +405,22 @@ lines = []
 class_map_lines = []
 history_loss_lines = []
 
-# germplasmBinarizer = LabelBinarizer().fit(unique_germplasm.keys())
+# germplasmBinarizer = LabelBinarizer().fit(unique_germplasm)
 # trainCategorical = zipBinarizer.transform(train["zipcode"])
 
-if len(unique_labels.keys()) < 2:
+if len(unique_labels) < 2:
+    print("Number of unique labels less than 2!")
     lines = ["Number of labels is less than 2, so nothing to predict!"]
 else:
     separator = ","
     labels_string = separator.join([str(x) for x in labels])
-    unique_labels_string = separator.join([str(x) for x in unique_labels.keys()])
+    unique_labels_string = separator.join([str(x) for x in unique_labels])
     if log_file_path is not None:
         eprint("Labels " + str(len(labels)) + ": " + labels_string)
-        eprint("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
+        eprint("Unique Labels " + str(len(unique_labels)) + ": " + unique_labels_string)
     else:
         print("Labels " + str(len(labels)) + ": " + labels_string)
-        print("Unique Labels " + str(len(unique_labels.keys())) + ": " + unique_labels_string)
+        print("Unique Labels " + str(len(unique_labels)) + ": " + unique_labels_string)
 
     if log_file_path is not None:
         eprint("[INFO] number of labels: %d" % (len(labels)))
@@ -475,20 +438,26 @@ else:
     data_augmentation_test = 1
     montage_image_number = 4 # Implemented to combine 4 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
-    (testX, testY, trainX, trainY) = process_data.process_cnn_data(data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size)
+    (testImages, testX, testY, trainImages, trainX, trainY) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size)
+    print(testImages.shape)
     print(testX.shape)
     print(testY.shape)
+    print(trainImages.shape)
     print(trainX.shape)
     print(trainY.shape)
 
     if log_file_path is not None:
-        eprint("[INFO] number of augmented training images: %d" % (len(trainX)))
-        eprint("[INFO] number of augmented testing images: %d" % (len(testX)))
+        eprint("[INFO] number of augmented training images: %d" % (len(trainImages)))
+        eprint("[INFO] number of augmented testing images: %d" % (len(testImages)))
+        eprint("[INFO] number of augmented aux data: %d" % (len(trainX)))
+        eprint("[INFO] number of augmented aux data: %d" % (len(testX)))
         eprint("[INFO] number of augmented training labels: %d" % (len(trainY)))
         eprint("[INFO] number of augmented testing labels: %d" % (len(testY)))
     else:
-        print("[INFO] number of augmented training images: %d" % (len(trainX)))
-        print("[INFO] number of augmented testing images: %d" % (len(testX)))
+        print("[INFO] number of augmented training images: %d" % (len(trainImages)))
+        print("[INFO] number of augmented testing images: %d" % (len(testImages)))
+        print("[INFO] number of augmented aux data: %d" % (len(trainX)))
+        print("[INFO] number of augmented aux data: %d" % (len(testX)))
         print("[INFO] number of augmented training labels: %d" % (len(trainY)))
         print("[INFO] number of augmented testing labels: %d" % (len(testY)))
 
@@ -784,6 +753,19 @@ else:
         # )
         # tuner.search(trainX, trainY, epochs=5, validation_split=0.1)
         # model = tuner.get_best_models(num_models=1)[0]
+
+    if keras_model_type == 'mlp_cnn_example':
+        mlp = models.create_mlp(trainX.shape[1], regress=False)
+        cnn = models.create_cnn(montage_image_size, montage_image_size, 3, regress=False)
+        combinedInput = concatenate([mlp.output, cnn.output])
+        x = Dense(4, activation="relu")(combinedInput)
+        x = Dense(1, activation="linear")(x)
+        model = Model(inputs=[mlp.input, cnn.input], outputs=x)
+        opt = Adam(lr=1e-3, decay=1e-3 / 200)
+        model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
+
+        trainX = [trainX, trainImages]
+        testX = [testX, testImages]
 
     for layer in model.layers:
         print(layer.output_shape)

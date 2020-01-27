@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
 class CNNProcessData:
@@ -88,13 +89,10 @@ class CNNProcessData:
         testY = np.repeat(testY, number)
         return (testX, testY)
 
-    def create_montages(self, data, labels, montage_image_number, image_size, full_montage_image_size):
+    def create_montages(self, images, montage_image_number, image_size, full_montage_image_size):
         output = []
-        label_output = []
         if montage_image_number == 4:
-            data = data.reshape(int(len(data)/montage_image_number), montage_image_number, image_size, image_size, 3)
-            if labels is not None:
-                labels = labels.reshape(int(len(labels)/montage_image_number), montage_image_number)
+            data = images.reshape(int(len(images)/montage_image_number), montage_image_number, image_size, image_size, 3)
 
             for iter in range(len(data)):
                 img_set = data[iter]
@@ -109,17 +107,12 @@ class CNNProcessData:
                 # raise Exception('Exit')
 
                 output.append(outputImage)
-
-                if labels is not None:
-                    label_set = labels[iter]
-                    label_output.append(label_set[0])
-
         else:
-            raise Exception('Only implemented to montage 9 images into one image')
+            raise Exception('Only implemented to montage 4 images into one image')
 
-        return (np.array(output), np.array(label_output))
+        return np.array(output)
 
-    def process_cnn_data(self, data, labels, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size):
+    def process_cnn_data(self, images, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
         testX = []
         trainY = []
@@ -127,8 +120,8 @@ class CNNProcessData:
 
         datagen = self.get_imagedatagenerator()
 
-        datagen.fit(data)
-        data = datagen.standardize(data)
+        datagen.fit(images)
+        images = datagen.standardize(images)
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
@@ -190,9 +183,9 @@ class CNNProcessData:
                 labels.append(l[0])
             trainY = np.array(labels)
         else:
-            (data, labels) = self.create_montages(data, labels, montage_image_number, image_size, full_montage_image_size)
+            images = self.create_montages(images, montage_image_number, image_size, full_montage_image_size)
 
-            (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2)
+            (train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
             # testY_length = len(testY)
 
             # (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
@@ -202,11 +195,35 @@ class CNNProcessData:
             # for i in range(0, data_augmentation):
             #     X, y = augmented.next()
 
-        max_label = np.amax(trainY)
-        trainY = trainY/max_label
-        testY = testY/max_label
+        continuous = [col for col in csv_data.columns if 'aux_trait_' in col]
+        cs = MinMaxScaler()
+        trainContinuous = cs.fit_transform(train_aux_data[continuous])
+        testContinuous = cs.transform(test_aux_data[continuous])
 
-        return (testX, testY, trainX, trainY)
+        stock_id_binarizer = LabelBinarizer().fit(aux_data["stock_id"])
+        train_stock_id_categorical = stock_id_binarizer.transform(train_aux_data["stock_id"])
+        test_stock_id_categorical = stock_id_binarizer.transform(test_aux_data["stock_id"])
+
+        accession_id_binarizer = LabelBinarizer().fit(aux_data["accession_id"])
+        train_accession_id_categorical = accession_id_binarizer.transform(train_aux_data["accession_id"])
+        test_accession_id_categorical = accession_id_binarizer.transform(test_aux_data["accession_id"])
+
+        female_id_binarizer = LabelBinarizer().fit(aux_data["female_id"])
+        train_female_id_categorical = female_id_binarizer.transform(train_aux_data["female_id"])
+        test_female_id_categorical = female_id_binarizer.transform(test_aux_data["female_id"])
+
+        male_id_binarizer = LabelBinarizer().fit(aux_data["male_id"])
+        train_male_id_categorical = male_id_binarizer.transform(train_aux_data["male_id"])
+        test_male_id_categorical = male_id_binarizer.transform(test_aux_data["male_id"])
+
+        trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical, trainContinuous])
+        testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical, testContinuous])
+
+        max_label = train_aux_data["phenotype_value"].max()
+        trainY = train_aux_data["phenotype_value"]/max_label
+        testY = test_aux_data["phenotype_value"]/max_label
+
+        return (test_images, testX, testY, train_images, trainX, trainY)
 
     def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
@@ -217,7 +234,7 @@ class CNNProcessData:
         datagen = self.get_imagedatagenerator()
         datagen.fit(training_data)
 
-        (data, labels) = self.create_montages(data, None, montage_image_number, image_size, full_montage_image_size)
+        data = self.create_montages(data, montage_image_number, image_size, full_montage_image_size)
         data = datagen.standardize(data)
 
         #ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
