@@ -31,6 +31,7 @@ from tensorflow.keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.layers import TimeDistributed
+from tensorflow.keras.layers import concatenate
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
@@ -375,12 +376,17 @@ unique_image_types = csv_data.image_type.unique()
 
 aux_data_cols = ["stock_id","phenotype_value","trait_name","field_trial_id","accession_id","female_id","male_id"]
 aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
-aux_data_cols.extend(aux_data_trait_cols)
+aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
 aux_data = pd.read_csv(input_aux_data_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
 
-print(aux_data)
+if log_file_path is not None:
+    eprint(csv_data)
+    eprint(aux_data)
+else:
+    print(csv_data)
+    print(aux_data)
+
 unique_labels = aux_data.phenotype_value.unique()
-print(unique_labels)
 unique_germplasm = aux_data.accession_id.unique()
 unique_female_parents = aux_data.female_id.unique()
 unique_male_parents = aux_data.male_id.unique()
@@ -465,6 +471,7 @@ else:
     opt = Adam(lr=1e-3, decay=1e-3 / 200)
     initial_epoch = 0
 
+    print(keras_model_type)
     if keras_model_type == 'inceptionresnetv2':
         img_input = Input(shape=(montage_image_size,montage_image_size,3))
 
@@ -755,8 +762,8 @@ else:
         # model = tuner.get_best_models(num_models=1)[0]
 
     if keras_model_type == 'mlp_cnn_example':
-        mlp = models.create_mlp(trainX.shape[1], regress=False)
-        cnn = models.create_cnn(montage_image_size, montage_image_size, 3, regress=False)
+        mlp = create_mlp(trainX.shape[1], regress=False)
+        cnn = create_cnn_example(montage_image_size, montage_image_size, 3, regress=False)
         combinedInput = concatenate([mlp.output, cnn.output])
         x = Dense(4, activation="relu")(combinedInput)
         x = Dense(1, activation="linear")(x)
@@ -764,8 +771,8 @@ else:
         opt = Adam(lr=1e-3, decay=1e-3 / 200)
         model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
-        trainX = [trainX, trainImages]
-        testX = [testX, testImages]
+        trainImages = [trainX, trainImages]
+        testImages = [testX, testImages]
 
     for layer in model.layers:
         print(layer.output_shape)
@@ -777,7 +784,7 @@ else:
     history = LossHistory()
     callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=100, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
+    H = model.fit(trainImages, trainY, validation_data=(testImages, testY), epochs=100, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
 
     for h in history.losses:
         history_loss_lines.append([h])
