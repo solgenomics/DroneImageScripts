@@ -34,7 +34,7 @@ def run():
     final_rgb_output_path = args["final_rgb_output_path"]
     work_megapix = args["work_megapix"]
 
-    if log_file_path is not None:
+    if log_file_path is not None and log_file_path != '':
         sys.stderr = open(log_file_path, 'a')
 
     def eprint(*args, **kwargs):

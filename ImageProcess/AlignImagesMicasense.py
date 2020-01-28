@@ -69,7 +69,7 @@ def run():
     if sys.version_info[0] < 3:
         raise Exception("Must use Python3. Use python3 in your command line.")
 
-    if log_file_path is not None:
+    if log_file_path is not None and log_file_path != '':
         sys.stderr = open(log_file_path, 'a')
 
     def eprint(*args, **kwargs):
