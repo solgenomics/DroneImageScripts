@@ -68,7 +68,11 @@ def run():
 
     sep = " ";
     images_string1 = sep.join(imageNamesAll)
-    stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' --log_file "+log_file_path
+
+    log_file_path_string = ''
+    if log_file_path is not None and log_file_path != '':
+        log_file_path_string = " --log_file '"+log_file_path+"'"
+    stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' "+log_file_path_string
     # stitchCmd = "stitching_single "+images_string1+" --result1 '"+final_rgb_output_path+"' --try_cuda yes --log_file "+log_file_path+" --work_megapix "+work_megapix
     if log_file_path is not None:
         eprint(stitchCmd)

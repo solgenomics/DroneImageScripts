@@ -324,7 +324,7 @@ def run():
     del images_to_stitch2
 
     log_file_path_string = ''
-    if log_file_path is not None:
+    if log_file_path is not None and log_file_path != '':
         log_file_path_string = " --log_file '"+log_file_path+"'"
     stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(num_images)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' "+log_file_path_string
     # stitchCmd = "stitching_multi "+images_string1+" "+images_string2+" --num_images "+str(num_images)+" --result1 '"+final_rgb_output_path+"' --result2 '"+final_rnre_output_path+"' --log_file "+log_file_path+" --work_megapix "+work_megapix+" --ba_refine_mask "+ba_refine_mask
