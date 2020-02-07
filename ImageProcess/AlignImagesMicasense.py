@@ -233,9 +233,9 @@ def run():
     pyramid_levels = None # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
     if log_file_path is not None:
-        eprint("Alinging images. Depending on settings this can take from a few seconds to many minutes")
+        eprint("Aligning images. Depending on settings this can take from a few seconds to many minutes")
     else:
-        print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
+        print("Aligning images. Depending on settings this can take from a few seconds to many minutes")
 
     warp_matrices = None
     if tempImagePath is not None:
