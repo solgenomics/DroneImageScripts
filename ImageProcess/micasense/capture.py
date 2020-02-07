@@ -327,7 +327,7 @@ class Capture(object):
         warp_matrices  =[np.linalg.inv(im.get_homography(ref)) for im in self.images]
         return [w/w[2,2] for w in warp_matrices]
 
-    def create_aligned_capture(self, irradiance_list=None, warp_matrices=None, normalize=False, img_type=None):
+    def create_aligned_capture(self, irradiance_list=None, warp_matrices=None, normalize=False, img_type=None, match_index=None, warp_mode=cv2.MOTION_HOMOGRAPHY):
         if img_type is None and irradiance_list is None and self.dls_irradiance() is None:
             self.compute_undistorted_radiance()
             img_type = 'radiance'
@@ -341,9 +341,9 @@ class Capture(object):
         cropped_dimensions,_ = imageutils.find_crop_bounds(self,warp_matrices)
         self.__aligned_capture = imageutils.aligned_capture(self, 
                                                 warp_matrices, 
-                                                cv2.MOTION_HOMOGRAPHY, 
+                                                warp_mode,
                                                 cropped_dimensions, 
-                                                None, 
+                                                match_index,
                                                 img_type=img_type)
         return self.__aligned_capture
 

@@ -102,7 +102,6 @@ def run():
             print("No input images given. use image_path OR file_with_image_paths args")
         os._exit
 
-    panelBandCorrection = {}
     panelNames = []
     if panel_image_path is not None:
         panelNames = glob.glob(os.path.join(panel_image_path,'*.tif'))
@@ -116,43 +115,50 @@ def run():
             eprint("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
         else:
             print("No panel input images given. use panel_image_path OR file_with_panel_image_paths args")
-        #os._exit
+        os._exit
 
-    for imageName in panelNames:
-        img = Image(imageName)
-        band_name = img.band_name
-        if img.auto_calibration_image:
-            if log_file_path is not None:
-                eprint("Found automatic calibration image")
-            else:
-                print("Found automatic calibration image")
-        panel = Panel(img)
+    panelCap = Capture.from_filelist(panelNames)
+    if panelCap.panel_albedo() is not None:
+        panel_reflectance_by_band = panelCap.panel_albedo()
+    else:
+        panel_reflectance_by_band = [0.58, 0.59, 0.59, 0.54, 0.58] #RedEdge band_index order
+    panel_irradiance = panelCap.panel_irradiance(panel_reflectance_by_band)
 
-        if not panel.panel_detected():
-            raise IOError("Panel Not Detected!")
-
-        mean, std, num, sat_count = panel.raw()
-        micasense_panel_calibration = panel.reflectance_from_panel_serial()
-        radianceToReflectance = micasense_panel_calibration / mean
-        panelBandCorrection[band_name] = radianceToReflectance
-        if log_file_path is not None:
-            eprint("Detected panel serial: {}".format(panel.serial))
-            eprint("Extracted Panel Statistics:")
-            eprint("Mean: {}".format(mean))
-            eprint("Standard Deviation: {}".format(std))
-            eprint("Panel Pixel Count: {}".format(num))
-            eprint("Saturated Pixel Count: {}".format(sat_count))
-            eprint('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
-            eprint('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
-        else:
-            print("Detected panel serial: {}".format(panel.serial))
-            print("Extracted Panel Statistics:")
-            print("Mean: {}".format(mean))
-            print("Standard Deviation: {}".format(std))
-            print("Panel Pixel Count: {}".format(num))
-            print("Saturated Pixel Count: {}".format(sat_count))
-            print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
-            print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+    # for imageName in panelNames:
+    #     img = Image(imageName)
+    #     band_name = img.band_name
+    #     if img.auto_calibration_image:
+    #         if log_file_path is not None:
+    #             eprint("Found automatic calibration image")
+    #         else:
+    #             print("Found automatic calibration image")
+    #     panel = Panel(img)
+    # 
+    #     if not panel.panel_detected():
+    #         raise IOError("Panel Not Detected!")
+    # 
+    #     mean, std, num, sat_count = panel.raw()
+    #     micasense_panel_calibration = panel.reflectance_from_panel_serial()
+    #     radianceToReflectance = micasense_panel_calibration / mean
+    #     panelBandCorrection[band_name] = radianceToReflectance
+    #     if log_file_path is not None:
+    #         eprint("Detected panel serial: {}".format(panel.serial))
+    #         eprint("Extracted Panel Statistics:")
+    #         eprint("Mean: {}".format(mean))
+    #         eprint("Standard Deviation: {}".format(std))
+    #         eprint("Panel Pixel Count: {}".format(num))
+    #         eprint("Saturated Pixel Count: {}".format(sat_count))
+    #         eprint('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+    #         eprint('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
+    #     else:
+    #         print("Detected panel serial: {}".format(panel.serial))
+    #         print("Extracted Panel Statistics:")
+    #         print("Mean: {}".format(mean))
+    #         print("Standard Deviation: {}".format(std))
+    #         print("Panel Pixel Count: {}".format(num))
+    #         print("Saturated Pixel Count: {}".format(sat_count))
+    #         print('Panel Calibration: {:1.3f}'.format(micasense_panel_calibration))
+    #         print('Radiance to reflectance conversion factor: {:1.3f}'.format(radianceToReflectance))
 
     imageNamesDict = {}
     for i in imageNamesAll:
@@ -217,40 +223,18 @@ def run():
         return(gamma_corr_rgb)
 
     captures = []
-    # captureGPSDict = {}
-    # counter = 0
     for i in imageNameCaptures:
         im = Capture(i)
         captures.append(im)
-        # latitudes = []
-        # longitudes = []
-        # altitudes = []
-        # for i,img in enumerate(im.images):
-        #     latitudes.append(img.latitude)
-        #     longitudes.append(img.longitude)
-        #     altitudes.append(img.altitude)
-        # captureGPSDict[counter] = [round(statistics.mean(latitudes), 4), round(statistics.mean(longitudes), 4), statistics.mean(altitudes)]
-        # counter = counter + 1
 
-    # GPSsorter = {}
-    # for counter, loc in captureGPSDict.items(): 
-    #     if loc[0] not in GPSsorter:
-    #         GPSsorter[loc[0]] = {}
-    #     GPSsorter[loc[0]][loc[1]] = counter
-
-    imageCaptureSets = captures
-
-    img_type = "reflectance"
     match_index = 0 # Index of the band 
     max_alignment_iterations = 1000
     warp_mode = cv2.MOTION_HOMOGRAPHY # MOTION_HOMOGRAPHY or MOTION_AFFINE. For Altum images only use HOMOGRAPHY
     pyramid_levels = None # for images with RigRelatives, setting this to 0 or 1 may improve alignment
 
     if log_file_path is not None:
-        eprint(img_type)
         eprint("Alinging images. Depending on settings this can take from a few seconds to many minutes")
     else:
-        print(img_type)
         print("Alinging images. Depending on settings this can take from a few seconds to many minutes")
 
     warp_matrices = None
@@ -279,30 +263,32 @@ def run():
     images_to_stitch1 = []
     images_to_stitch2 = []
     count = 0
-    for x in imageCaptureSets:
-        cropped_dimensions, edges = imageutils.find_crop_bounds(x, warp_matrices, warp_mode=warp_mode)
-        im_aligned = imageutils.aligned_capture(x, warp_matrices, warp_mode, cropped_dimensions, match_index, img_type=img_type)
+    for x in captures:
+        im_aligned = x.create_aligned_capture(
+            irradiance_list = panel_irradiance,
+            warp_matrices = warp_matrices,
+            match_index = match_index,
+            warp_mode = warp_mode
+        )
         if log_file_path is not None:
             eprint(im_aligned.shape)
         else:
             print(im_aligned.shape)
 
         i1 = im_aligned[:,:,[0,1,2]]
-        i1 = enhance_image(i1)
+        # i1 = enhance_image(i1)
         image1 = np.uint8(i1*255)
         cv2.imwrite(imageTempNames[count], image1)
         images_to_stitch1.append(imageTempNames[count])
         count = count + 1
 
         i2 = im_aligned[:,:,[2,3,4]]
-        i2 = enhance_image(i2)
+        # i2 = enhance_image(i2)
         image2 = np.uint8(i2*255)
         cv2.imwrite(imageTempNames[count], image2)
         images_to_stitch2.append(imageTempNames[count])
         count = count + 1
 
-        del cropped_dimensions
-        del edges
         del im_aligned
         del i1
         del i2
@@ -319,7 +305,6 @@ def run():
     del imageNamesDict
     del panelNames
     del imageNameCaptures
-    del imageCaptureSets
     del images_to_stitch1
     del images_to_stitch2
 
@@ -339,8 +324,10 @@ def run():
 
     final_result_img1 = cv2.imread(final_rgb_output_path, cv2.IMREAD_UNCHANGED)
     final_result_img2 = cv2.imread(final_rnre_output_path, cv2.IMREAD_UNCHANGED)
-    final_result_img1 = enhance_image(final_result_img1/255)
-    final_result_img2 = enhance_image(final_result_img2/255)
+    final_result_img1 = final_result_img1/255
+    final_result_img2 = final_result_img2/255
+    # final_result_img1 = enhance_image(final_result_img1)
+    # final_result_img2 = enhance_image(final_result_img2)
 
     plt.imsave(final_rgb_output_path, final_result_img1)
     plt.imsave(final_rnre_output_path, final_result_img2)
