@@ -79,6 +79,8 @@ rotate_angle = float(field_params[5])
 num_rows = field_params[6]
 num_columns = field_params[7]
 flight_direction = field_params[8]
+plot_width_m = field_params[9]
+plot_length_m = field_params[10]
 
 top_latitude_diff = corner_gps_obj['tl'][0] - corner_gps_obj['tr'][0]
 top_longitude_diff = corner_gps_obj['tl'][1] - corner_gps_obj['tr'][1]
@@ -170,12 +172,13 @@ for x in captures:
     rotated_imgs.append(rotated_img)
 
 latitude_going_in_drone_direction = 0
+latitude_going_against_drone_direction = 0
 img_gps_locations_latitude_diff_check = img_gps_locations[2][0] - img_gps_locations[0][0]
 img_gps_locations_longitude_diff_check = img_gps_locations[2][1] - img_gps_locations[0][1]
 if img_gps_locations_latitude_diff_check > img_gps_locations_longitude_diff_check:
     latitude_going_in_drone_direction = 1
-else:
-    latitude_going_in_drone_direction = 0
+else if img_gps_locations_latitude_diff_check < img_gps_locations_longitude_diff_check:
+    latitude_going_against_drone_direction = 0
 
 img_rows_pixels, img_columns_pixels, d = rotated_imgs[0].shape
 tl_pixel_x_diff = int(corners_obj['top_left']['x']) - (img_rows_pixels/2)
@@ -195,6 +198,7 @@ column_width_pixels = 0
 column_height_pixels = 0
 row_width_pixels = 0
 row_height_pixels = 0
+#GET PLOT WIDTH, GET NUMBER OF PIXELS FOR PLOT, AND CONVERT TO GPS->Pixels
 if latitude_going_in_drone_direction == 1:
     if flight_direction == 'columns':
         column_width_gps = top_latitude_diff/num_columns
