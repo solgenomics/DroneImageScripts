@@ -9,6 +9,7 @@ import imutils
 import cv2
 import numpy as np
 import math
+import json
 from PIL import Image
 import micasense.imageutils as imageutils
 import micasense.plotutils as plotutils
@@ -62,6 +63,31 @@ with open(file_with_image_paths) as fp:
     for line in fp:
         plot_id, plot_name, plot_number = line.strip().split(",")
         field_layout.append([plot_id, plot_name, plot_number])
+
+field_params = []
+with open(field_layout_params) as fp:
+    for line in fp:
+        param = line.strip()
+        field_params.append(param)
+
+first_plot_corner = field_params[0]
+second_plot_direction = field_params[1]
+first_plot_orientation = field_params[2]
+corners_obj = json.loads(field_params[3])
+corner_gps_obj = json.loads(field_params[4])
+rotate_angle = float(field_params[5])
+num_rows = field_params[6]
+num_columns = field_params[7]
+flight_direction = field_params[8]
+
+top_latitude_diff = corner_gps_obj['tl'][0] - corner_gps_obj['tr'][0]
+top_longitude_diff = corner_gps_obj['tl'][1] - corner_gps_obj['tr'][1]
+left_latitude_diff = corner_gps_obj['tl'][0] - corner_gps_obj['bl'][0]
+left_longitude_diff = corner_gps_obj['tl'][1] - corner_gps_obj['bl'][1]
+right_latitude_diff = corner_gps_obj['tr'][0] - corner_gps_obj['br'][0]
+right_longitude_diff = corner_gps_obj['tr'][1] - corner_gps_obj['br'][1]
+bottom_latitude_diff = corner_gps_obj['bl'][0] - corner_gps_obj['br'][0]
+bottom_longitude_diff = corner_gps_obj['bl'][1] - corner_gps_obj['br'][1]
 
 panelCap = Capture.from_filelist(panelNames)
 if panelCap.panel_albedo() is not None:
@@ -117,6 +143,8 @@ if log_file_path is not None:
 else:
     print("Finished Aligning, warp matrices={}".format(warp_matrices))
 
+rotated_imgs = []
+img_gps_locations = []
 for x in captures:
     im_aligned = x.create_aligned_capture(
         irradiance_list = panel_irradiance,
@@ -133,4 +161,60 @@ for x in captures:
     latitude = img.latitude
     longitude = img.longitude
     altitude = img.altitude
+    img_gps_locations.append([latitude, longitude, altitude])
 
+    rows,cols,d = img.shape
+    M = cv2.getRotationMatrix2D((cols/2,rows/2),rotate_angle,1)
+    rotated_img = cv2.warpAffine(img,M,(cols,rows,d))
+
+    rotated_imgs.append(rotated_img)
+
+latitude_going_in_drone_direction = 0
+img_gps_locations_latitude_diff_check = img_gps_locations[2][0] - img_gps_locations[0][0]
+img_gps_locations_longitude_diff_check = img_gps_locations[2][1] - img_gps_locations[0][1]
+if img_gps_locations_latitude_diff_check > img_gps_locations_longitude_diff_check:
+    latitude_going_in_drone_direction = 1
+else:
+    latitude_going_in_drone_direction = 0
+
+img_rows_pixels, img_columns_pixels, d = rotated_imgs[0].shape
+tl_pixel_x_diff = int(corners_obj['top_left']['x']) - (img_rows_pixels/2)
+tl_pixel_y_diff = int(corners_obj['top_left']['y']) - (img_columns_pixels/2)
+tr_pixel_x_diff = int(corners_obj['top_right']['x']) - (img_rows_pixels/2)
+tr_pixel_y_diff = int(corners_obj['top_right']['y']) - (img_columns_pixels/2)
+bl_pixel_x_diff = int(corners_obj['bottom_left']['x']) - (img_rows_pixels/2)
+bl_pixel_y_diff = int(corners_obj['bottom_left']['y']) - (img_columns_pixels/2)
+br_pixel_x_diff = int(corners_obj['bottom_right']['x']) - (img_rows_pixels/2)
+br_pixel_y_diff = int(corners_obj['bottom_right']['y']) - (img_columns_pixels/2)
+
+column_width_gps = 0
+column_height_gps = 0
+row_width_gps = 0
+row_height_gps = 0
+column_width_pixels = 0
+column_height_pixels = 0
+row_width_pixels = 0
+row_height_pixels = 0
+if latitude_going_in_drone_direction == 1:
+    if flight_direction == 'columns':
+        column_width_gps = top_latitude_diff/num_columns
+        column_height_gps = left_longitude_diff
+        row_width_gps = top_latitude_diff
+        row_height_gps = left_longitude_diff/num_rows
+    if flight_direction == 'rows':
+        row_width_gps = top_latitude_diff/num_columns
+        row_height_gps = left_longitude_diff
+        column_width_gps = top_latitude_diff
+        column_height_gps = left_longitude_diff/num_rows
+if latitude_going_in_drone_direction == 0:
+    if flight_direction == 'columns':
+        column_width_gps = top_longitude_diff/num_columns
+        column_height_gps = left_latitude_diff
+        row_width_gps = top_longitude_diff
+        row_height_gps = left_latitude_diff/num_rows
+    if flight_direction == 'rows':
+        row_width_gps = top_longitude_diff/num_columns
+        row_height_gps = left_latitude_diff
+        column_width_gps = top_longitude_diff
+        column_height_gps = left_latitude_diff/num_rows
+    
