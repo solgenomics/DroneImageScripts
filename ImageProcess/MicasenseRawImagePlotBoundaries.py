@@ -70,26 +70,23 @@ with open(field_layout_params) as fp:
         param = line.strip()
         field_params.append(param)
 
-first_plot_corner = field_params[0]
-second_plot_direction = field_params[1]
-first_plot_orientation = field_params[2]
+first_plot_corner = field_params[0] #north_west, north_east, south_west, south_east
+second_plot_direction = field_params[1] #north_to_south, south_to_north, east_to_west, west_to_east
+first_plot_orientation = field_params[2] #serpentine, zigzag
 corners_obj = json.loads(field_params[3])
 corner_gps_obj = json.loads(field_params[4])
 rotate_angle = float(field_params[5])
-num_rows = field_params[6]
-num_columns = field_params[7]
-flight_direction = field_params[8]
-plot_width_m = field_params[9]
-plot_length_m = field_params[10]
-
-top_latitude_diff = corner_gps_obj['tl'][0] - corner_gps_obj['tr'][0]
-top_longitude_diff = corner_gps_obj['tl'][1] - corner_gps_obj['tr'][1]
-left_latitude_diff = corner_gps_obj['tl'][0] - corner_gps_obj['bl'][0]
-left_longitude_diff = corner_gps_obj['tl'][1] - corner_gps_obj['bl'][1]
-right_latitude_diff = corner_gps_obj['tr'][0] - corner_gps_obj['br'][0]
-right_longitude_diff = corner_gps_obj['tr'][1] - corner_gps_obj['br'][1]
-bottom_latitude_diff = corner_gps_obj['bl'][0] - corner_gps_obj['br'][0]
-bottom_longitude_diff = corner_gps_obj['bl'][1] - corner_gps_obj['br'][1]
+num_rows = int(field_params[6])
+num_columns = int(field_params[7])
+flight_direction = field_params[8] #rows, columns, #DEPRECATED
+plot_width_m = float(field_params[9])
+plot_length_m = float(field_params[10])
+plot_corners_pixels = field_params[11]
+gps_precision_to_mm = float(field_params[12])
+start_direction = field_params[13] #north_to_south, south_to_north, east_to_west, west_to_east
+turn_direction = field_params[14] #north_to_south, south_to_north, east_to_west, west_to_east
+geographic_position = field_params[15] #Q1, Q2, Q3, Q4
+image_top_direction = field_params[16] #north, south, east, west
 
 panelCap = Capture.from_filelist(panelNames)
 if panelCap.panel_albedo() is not None:
@@ -171,24 +168,27 @@ for x in captures:
 
     rotated_imgs.append(rotated_img)
 
-latitude_going_in_drone_direction = 0
-latitude_going_against_drone_direction = 0
-img_gps_locations_latitude_diff_check = img_gps_locations[2][0] - img_gps_locations[0][0]
-img_gps_locations_longitude_diff_check = img_gps_locations[2][1] - img_gps_locations[0][1]
-if img_gps_locations_latitude_diff_check > img_gps_locations_longitude_diff_check:
-    latitude_going_in_drone_direction = 1
-else if img_gps_locations_latitude_diff_check < img_gps_locations_longitude_diff_check:
-    latitude_going_against_drone_direction = 0
-
 img_rows_pixels, img_columns_pixels, d = rotated_imgs[0].shape
-tl_pixel_x_diff = int(corners_obj['top_left']['x']) - (img_rows_pixels/2)
-tl_pixel_y_diff = int(corners_obj['top_left']['y']) - (img_columns_pixels/2)
-tr_pixel_x_diff = int(corners_obj['top_right']['x']) - (img_rows_pixels/2)
-tr_pixel_y_diff = int(corners_obj['top_right']['y']) - (img_columns_pixels/2)
-bl_pixel_x_diff = int(corners_obj['bottom_left']['x']) - (img_rows_pixels/2)
-bl_pixel_y_diff = int(corners_obj['bottom_left']['y']) - (img_columns_pixels/2)
-br_pixel_x_diff = int(corners_obj['bottom_right']['x']) - (img_rows_pixels/2)
-br_pixel_y_diff = int(corners_obj['bottom_right']['y']) - (img_columns_pixels/2)
+img_rows_pixels_half = img_rows_pixels/2
+img_columns_pixels_half = img_columns_pixels/2
+
+plot_width_pixel_tl = int(plot_corners_pixels['north_west'][1]['x']) - int(plot_corners_pixels['north_west'][0]['x'])
+plot_width_pixel_tr = int(plot_corners_pixels['north_east'][1]['x']) - int(plot_corners_pixels['north_east'][0]['x'])
+plot_width_pixel_bl = int(plot_corners_pixels['south_west'][1]['x']) - int(plot_corners_pixels['south_west'][0]['x'])
+plot_width_pixel_br = int(plot_corners_pixels['south_east'][1]['x']) - int(plot_corners_pixels['south_east'][0]['x'])
+plot_length_pixel_tl = int(plot_corners_pixels['north_west'][1]['y']) - int(plot_corners_pixels['north_west'][0]['y'])
+plot_length_pixel_tr = int(plot_corners_pixels['north_east'][1]['y']) - int(plot_corners_pixels['north_east'][0]['y'])
+plot_length_pixel_bl = int(plot_corners_pixels['south_west'][1]['y']) - int(plot_corners_pixels['south_west'][0]['y'])
+plot_length_pixel_br = int(plot_corners_pixels['south_east'][1]['y']) - int(plot_corners_pixels['south_east'][0]['y'])
+
+plot_width_pixel_avg = int((plot_width_pixel_tl + plot_width_pixel_tr + plot_width_pixel_bl + plot_width_pixel_br)/4)
+plot_length_pixel_avg = int((plot_length_pixel_tl + plot_length_pixel_tr + plot_length_pixel_bl + plot_length_pixel_br)/4)
+
+plot_width_pixels_per_m = plot_width_pixel_avg/plot_width_m
+plot_length_pixels_per_m = plot_length_pixel_avg/plot_length_m
+plot_pixels_per_m_avg = int((plot_width_pixels_per_m + plot_length_pixels_per_m)/2)
+
+plot_pixels_per_gps = int(plot_pixels_per_m_avg * gps_precision_to_mm * 1000)
 
 column_width_gps = 0
 column_height_gps = 0
@@ -198,27 +198,128 @@ column_width_pixels = 0
 column_height_pixels = 0
 row_width_pixels = 0
 row_height_pixels = 0
-#GET PLOT WIDTH, GET NUMBER OF PIXELS FOR PLOT, AND CONVERT TO GPS->Pixels
-if latitude_going_in_drone_direction == 1:
-    if flight_direction == 'columns':
-        column_width_gps = top_latitude_diff/num_columns
-        column_height_gps = left_longitude_diff
-        row_width_gps = top_latitude_diff
-        row_height_gps = left_longitude_diff/num_rows
-    if flight_direction == 'rows':
-        row_width_gps = top_latitude_diff/num_columns
-        row_height_gps = left_longitude_diff
-        column_width_gps = top_latitude_diff
-        column_height_gps = left_longitude_diff/num_rows
-if latitude_going_in_drone_direction == 0:
-    if flight_direction == 'columns':
-        column_width_gps = top_longitude_diff/num_columns
-        column_height_gps = left_latitude_diff
-        row_width_gps = top_longitude_diff
-        row_height_gps = left_latitude_diff/num_rows
-    if flight_direction == 'rows':
-        row_width_gps = top_longitude_diff/num_columns
-        row_height_gps = left_latitude_diff
-        column_width_gps = top_longitude_diff
-        column_height_gps = left_latitude_diff/num_rows
+tl_latitude_to_pixel_sign = 1
+tl_longitude_to_pixel_sign = 1
+tr_latitude_to_pixel_sign = 1
+tr_longitude_to_pixel_sign = 1
+bl_latitude_to_pixel_sign = 1
+bl_longitude_to_pixel_sign = 1
+br_latitude_to_pixel_sign = 1
+br_longitude_to_pixel_sign = 1
+
+tl_pixel_x_diff = int(corners_obj['north_west']['x']) - img_rows_pixels_half
+tl_pixel_y_diff = int(corners_obj['north_west']['y']) - img_columns_pixels_half
+tr_pixel_x_diff = int(corners_obj['north_east']['x']) - img_rows_pixels_half
+tr_pixel_y_diff = int(corners_obj['north_east']['y']) - img_columns_pixels_half
+bl_pixel_x_diff = int(corners_obj['south_west']['x']) - img_rows_pixels_half
+bl_pixel_y_diff = int(corners_obj['south_west']['y']) - img_columns_pixels_half
+br_pixel_x_diff = int(corners_obj['south_east']['x']) - img_rows_pixels_half
+br_pixel_y_diff = int(corners_obj['south_east']['y']) - img_columns_pixels_half
+
+# Q1 is north of 0 and west of 0 e.g. North America
+if geographic_position == 'Q1':
+
+    if start_direction == 'west_to_east' and turn_direction == 'north_to_south':
+        if image_top_direction == 'north':
+
+            if tl_pixel_x_diff < 0:
+                tl_pixel_x_diff = img_rows_pixels_half - int(corners_obj['north_west']['x'])
+                tl_longitude_to_pixel_sign = -1
+            if tl_pixel_y_diff < 0:
+                tl_pixel_y_diff = img_rows_pixels_half - int(corners_obj['north_west']['y'])
+            else:
+                tl_latitude_to_pixel_sign = -1
+
+            if tr_pixel_x_diff < 0:
+                tr_pixel_x_diff = img_rows_pixels_half - int(corners_obj['north_east']['x'])
+                tr_longitude_to_pixel_sign = -1
+            if tr_pixel_y_diff < 0:
+                tr_pixel_y_diff = img_rows_pixels_half - int(corners_obj['north_east']['y'])
+            else:
+                tr_latitude_to_pixel_sign = -1
+
+            if bl_pixel_x_diff < 0:
+                bl_pixel_x_diff = img_rows_pixels_half - int(corners_obj['south_west']['x'])
+                bl_longitude_to_pixel_sign = -1
+            if bl_pixel_y_diff < 0:
+                bl_pixel_y_diff = img_rows_pixels_half - int(corners_obj['south_west']['y'])
+            else:
+                bl_latitude_to_pixel_sign = -1
+
+            if br_pixel_x_diff < 0:
+                br_pixel_x_diff = img_rows_pixels_half - int(corners_obj['south_east']['x'])
+                br_longitude_to_pixel_sign = -1
+            if br_pixel_y_diff < 0:
+                br_pixel_y_diff = img_rows_pixels_half - int(corners_obj['south_east']['y'])
+            else:
+                br_latitude_to_pixel_sign = -1
+
+            if first_plot_corner == 'north_west' and second_plot_direction == 'west_to_east':
+                field_tl_longitude_gps = float(corner_gps_obj['north_west'][1]) + (tl_pixel_x_diff*tl_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tl_latitude_gps = float(corner_gps_obj['north_west'][0]) + (tl_pixel_y_diff*tl_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tr_longitude_gps = float(corner_gps_obj['north_east'][1]) + (tr_pixel_x_diff*tr_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tr_latitude_gps = float(corner_gps_obj['north_east'][0]) + (tr_pixel_y_diff*tr_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_bl_longitude_gps = float(corner_gps_obj['south_west'][1]) + (bl_pixel_x_diff*bl_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_bl_latitude_gps = float(corner_gps_obj['south_west'][0]) + (bl_pixel_y_diff*bl_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_br_longitude_gps = float(corner_gps_obj['south_east'][1]) + (br_pixel_x_diff*br_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_br_latitude_gps = float(corner_gps_obj['south_east'][0]) + (br_pixel_y_diff*br_latitude_to_pixel_sign/plot_pixels_per_gps)
     
+                plot_width_top_gps = (field_tr_longitude_gps - field_tl_longitude_gps)/num_columns
+                plot_width_bottom_gps = (field_br_longitude_gps - field_bl_longitude_gps)/num_columns
+                plot_width_gps_avg = (plot_width_top_gps + plot_width_bottom_gps)/2
+
+                plot_length_left_gps = (field_tl_latitude_gps - field_bl_latitude_gps)/num_rows
+                plot_length_right_gps = (field_tr_latitude_gps - field_br_latitude_gps)/num_rows
+                plot_length_gps_avg = (plot_length_left_gps + plot_length_right_gps)/2
+                
+        if image_top_direction == 'west':
+
+            if tl_pixel_x_diff < 0:
+                tl_pixel_x_diff = img_rows_pixels_half - int(corners_obj['north_west']['x'])
+                tl_latitude_to_pixel_sign = -1
+            if tl_pixel_y_diff < 0:
+                tl_pixel_y_diff = img_rows_pixels_half - int(corners_obj['north_west']['y'])
+                tl_longitude_to_pixel_sign = -1
+
+            if tr_pixel_x_diff < 0:
+                tr_pixel_x_diff = img_rows_pixels_half - int(corners_obj['north_east']['x'])
+                tr_latitude_to_pixel_sign = -1
+            if tr_pixel_y_diff < 0:
+                tr_pixel_y_diff = img_rows_pixels_half - int(corners_obj['north_east']['y'])
+                tr_longitude_to_pixel_sign = -1
+
+            if bl_pixel_x_diff < 0:
+                bl_pixel_x_diff = img_rows_pixels_half - int(corners_obj['south_west']['x'])
+                bl_latitude_to_pixel_sign = -1
+            if bl_pixel_y_diff < 0:
+                bl_pixel_y_diff = img_rows_pixels_half - int(corners_obj['south_west']['y'])
+                bl_longitude_to_pixel_sign = -1
+
+            if br_pixel_x_diff < 0:
+                br_pixel_x_diff = img_rows_pixels_half - int(corners_obj['south_east']['x'])
+                br_latitude_to_pixel_sign = -1
+            if br_pixel_y_diff < 0:
+                br_pixel_y_diff = img_rows_pixels_half - int(corners_obj['south_east']['y'])
+                br_longitude_to_pixel_sign = -1
+
+            if first_plot_corner == 'north_west' and second_plot_direction == 'west_to_east':
+                field_tl_longitude_gps = float(corner_gps_obj['north_west'][1]) + (tl_pixel_y_diff*tl_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tl_latitude_gps = float(corner_gps_obj['north_west'][0]) + (tl_pixel_x_diff*tl_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tr_longitude_gps = float(corner_gps_obj['north_east'][1]) + (tr_pixel_y_diff*tr_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_tr_latitude_gps = float(corner_gps_obj['north_east'][0]) + (tr_pixel_x_diff*tr_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_bl_longitude_gps = float(corner_gps_obj['south_west'][1]) + (bl_pixel_y_diff*bl_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_bl_latitude_gps = float(corner_gps_obj['south_west'][0]) + (bl_pixel_x_diff*bl_latitude_to_pixel_sign/plot_pixels_per_gps)
+                field_br_longitude_gps = float(corner_gps_obj['south_east'][1]) + (br_pixel_y_diff*br_longitude_to_pixel_sign/plot_pixels_per_gps)
+                field_br_latitude_gps = float(corner_gps_obj['south_east'][0]) + (br_pixel_x_diff*br_latitude_to_pixel_sign/plot_pixels_per_gps)
+    
+                plot_width_top_gps = (field_tl_latitude_gps - field_bl_latitude_gps)/num_columns
+                plot_width_bottom_gps = (field_br_latitude_gps - field_br_latitude_gps)/num_columns
+                plot_width_gps_avg = (plot_width_top_gps + plot_width_bottom_gps)/2
+
+                plot_length_left_gps = (field_tr_longitude_gps - field_tl_longitude_gps)/num_rows
+                plot_length_right_gps = (field_br_longitude_gps - field_bl_longitude_gps)/num_rows
+                plot_length_gps_avg = (plot_length_left_gps + plot_length_right_gps)/2
+                
+
+
+
