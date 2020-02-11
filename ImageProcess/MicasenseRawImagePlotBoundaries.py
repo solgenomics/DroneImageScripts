@@ -85,7 +85,7 @@ def run():
     flight_direction = field_params[8] #rows, columns, #DEPRECATED
     plot_width_m = float(field_params[9])
     plot_length_m = float(field_params[10])
-    plot_corners_pixels = field_params[11]
+    plot_corners_pixels = json.loads(field_params[11])
     gps_precision_to_mm = float(field_params[12])
     start_direction = field_params[13] #north_to_south, south_to_north, east_to_west, west_to_east
     turn_direction = field_params[14] #north_to_south, south_to_north, east_to_west, west_to_east
@@ -171,7 +171,7 @@ def run():
 
         rows,cols,d = im_aligned.shape
         M = cv2.getRotationMatrix2D((cols/2,rows/2),rotate_angle,1)
-        rotated_img = cv2.warpAffine(im_aligned,M,(cols,rows,d))
+        rotated_img = cv2.warpAffine(im_aligned,M,(cols,rows))
 
         rotated_imgs.append(rotated_img)
         
