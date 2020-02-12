@@ -4,6 +4,7 @@
 # import the necessary packages
 def run():
     import sys
+    import os, glob
     import argparse
     import csv
     import imutils
@@ -20,6 +21,7 @@ def run():
     from micasense.panel import Panel
     import micasense.utils as msutils
     from micasense.capture import Capture
+    import pickle
 
     freeze_support()
 
@@ -31,6 +33,7 @@ def run():
     ap.add_argument("-a", "--field_layout_path", required=True, help="file with field layout")
     ap.add_argument("-r", "--field_layout_params", required=True, help="file with layout params")
     ap.add_argument("-o", "--output_path", required=True, help="file path where the output will be saved")
+    ap.add_argument("-u", "--temporary_development_path", required=False, help="file path for saving warp matrices. only useful for development")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
@@ -39,6 +42,7 @@ def run():
     field_layout_path = args["field_layout_path"]
     field_layout_params = args["field_layout_params"]
     output_path = args["output_path"]
+    temporary_development_path = args["temporary_development_path"]
 
     if sys.version_info[0] < 3:
         raise Exception("Must use Python3. Use python3 in your command line.")
@@ -100,6 +104,8 @@ def run():
     turn_direction = field_params[14] #north_to_south, south_to_north, east_to_west, west_to_east
     geographic_position = field_params[15] #Q1, Q2, Q3, Q4
     image_top_direction = field_params[16] #north, south, east, west
+    # row_alley_width_m = float(field_params[17])
+    # column_alley_width_m = float(field_params[18])
 
     panelCap = Capture.from_filelist(panelNames)
     if panelCap.panel_albedo() is not None:
@@ -143,14 +149,26 @@ def run():
     else:
         print("Aligning images. Depending on settings this can take from a few seconds to many minutes")
 
-    warp_matrices, alignment_pairs = imageutils.align_capture(
-        captures[0],
-        ref_index = match_index,
-        max_iterations = max_alignment_iterations,
-        warp_mode = warp_mode,
-        pyramid_levels = pyramid_levels,
-        multithreaded = True
-    )
+
+    warp_matrices = None
+    if temporary_development_path is not None:
+        if os.path.exists(os.path.join(temporary_development_path,'capturealignment.pkl')):
+            with open(os.path.join(temporary_development_path,'capturealignment.pkl'), 'rb') as f:
+                warp_matrices, alignment_pairs = pickle.load(f)
+
+    if warp_matrices is None:
+        warp_matrices, alignment_pairs = imageutils.align_capture(
+            captures[0],
+            ref_index = match_index,
+            max_iterations = max_alignment_iterations,
+            warp_mode = warp_mode,
+            pyramid_levels = pyramid_levels,
+            multithreaded = True
+        )
+
+    if temporary_development_path is not None:
+        with open(os.path.join(temporary_development_path,'capturealignment.pkl'), 'wb') as f:
+            pickle.dump([warp_matrices, alignment_pairs], f)
 
     if log_file_path is not None:
         eprint("Finished Aligning, warp matrices={}".format(warp_matrices))
@@ -309,7 +327,7 @@ def run():
             plot_length_gps_avg = (plot_length_left_gps + plot_length_right_gps)/2
             print(plot_length_gps_avg)
 
-            plot_total_vertical_shift_gps = ((field_nw_longitude_gps - field_sw_longitude_gps) + (field_ne_longitude_gps - field_sw_longitude_gps))/2
+            plot_total_vertical_shift_gps = ((field_nw_longitude_gps - field_sw_longitude_gps) + (field_ne_longitude_gps - field_se_longitude_gps))/2
             plot_vertical_shift_avg_gps = plot_total_vertical_shift_gps/num_columns
             print(plot_vertical_shift_avg_gps)
 
@@ -336,16 +354,19 @@ def run():
                             {'lat':x_pos_val + plot_width_gps_avg, 'lon':y_pos_val + plot_length_gps_avg},
                             {'lat':x_pos_val, 'lon':y_pos_val + plot_length_gps_avg}
                         ])
+
                         color = random.choice(colors)
-                        dumper_str = dumper_str + str(x_pos_val)+'\t'+str(y_pos_val)+'\tcircle1\t'+color+'\n'
-                        dumper_str = dumper_str + str(x_pos_val + plot_width_gps_avg)+'\t'+str(y_pos_val)+'\tcircle1\t'+color+'\n'
-                        dumper_str = dumper_str + str(x_pos_val + plot_width_gps_avg)+'\t'+str(y_pos_val + plot_length_gps_avg)+'\tcircle1\t'+color+'\n'
-                        dumper_str = dumper_str + str(x_pos_val)+'\t'+str(y_pos_val + plot_length_gps_avg)+'\tcircle1\t'+color+'\n'
+                        dumper_str = dumper_str + str(x_pos_val)+'\t'+str(y_pos_val)+'\tnumbered\t'+color+'\t'+str(plot_counter)+'\n'
+                        dumper_str = dumper_str + str(x_pos_val + plot_width_gps_avg)+'\t'+str(y_pos_val)+'\tnumbered\t'+color+'\t'+str(plot_counter)+'\n'
+                        dumper_str = dumper_str + str(x_pos_val + plot_width_gps_avg)+'\t'+str(y_pos_val + plot_length_gps_avg)+'\tnumbered\t'+color+'\t'+str(plot_counter)+'\n'
+                        dumper_str = dumper_str + str(x_pos_val)+'\t'+str(y_pos_val + plot_length_gps_avg)+'\tnumbered\t'+color+'\t'+str(plot_counter)+'\n'
+
                         x_pos = x_pos - plot_width_gps_avg
                         y_pos = y_pos + plot_vertical_shift_avg_gps
                         plot_counter += 1
                     x_pos = field_nw_latitude_gps - plot_width_gps_avg + (row_num * plot_horizontal_shift_avg_gps)
-                    y_pos = y_pos + plot_length_gps_avg + plot_total_vertical_shift_gps
+                    # y_pos = y_pos + plot_length_gps_avg + plot_total_vertical_shift_gps
+                    y_pos = y_pos + plot_length_gps_avg - plot_total_vertical_shift_gps
                     row_num = row_num + 1
                 print(dumper_str)
                 for p in plot_polygons_gps:
