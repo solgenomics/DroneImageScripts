@@ -41,6 +41,7 @@ img = Image(input_file)
 
 with open(outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
-    writer.writerows([[img.latitude, img.longitude, img.altitude]])
+    # GSD resolution for Micasenes camera in m/p
+    writer.writerows([[img.latitude, img.longitude, img.altitude, 0.06857*100*img.altitude/10]])
 
 writeFile.close()

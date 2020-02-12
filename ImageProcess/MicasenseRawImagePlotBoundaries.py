@@ -13,6 +13,7 @@ def run():
     import math
     import json
     import random
+    import matplotlib.pyplot as plt
     from multiprocessing import Process, freeze_support
     from PIL import Image
     import micasense.imageutils as imageutils
@@ -53,6 +54,7 @@ def run():
     def eprint(*args, **kwargs):
         print(*args, file=sys.stderr, **kwargs)
 
+    basePath = ''
     imageNamesAll = []
     imageTempNamesBlue = []
     imageTempNamesGreen = []
@@ -61,7 +63,7 @@ def run():
     imageTempNamesRedEdge = []
     with open(file_with_image_paths) as fp:
         for line in fp:
-            imageName, tempImageNameBlue, tempImageNameGreen, tempImageNameRed, tempImageNameNIR, tempImageNameRedEdge = line.strip().split(",")
+            imageName, basePath, tempImageNameBlue, tempImageNameGreen, tempImageNameRed, tempImageNameNIR, tempImageNameRedEdge = line.strip().split(",")
             imageNamesAll.append(imageName)
             imageTempNamesBlue.append(tempImageNameBlue)
             imageTempNamesGreen.append(tempImageNameGreen)
@@ -190,7 +192,8 @@ def run():
         latitude = img.latitude
         longitude = img.longitude
         altitude = img.altitude
-        img_gps_locations.append([latitude, longitude, altitude])
+        # GSD resolution for Micasenes camera in m/p
+        img_gps_locations.append([latitude, longitude, altitude, 0.06857*100*altitude/10])
 
         rows,cols,d = im_aligned.shape
         M = cv2.getRotationMatrix2D((cols/2,rows/2),rotate_angle,1)
@@ -277,8 +280,27 @@ def run():
         val, idx = min((val, idx) for (idx, val) in enumerate(d))
         return (val, idx)
 
+    def crop_polygon(input_image, polygon):
+        pts_array = []
+        for point in polygon:
+            x = point['x']
+            y = point['y']
+
+            x = int(round(x))
+            y = int(round(y))
+            pts_array.append([x,y])
+
+        pts = np.array(pts_array)
+        rect = cv2.boundingRect(pts)
+        x,y,w,h = rect
+        finalImage = input_image[y:y+h, x:x+w, :]
+        return finalImage
+
     plot_polygons_gps = []
     plot_polygons_pixels = []
+
+    output_lines = []
+    print(corner_gps_obj)
 
     # Q1 is north of 0 and west of 0 e.g. North America
     if geographic_position == 'Q1':
@@ -289,14 +311,14 @@ def run():
             latitude_to_pixel_sign = -1
 
             if first_plot_corner == 'north_west' and second_plot_direction == 'west_to_east':
-                field_nw_longitude_gps = float(corner_gps_obj['north_west'][1]) + (nw_pixel_x_diff*longitude_to_pixel_sign/plot_pixels_per_gps_width)
-                field_nw_latitude_gps = float(corner_gps_obj['north_west'][0]) + (nw_pixel_y_diff*latitude_to_pixel_sign/plot_pixels_per_gps_length)
-                field_ne_longitude_gps = float(corner_gps_obj['north_east'][1]) + (ne_pixel_x_diff*longitude_to_pixel_sign/plot_pixels_per_gps_width)
-                field_ne_latitude_gps = float(corner_gps_obj['north_east'][0]) + (ne_pixel_y_diff*latitude_to_pixel_sign/plot_pixels_per_gps_length)
-                field_sw_longitude_gps = float(corner_gps_obj['south_west'][1]) + (sw_pixel_x_diff*longitude_to_pixel_sign/plot_pixels_per_gps_width)
-                field_sw_latitude_gps = float(corner_gps_obj['south_west'][0]) + (sw_pixel_y_diff*latitude_to_pixel_sign/plot_pixels_per_gps_length)
-                field_se_longitude_gps = float(corner_gps_obj['south_east'][1]) + (se_pixel_x_diff*longitude_to_pixel_sign/plot_pixels_per_gps_width)
-                field_se_latitude_gps = float(corner_gps_obj['south_east'][0]) + (se_pixel_y_diff*latitude_to_pixel_sign/plot_pixels_per_gps_length)
+                field_nw_longitude_gps = float(corner_gps_obj['north_west'][1]) + (nw_pixel_x_diff*longitude_to_pixel_sign*float(corner_gps_obj['north_west'][3])/gps_precision_to_mm)
+                field_nw_latitude_gps = float(corner_gps_obj['north_west'][0]) + (nw_pixel_y_diff*latitude_to_pixel_sign*float(corner_gps_obj['north_west'][3])/gps_precision_to_mm)
+                field_ne_longitude_gps = float(corner_gps_obj['north_east'][1]) + (ne_pixel_x_diff*longitude_to_pixel_sign*float(corner_gps_obj['north_east'][3])/gps_precision_to_mm)
+                field_ne_latitude_gps = float(corner_gps_obj['north_east'][0]) + (ne_pixel_y_diff*latitude_to_pixel_sign*float(corner_gps_obj['north_east'][3])/gps_precision_to_mm)
+                field_sw_longitude_gps = float(corner_gps_obj['south_west'][1]) + (sw_pixel_x_diff*longitude_to_pixel_sign*float(corner_gps_obj['south_west'][3])/gps_precision_to_mm)
+                field_sw_latitude_gps = float(corner_gps_obj['south_west'][0]) + (sw_pixel_y_diff*latitude_to_pixel_sign*float(corner_gps_obj['south_west'][3])/gps_precision_to_mm)
+                field_se_longitude_gps = float(corner_gps_obj['south_east'][1]) + (se_pixel_x_diff*longitude_to_pixel_sign*float(corner_gps_obj['south_east'][3])/gps_precision_to_mm)
+                field_se_latitude_gps = float(corner_gps_obj['south_east'][0]) + (se_pixel_y_diff*latitude_to_pixel_sign*float(corner_gps_obj['south_east'][3])/gps_precision_to_mm)
     
                 plot_width_top_gps = (field_ne_longitude_gps - field_nw_longitude_gps)/num_columns
                 plot_width_bottom_gps = (field_se_longitude_gps - field_sw_longitude_gps)/num_columns
@@ -308,14 +330,14 @@ def run():
                 
         if image_top_direction == 'west':
 
-            field_nw_longitude_gps = float(corner_gps_obj['north_west'][1]) + (nw_pixel_y_diff*longitude_to_pixel_sign/plot_pixels_per_gps_length)
-            field_nw_latitude_gps = float(corner_gps_obj['north_west'][0]) + (nw_pixel_x_diff*latitude_to_pixel_sign/plot_pixels_per_gps_width)
-            field_ne_longitude_gps = float(corner_gps_obj['north_east'][1]) + (ne_pixel_y_diff*longitude_to_pixel_sign/plot_pixels_per_gps_length)
-            field_ne_latitude_gps = float(corner_gps_obj['north_east'][0]) + (ne_pixel_x_diff*latitude_to_pixel_sign/plot_pixels_per_gps_width)
-            field_sw_longitude_gps = float(corner_gps_obj['south_west'][1]) + (sw_pixel_y_diff*longitude_to_pixel_sign/plot_pixels_per_gps_length)
-            field_sw_latitude_gps = float(corner_gps_obj['south_west'][0]) + (sw_pixel_x_diff*latitude_to_pixel_sign/plot_pixels_per_gps_width)
-            field_se_longitude_gps = float(corner_gps_obj['south_east'][1]) + (se_pixel_y_diff*longitude_to_pixel_sign/plot_pixels_per_gps_length)
-            field_se_latitude_gps = float(corner_gps_obj['south_east'][0]) + (se_pixel_x_diff*latitude_to_pixel_sign/plot_pixels_per_gps_width)
+            field_nw_longitude_gps = float(corner_gps_obj['north_west'][1]) + (nw_pixel_y_diff*longitude_to_pixel_sign*float(corner_gps_obj['north_west'][3])/gps_precision_to_mm)
+            field_nw_latitude_gps = float(corner_gps_obj['north_west'][0]) + (nw_pixel_x_diff*latitude_to_pixel_sign*float(corner_gps_obj['north_west'][3])/gps_precision_to_mm)
+            field_ne_longitude_gps = float(corner_gps_obj['north_east'][1]) + (ne_pixel_y_diff*longitude_to_pixel_sign*float(corner_gps_obj['north_east'][3])/gps_precision_to_mm)
+            field_ne_latitude_gps = float(corner_gps_obj['north_east'][0]) + (ne_pixel_x_diff*latitude_to_pixel_sign*float(corner_gps_obj['north_east'][3])/gps_precision_to_mm)
+            field_sw_longitude_gps = float(corner_gps_obj['south_west'][1]) + (sw_pixel_y_diff*longitude_to_pixel_sign*float(corner_gps_obj['south_west'][3])/gps_precision_to_mm)
+            field_sw_latitude_gps = float(corner_gps_obj['south_west'][0]) + (sw_pixel_x_diff*latitude_to_pixel_sign*float(corner_gps_obj['south_west'][3])/gps_precision_to_mm)
+            field_se_longitude_gps = float(corner_gps_obj['south_east'][1]) + (se_pixel_y_diff*longitude_to_pixel_sign*float(corner_gps_obj['south_east'][3])/gps_precision_to_mm)
+            field_se_latitude_gps = float(corner_gps_obj['south_east'][0]) + (se_pixel_x_diff*latitude_to_pixel_sign*float(corner_gps_obj['south_east'][3])/gps_precision_to_mm)
 
             plot_width_top_gps = (field_nw_latitude_gps - field_sw_latitude_gps)/num_columns
             plot_width_bottom_gps = (field_ne_latitude_gps - field_se_latitude_gps)/num_columns
@@ -369,32 +391,55 @@ def run():
                     y_pos = y_pos + plot_length_gps_avg - plot_total_vertical_shift_gps
                     row_num = row_num + 1
                 print(dumper_str)
+
+                counter = 0
                 for p in plot_polygons_gps:
                     #Find image closest to plot GPS
                     img_distance, img_index = min_distance(img_gps_locations, p[0])
                     img = rotated_imgs[img_index]
                     img_gps = img_gps_locations[img_index]
 
+                    polygon = [{
+                        'x':img_rows_pixels_half + (p[0]['lat'] - img_gps[0])*gps_precision_to_mm/img_gps[3],
+                        'y':img_columns_pixels_half - abs(p[0]['lon'] - img_gps[1])*gps_precision_to_mm/img_gps[3]
+                    },
+                    {
+                        'x':img_rows_pixels_half + abs(p[1]['lat'] - img_gps[0])*gps_precision_to_mm/img_gps[3],
+                        'y':img_columns_pixels_half - abs(p[1]['lon'] - img_gps[1])*gps_precision_to_mm/img_gps[3]
+                    },
+                    {
+                        'x':img_rows_pixels_half + abs(p[2]['lat'] - img_gps[0])*gps_precision_to_mm/img_gps[3],
+                        'y':img_columns_pixels_half - abs(p[2]['lon'] - img_gps[1])*gps_precision_to_mm/img_gps[3]
+                    },
+                    {
+                        'x':img_rows_pixels_half + abs(p[3]['lat'] - img_gps[0])*gps_precision_to_mm/img_gps[3],
+                        'y':img_columns_pixels_half - abs(p[3]['lon'] - img_gps[1])*gps_precision_to_mm/img_gps[3]
+                    }]
+
                     plot_polygons_pixels.append({
                         'img_index':img_index,
-                        'p':
-                        [{
-                            'x':img_rows_pixels_half + (p[0]['lat'] - img_gps[0])*plot_pixels_per_gps_width,
-                            'y':img_columns_pixels_half - (p[0]['lon'] - img_gps[1])*plot_pixels_per_gps_length
-                        },
-                        {
-                            'x':img_rows_pixels_half + (p[1]['lat'] - img_gps[0])*plot_pixels_per_gps_width,
-                            'y':img_columns_pixels_half - (p[1]['lon'] - img_gps[1])*plot_pixels_per_gps_length
-                        },
-                        {
-                            'x':img_rows_pixels_half + (p[2]['lat'] - img_gps[0])*plot_pixels_per_gps_width,
-                            'y':img_columns_pixels_half - (p[2]['lon'] - img_gps[1])*plot_pixels_per_gps_length
-                        },
-                        {
-                            'x':img_rows_pixels_half + (p[3]['lat'] - img_gps[0])*plot_pixels_per_gps_width,
-                            'y':img_columns_pixels_half - (p[3]['lon'] - img_gps[1])*plot_pixels_per_gps_length
-                        }]
+                        'p':polygon
                     })
+
+                    plot_stack = crop_polygon(img, polygon)
+
+                    blue_img_file = imageTempNamesBlue[counter]
+                    green_img_file = imageTempNamesGreen[counter]
+                    red_img_file = imageTempNamesRed[counter]
+                    nir_img_file = imageTempNamesNIR[counter]
+                    red_edge_img_file = imageTempNamesRedEdge[counter]
+
+                    plt.imsave(basePath+blue_img_file, plot_stack[:,:,0], cmap='gray')
+                    plt.imsave(basePath+green_img_file, plot_stack[:,:,1], cmap='gray')
+                    plt.imsave(basePath+red_img_file, plot_stack[:,:,2], cmap='gray')
+                    plt.imsave(basePath+nir_img_file, plot_stack[:,:,3], cmap='gray')
+                    plt.imsave(basePath+red_edge_img_file, plot_stack[:,:,4], cmap='gray')
+
+                    if counter in range(-len(field_layout), len(field_layout)):
+                        plot_database = field_layout[counter]
+                        output_lines.append([plot_database[0], plot_database[1], plot_database[2], blue_img_file, green_img_file, red_img_file, nir_img_file, red_edge_img_file])
+
+                    counter += 1
 
     print(plot_width_gps_avg)
     print(plot_length_gps_avg)
@@ -402,6 +447,13 @@ def run():
     print(len(plot_polygons_gps))
     print(plot_polygons_pixels)
     print(len(plot_polygons_pixels))
+    print(output_lines)
+
+    with open(output_path, 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(output_lines)
+
+    writeFile.close()
 
 if __name__ == '__main__':
     run()
