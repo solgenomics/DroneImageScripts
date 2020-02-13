@@ -423,21 +423,33 @@ def run():
 
                     plot_stack = crop_polygon(img, polygon)
 
+                    blue_img = cv2.rectangle(img[:,:,0]*255, (int(polygon[0]['x']), int(polygon[0]['y'])), (int(polygon[2]['x']), int(polygon[2]['y'])), (0,0,0), 1)
+                    green_img = cv2.rectangle(img[:,:,1]*255, (int(polygon[0]['x']), int(polygon[0]['y'])), (int(polygon[2]['x']), int(polygon[2]['y'])), (0,0,0), 1)
+                    red_img = cv2.rectangle(img[:,:,2]*255, (int(polygon[0]['x']), int(polygon[0]['y'])), (int(polygon[2]['x']), int(polygon[2]['y'])), (0,0,0), 1)
+                    nir_img = cv2.rectangle(img[:,:,3]*255, (int(polygon[0]['x']), int(polygon[0]['y'])), (int(polygon[2]['x']), int(polygon[2]['y'])), (0,0,0), 1)
+                    red_edge_img = cv2.rectangle(img[:,:,4]*255, (int(polygon[0]['x']), int(polygon[0]['y'])), (int(polygon[2]['x']), int(polygon[2]['y'])), (0,0,0), 1)
+
                     blue_img_file = imageTempNamesBlue[counter]
                     green_img_file = imageTempNamesGreen[counter]
                     red_img_file = imageTempNamesRed[counter]
                     nir_img_file = imageTempNamesNIR[counter]
                     red_edge_img_file = imageTempNamesRedEdge[counter]
 
-                    plt.imsave(basePath+blue_img_file, plot_stack[:,:,0], cmap='gray')
-                    plt.imsave(basePath+green_img_file, plot_stack[:,:,1], cmap='gray')
-                    plt.imsave(basePath+red_img_file, plot_stack[:,:,2], cmap='gray')
-                    plt.imsave(basePath+nir_img_file, plot_stack[:,:,3], cmap='gray')
-                    plt.imsave(basePath+red_edge_img_file, plot_stack[:,:,4], cmap='gray')
+                    cv2.imwrite(basePath+blue_img_file, blue_img)
+                    cv2.imwrite(basePath+green_img_file, green_img)
+                    cv2.imwrite(basePath+red_img_file, red_img)
+                    cv2.imwrite(basePath+nir_img_file, nir_img)
+                    cv2.imwrite(basePath+red_edge_img_file, red_edge_img)
+
+                    # plt.imsave(basePath+blue_img_file, plot_stack[:,:,0], cmap='gray')
+                    # plt.imsave(basePath+green_img_file, plot_stack[:,:,1], cmap='gray')
+                    # plt.imsave(basePath+red_img_file, plot_stack[:,:,2], cmap='gray')
+                    # plt.imsave(basePath+nir_img_file, plot_stack[:,:,3], cmap='gray')
+                    # plt.imsave(basePath+red_edge_img_file, plot_stack[:,:,4], cmap='gray')
 
                     if counter in range(-len(field_layout), len(field_layout)):
                         plot_database = field_layout[counter]
-                        output_lines.append([plot_database[0], plot_database[1], plot_database[2], blue_img_file, green_img_file, red_img_file, nir_img_file, red_edge_img_file])
+                        output_lines.append([plot_database[0], plot_database[1], plot_database[2], blue_img_file, green_img_file, red_img_file, nir_img_file, red_edge_img_file, json.dumps(polygon)])
 
                     counter += 1
 
