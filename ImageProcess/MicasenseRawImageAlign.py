@@ -147,30 +147,25 @@ def run():
             warp_mode = warp_mode
         )
 
-        rows,cols,d = im_aligned.shape
-        M = cv2.getRotationMatrix2D((cols/2,rows/2),rotate_angle,1)
-        rotated_img = cv2.warpAffine(im_aligned,M,(cols,rows))
+        blue_img_file = imageTempNamesBlue[counter]
+        green_img_file = imageTempNamesGreen[counter]
+        red_img_file = imageTempNamesRed[counter]
+        nir_img_file = imageTempNamesNIR[counter]
+        red_edge_img_file = imageTempNamesRedEdge[counter]
 
-        if log_file_path is not None:
-            eprint(rotated_img.shape)
-        else:
-            print(rotated_img.shape)
+        plt.imsave(basePath+blue_img_file, im_aligned[:,:,0], cmap='gray')
+        plt.imsave(basePath+green_img_file, im_aligned[:,:,1], cmap='gray')
+        plt.imsave(basePath+red_img_file, im_aligned[:,:,2], cmap='gray')
+        plt.imsave(basePath+nir_img_file, im_aligned[:,:,3], cmap='gray')
+        plt.imsave(basePath+red_edge_img_file, im_aligned[:,:,4], cmap='gray')
 
-        rotated_imgs.append(rotated_img)
+        output_lines.append([basePath+blue_img_file])
+        output_lines.append([basePath+green_img_file])
+        output_lines.append([basePath+red_img_file])
+        output_lines.append([basePath+nir_img_file])
+        output_lines.append([basePath+red_edge_img_file])
 
         counter += 1
-
-        plt.imsave(basePath+blue_img_file, plot_stack[:,:,0], cmap='gray')
-        plt.imsave(basePath+green_img_file, plot_stack[:,:,1], cmap='gray')
-        plt.imsave(basePath+red_img_file, plot_stack[:,:,2], cmap='gray')
-        plt.imsave(basePath+nir_img_file, plot_stack[:,:,3], cmap='gray')
-        plt.imsave(basePath+red_edge_img_file, plot_stack[:,:,4], cmap='gray')
-
-        output_lines.append([blue_img_file])
-        output_lines.append([green_img_file])
-        output_lines.append([red_img_file])
-        output_lines.append([nir_img_file])
-        output_lines.append([red_edge_img_file])
 
     with open(output_path, 'w') as writeFile:
         writer = csv.writer(writeFile)
