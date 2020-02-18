@@ -178,11 +178,6 @@ class CNNProcessData:
             # for i in range(0, data_augmentation):
             #     X, y = augmented.next()
 
-        continuous = [col for col in aux_data.columns if 'aux_trait_' in col]
-        cs = MinMaxScaler()
-        trainContinuous = cs.fit_transform(train_aux_data[continuous])
-        testContinuous = cs.transform(test_aux_data[continuous])
-
         stock_id_binarizer = LabelBinarizer().fit(aux_data["stock_id"])
         train_stock_id_categorical = stock_id_binarizer.transform(train_aux_data["stock_id"])
         test_stock_id_categorical = stock_id_binarizer.transform(test_aux_data["stock_id"])
@@ -199,8 +194,17 @@ class CNNProcessData:
         train_male_id_categorical = male_id_binarizer.transform(train_aux_data["male_id"])
         test_male_id_categorical = male_id_binarizer.transform(test_aux_data["male_id"])
 
-        trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical, trainContinuous])
-        testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical, testContinuous])
+        continuous = [col for col in aux_data.columns if 'aux_trait_' in col]
+        cs = MinMaxScaler()
+        if len(continuous) > 0:
+            trainContinuous = cs.fit_transform(train_aux_data[continuous])
+            testContinuous = cs.transform(test_aux_data[continuous])
+
+            trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical, trainContinuous])
+            testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical, testContinuous])
+        else:
+            trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical])
+            testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical])
 
         max_label = train_aux_data["phenotype_value"].max()
         trainY = train_aux_data["phenotype_value"]/max_label
