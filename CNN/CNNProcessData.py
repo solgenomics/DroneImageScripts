@@ -206,9 +206,9 @@ class CNNProcessData:
             trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical])
             testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical])
 
-        max_label = train_aux_data["phenotype_value"].max()
-        trainY = train_aux_data["phenotype_value"]/max_label
-        testY = test_aux_data["phenotype_value"]/max_label
+        max_label = train_aux_data["value"].max()
+        trainY = train_aux_data["value"]/max_label
+        testY = test_aux_data["value"]/max_label
 
         return (test_images, testX, testY, train_images, trainX, trainY)
 

@@ -56,8 +56,8 @@ from kerastuner.tuners import RandomSearch
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
-ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs. Contains the following header: stock_id,image_path,image_type,day,drone_run_project_id")
-ap.add_argument("-a", "--input_aux_data_file", required=True, help="file path for aux data containing the following header: stock_id,phenotype_value,trait_name,field_trial_id,accession_id,female_id,male_id")
+ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs. Contains the following header: stock_id,image_path,image_type,day,drone_run_project_id,value")
+ap.add_argument("-a", "--input_aux_data_file", required=True, help="file path for aux data containing the following header: stock_id,value,trait_name,field_trial_id,accession_id,female_id,male_id")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
@@ -356,10 +356,10 @@ data_time_series = []
 
 print("[INFO] reading labels and image data...")
 
-csv_data = pd.read_csv(input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id'])
+csv_data = pd.read_csv(input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id','value'])
 for index, row in csv_data.iterrows():
     image = cv2.imread(row['image_path'], cv2.IMREAD_UNCHANGED)
-    # value = float(row['phenotype_value'])
+    value = float(row['value'])
 
     image = cv2.resize(image, (image_size,image_size)) / 255.0
 
@@ -374,7 +374,7 @@ unique_time_days = csv_data.day.unique()
 unique_drone_run_project_ids = csv_data.drone_run_project_id.unique()
 unique_image_types = csv_data.image_type.unique()
 
-aux_data_cols = ["stock_id","phenotype_value","trait_name","field_trial_id","accession_id","female_id","male_id"]
+aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id"]
 aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
 aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
 aux_data = pd.read_csv(input_aux_data_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
@@ -386,12 +386,12 @@ else:
     print(csv_data)
     print(aux_data)
 
-unique_labels = aux_data.phenotype_value.unique()
+unique_labels = aux_data.value.unique()
 unique_germplasm = aux_data.accession_id.unique()
 unique_female_parents = aux_data.female_id.unique()
 unique_male_parents = aux_data.male_id.unique()
 
-labels = aux_data["phenotype_value"].tolist()
+labels = aux_data["value"].tolist()
 
 num_unique_stock_ids = len(unique_stock_ids)
 num_unique_image_types = len(unique_image_types)

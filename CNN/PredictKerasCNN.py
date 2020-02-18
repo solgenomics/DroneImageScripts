@@ -67,6 +67,7 @@ ap.add_argument("-e", "--outfile_activation_path", required=True, help="file pat
 ap.add_argument("-u", "--outfile_evaluation_path", required=True, help="file path where the model evaluation output will be saved (in the case there were previous phenotypes for the images)")
 ap.add_argument("-a", "--keras_model_type_name", required=True, help="the name of the per-trained Keras CNN model to use e.g. KerasCNNSequentialSoftmaxCategorical, SimpleKerasTunerCNNSequentialSoftmaxCategorical, KerasTunerCNNInceptionResNetV2, KerasTunerCNNSequentialSoftmaxCategorical, KerasCNNInceptionResNetV2, KerasCNNLSTMDenseNet121ImageNetWeights, KerasCNNInceptionResNetV2ImageNetWeights")
 ap.add_argument("-t", "--training_data_input_file", required=True, help="The input data file used to train the model previously. this file should have the image file paths and labels used during training")
+ap.add_argument("-p", "--training_aux_data_input_file", required=True, help="The input auxiliary data file used to train the model previously. this file should have auxiliary data used in training")
 
 args = vars(ap.parse_args())
 
@@ -78,6 +79,7 @@ outfile_activation_path = args["outfile_activation_path"]
 outfile_evaluation_path = args["outfile_evaluation_path"]
 keras_model_name = args["keras_model_type_name"]
 training_data_input_file = args["training_data_input_file"]
+training_aux_data_input_file = args["training_aux_data_input_file"]
 
 image_size = 96
 montage_image_size = image_size*2
@@ -94,7 +96,6 @@ def eprint(*args, **kwargs):
 unique_stock_ids = {}
 unique_time_days = {}
 unique_image_types = {}
-unique_germplasm = {}
 unique_drone_run_project_ids = {}
 data = []
 previous_labeled_data = []
@@ -106,61 +107,24 @@ if log_file_path is not None:
 else:
     print("[INFO] reading labels and image data...")
 
-aux_tabular_data = {}
-with open(input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        image = Image.open(row[1])
-        value = row[2]
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
-        drone_run_project_id = row[6]
-        field_trial_id = row[7]
-        germplasm = row[8]
+csv_data = pd.read_csv(input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id','value'])
+for index, row in csv_data.iterrows():
+    image = cv2.imread(row['image_path'], cv2.IMREAD_UNCHANGED)
+    value = float(row['value'])
 
-        for i in range(9,len(row)):
-            if i in aux_tabular_data.keys():
-                aux_tabular_data[i].append(row[i])
-            else:
-                aux_tabular_data[i] = [row[i]]
+    image = cv2.resize(image, (image_size,image_size)) / 255.0
 
-        image = np.array(image.resize((image_size,image_size))) / 255.0
-        # cv2.imshow("Result", image)
-        # cv2.waitKey(0)
+    if (len(image.shape) == 2):
+        empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+        image = cv2.merge((image, empty_mat, empty_mat))
 
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
+    data.append(image)
+    previous_labels.append(value)
 
-        data.append(image)
-        previous_labels.append(value)
-
-        if image_type in unique_image_types.keys():
-            unique_image_types[image_type] += 1
-        else:
-            unique_image_types[image_type] = 1
-
-        if stock_id in unique_stock_ids.keys():
-            unique_stock_ids[stock_id] += 1
-        else:
-            unique_stock_ids[stock_id] = 1
-
-        if time_days in unique_time_days.keys():
-            unique_time_days[time_days] += 1
-        else:
-            unique_time_days[time_days] = 1
-
-        if germplasm in unique_germplasm.keys():
-            unique_germplasm[germplasm] += 1
-        else:
-            unique_germplasm[germplasm] = 1
-
-        if drone_run_project_id in unique_drone_run_project_ids.keys():
-            unique_drone_run_project_ids[drone_run_project_id] += 1
-        else:
-            unique_drone_run_project_ids[drone_run_project_id] = 1
+unique_stock_ids = csv_data.stock_id.unique()
+unique_time_days = csv_data.day.unique()
+unique_drone_run_project_ids = csv_data.drone_run_project_id.unique()
+unique_image_types = csv_data.image_type.unique()
 
 trained_image_data = []
 trained_labels = []
@@ -170,41 +134,43 @@ if log_file_path is not None:
 else:
     print("[INFO] reading labels and image data used to train model previously...")
 
-with open(training_data_input_file) as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        stock_id = row[0]
-        trait_name = row[3]
-        image_type = row[4]
-        time_days = row[5]
-        drone_run_project_id = row[6]
-        germplasm = row[7]
+csv_training_data = pd.read_csv(training_data_input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id','value'])
+for index, row in csv_training_data.iterrows():
+    image = cv2.imread(row['image_path'], cv2.IMREAD_UNCHANGED)
+    value = float(row['value'])
 
-        image = Image.open(row[1])
-        image = np.array(image.resize((image_size,image_size))) / 255.0
+    image = cv2.resize(image, (image_size,image_size)) / 255.0
 
-        if (len(image.shape) == 2):
-            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
-            image = cv2.merge((image, empty_mat, empty_mat))
+    if (len(image.shape) == 2):
+        empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+        image = cv2.merge((image, empty_mat, empty_mat))
 
-        #print(image.shape)
-        trained_image_data.append(image)
+    trained_image_data.append(image)
+    trained_labels.append(value)
 
-        value = float(row[2])
-        trained_labels.append(value)
-
-num_unique_stock_ids = len(unique_stock_ids.keys())
-num_unique_image_types = len(unique_image_types.keys())
-num_unique_time_days = len(unique_time_days.keys())
+num_unique_stock_ids = len(unique_stock_ids)
+num_unique_image_types = len(unique_image_types)
+num_unique_time_days = len(unique_time_days)
 print(num_unique_stock_ids)
 print(num_unique_time_days)
 print(num_unique_image_types)
 print(len(data))
-if len(data) % num_unique_stock_ids:
-    raise Exception('Number of images does not divide evenly among stock_ids. This means the input data is uneven.')
-if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data):
-    raise Exception('Number of rows in input file (images) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for an LSTM model')
+if len(data) % num_unique_stock_ids or len(previous_labels) % num_unique_stock_ids:
+    raise Exception('Number of images or labels does not divide evenly among stock_ids. This means the input data is uneven.')
+if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and ( num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(data) or num_unique_stock_ids * num_unique_time_days * num_unique_image_types != len(previous_labels) ):
+    print(num_unique_stock_ids)
+    print(num_unique_time_days)
+    print(num_unique_image_types)
+    print(len(data))
+    print(len(previous_labels))
+    raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for a LSTM model')
 
+if log_file_path is not None:
+    eprint(csv_data)
+    eprint(csv_training_data)
+else:
+    print(csv_data)
+    print(csv_training_data)
 
 data_augmentation = 1
 montage_image_number = 4
