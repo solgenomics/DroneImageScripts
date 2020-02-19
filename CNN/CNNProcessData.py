@@ -210,7 +210,7 @@ class CNNProcessData:
         trainY = train_aux_data["value"]/max_label
         testY = test_aux_data["value"]/max_label
 
-        return (test_images, testX, testY, train_images, trainX, trainY)
+        return (test_images, testX, testY.to_numpy(), train_images, trainX, trainY.to_numpy())
 
     def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
