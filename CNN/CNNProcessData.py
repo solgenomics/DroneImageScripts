@@ -123,6 +123,8 @@ class CNNProcessData:
         datagen.fit(images)
         images = datagen.standardize(images)
 
+        aux_data["value"] = aux_data["value"].astype(float)
+
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
             images = images.reshape(num_unique_stock_ids * num_unique_image_types, num_unique_time_days, input_image_size, input_image_size, 3)
@@ -206,7 +208,7 @@ class CNNProcessData:
             trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical])
             testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical])
 
-        max_label = train_aux_data["value"].max()
+        max_label = aux_data["value"].max()
         trainY = train_aux_data["value"]/max_label
         testY = test_aux_data["value"]/max_label
 
