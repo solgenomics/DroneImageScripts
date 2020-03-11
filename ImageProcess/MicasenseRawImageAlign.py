@@ -159,11 +159,17 @@ def run():
         plt.imsave(basePath+nir_img_file, im_aligned[:,:,3], cmap='gray')
         plt.imsave(basePath+red_edge_img_file, im_aligned[:,:,4], cmap='gray')
 
-        output_lines.append([basePath+blue_img_file])
-        output_lines.append([basePath+green_img_file])
-        output_lines.append([basePath+red_img_file])
-        output_lines.append([basePath+nir_img_file])
-        output_lines.append([basePath+red_edge_img_file])
+        gps_location_blue = x.images[0].location;
+        gps_location_green = x.images[1].location;
+        gps_location_red = x.images[2].location;
+        gps_location_nir = x.images[3].location;
+        gps_location_red_edge = x.images[4].location;
+
+        output_lines.append([basePath+blue_img_file, gps_location_blue[0], gps_location_blue[1], gps_location_blue[2]])
+        output_lines.append([basePath+green_img_file, gps_location_green[0], gps_location_green[1], gps_location_green[2]])
+        output_lines.append([basePath+red_img_file, gps_location_red[0], gps_location_red[1], gps_location_red[2]])
+        output_lines.append([basePath+nir_img_file, gps_location_nir[0], gps_location_nir[1], gps_location_nir[2]])
+        output_lines.append([basePath+red_edge_img_file, gps_location_red_edge[0], gps_location_red_edge[1], gps_location_red_edge[2]])
 
         counter += 1
 
