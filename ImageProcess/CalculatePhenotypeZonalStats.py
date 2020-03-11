@@ -83,7 +83,6 @@ def crop(input_image, polygons):
 input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=None)
 
 for index, row in input_image_file_data.iterrows():
-    print(row)
     stock_id = row[0]
     images = row[1]
     images_array = images.split(',')
