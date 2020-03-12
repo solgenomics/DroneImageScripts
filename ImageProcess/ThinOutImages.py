@@ -26,15 +26,6 @@ red_image_names = sorted(glob.glob(os.path.join(image_dir,'*3.tif')))
 nir_image_names = sorted(glob.glob(os.path.join(image_dir,'*4.tif')))
 red_edge_image_names = sorted(glob.glob(os.path.join(image_dir,'*5.tif')))
 
-print(blue_image_names)
-print(green_image_names)
-print(red_image_names)
-print(nir_image_names)
-print(red_edge_image_names)
-
-if not os.path.exists(image_out_dir):
-    os.makedirs(image_out_dir)
-
 if not os.path.exists(image_out_nir_dir):
     os.makedirs(image_out_nir_dir)
 
@@ -52,6 +43,18 @@ thinned_imgs_list = [thinned_blue, thinned_green, thinned_red, thinned_nir, thin
 thinned_imgs = [y for x in thinned_imgs_list for y in x]
 thinned_imgs = sorted(thinned_imgs)
 
+file_counter = 0
+file_counter_name = 0
 for img in thinned_imgs:
+
+    if file_counter >= 500:
+        file_counter_name += 1
+        file_counter = 0
+
+    image_out_dir_n = image_out_dir + str(file_counter_name)
+    if not os.path.exists(image_out_dir_n):
+        os.makedirs(image_out_dir_n)
+
     name = os.path.basename(img)
-    copyfile(img, os.path.join(image_out_dir, name))
+    copyfile(img, os.path.join(image_out_dir_n, name))
+    file_counter += 1
