@@ -27,7 +27,7 @@ def run():
     ap.add_argument("-b", "--file_with_image_paths", required=False, help="file path to file that has all image file names and temporary file names for each image in it, comma separated and separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-d", "--file_with_panel_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
-    ap.add_argument("-y", "--temporary_development_path", required=True, help="output file path for stitched RGB image")
+    ap.add_argument("-y", "--temporary_development_path", required=False, help="output file path for stitched RGB image")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
