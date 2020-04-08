@@ -2,6 +2,7 @@
 # python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0 --plot_polygon_type observation_unit_polygon_vari_imagery --margin_percent 5
 
 # import the necessary packages
+import sys
 import argparse
 import imutils
 import cv2
@@ -144,7 +145,10 @@ for index, row in input_image_file_data.iterrows():
         mean_pixel_value = statistics.mean(pixel_array)
         #print("Mean: %s" % mean_pixel_value)
 
-        harmonic_mean_pixel_value = statistics.harmonic_mean(pixel_array)
+        if sys.version_info >= (3,6,0):
+            harmonic_mean_pixel_value = statistics.harmonic_mean(pixel_array) #required python >= 3.6
+        else:
+            harmonic_mean_pixel_value = 0
         #print("Harmonic Mean: %s" % harmonic_mean_pixel_value)
 
         pixel_array_np = np.array(pixel_array)
