@@ -124,6 +124,7 @@ class CNNProcessData:
         images = datagen.standardize(images)
 
         aux_data["value"] = aux_data["value"].astype(float)
+        output_image_file = aux_data["output_image_file"].tolist()
 
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'densenet121_lstm_imagenet':
@@ -170,6 +171,11 @@ class CNNProcessData:
         else:
             images = self.create_montages(images, montage_image_number, image_size, full_montage_image_size)
 
+            output_image_counter = 0
+            for image in images:
+                cv2.imwrite(output_image_file[output_image_counter], image*255)
+                output_image_counter += 1
+
             (train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
             # testY_length = len(testY)
 
@@ -214,7 +220,7 @@ class CNNProcessData:
 
         return (test_images, testX, testY.to_numpy(), train_images, trainX, trainY.to_numpy())
 
-    def process_cnn_data_predictions(self, data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
+    def process_cnn_data_predictions(self, data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
         testX = []
         trainY = []
@@ -222,6 +228,8 @@ class CNNProcessData:
 
         datagen = self.get_imagedatagenerator()
         datagen.fit(training_data)
+
+        output_image_file = aux_data["output_image_file"].tolist()
 
         data = self.create_montages(data, montage_image_number, image_size, full_montage_image_size)
         data = datagen.standardize(data)
@@ -232,5 +240,10 @@ class CNNProcessData:
         # LSTM models group images by time, but are still ties to a single label e.g. X, Y = [img_t1, img_t2, img_t3], y1.
         if keras_model_type == 'KerasCNNLSTMDenseNet121ImageNetWeights':
             data = data.reshape(data_augmentation_test * num_unique_stock_ids * num_unique_image_types, num_unique_time_days, image_size, image_size, 3)
-            
+
+        output_image_counter = 0
+        for image in data:
+            cv2.imwrite(output_image_file[output_image_counter], image*255)
+            output_image_counter += 1
+
         return data

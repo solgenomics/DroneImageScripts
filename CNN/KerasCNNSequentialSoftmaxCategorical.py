@@ -358,7 +358,8 @@ print("[INFO] reading labels and image data...")
 
 csv_data = pd.read_csv(input_file, sep=",", header=0, index_col=False, usecols=['stock_id','image_path','image_type','day','drone_run_project_id','value'])
 for index, row in csv_data.iterrows():
-    image = cv2.imread(row['image_path'], cv2.IMREAD_UNCHANGED)
+    image_path = row['image_path']
+    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
     value = float(row['value'])
 
     image = cv2.resize(image, (image_size,image_size)) / 255.0
@@ -374,7 +375,7 @@ unique_time_days = csv_data.day.unique()
 unique_drone_run_project_ids = csv_data.drone_run_project_id.unique()
 unique_image_types = csv_data.image_type.unique()
 
-aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id"]
+aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file"]
 aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
 aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
 aux_data = pd.read_csv(input_aux_data_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)

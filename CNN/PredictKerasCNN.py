@@ -52,7 +52,7 @@ from sklearn.pipeline import Pipeline
 from kerastuner.tuners import RandomSearch
 from kerastuner.applications import HyperResNet
 from kerastuner.tuners import Hyperband
-from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
 import matplotlib.backends.backend_pdf
 from numpy.polynomial.polynomial import polyfit
@@ -61,6 +61,7 @@ from numpy.polynomial.polynomial import polyfit
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names to predict phenotypes from model. It is assumed that the input_image_label_file is ordered by the plots, then image types, then drone runs in chronological ascending order. The number of time points is only actively useful when using time-series (LSTM) CNNs.")
+ap.add_argument("-j", "--input_image_aux_file", required=True, help="file path for aux data of stocks. Also has an image path where to save the image which was predicted on for each stock.")
 ap.add_argument("-m", "--input_model_file_path", required=True, help="file path for saved keras model to use in prediction")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-e", "--outfile_activation_path", required=True, help="file path where the activation graph output will be saved")
@@ -73,6 +74,7 @@ args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
+input_image_aux_file = args["input_image_aux_file"]
 input_model_file_path = args["input_model_file_path"]
 outfile_path = args["outfile_path"]
 outfile_activation_path = args["outfile_activation_path"]
@@ -165,12 +167,19 @@ if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and ( num_unique
     print(len(previous_labels))
     raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for a LSTM model')
 
+aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file"]
+aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
+aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
+aux_data = pd.read_csv(input_image_aux_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
+
 if log_file_path is not None:
     eprint(csv_data)
     eprint(csv_training_data)
+    eprint(aux_data)
 else:
     print(csv_data)
     print(csv_training_data)
+    print(aux_data)
 
 data_augmentation = 1
 montage_image_number = 4
@@ -186,7 +195,7 @@ max_label = np.amax(trained_labels)
 trained_labels = trained_labels/max_label
 
 process_data = CNNProcessData.CNNProcessData()
-augmented_data = process_data.process_cnn_data_predictions(data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
+augmented_data = process_data.process_cnn_data_predictions(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
 
 lines = []
 evaluation_lines = []
