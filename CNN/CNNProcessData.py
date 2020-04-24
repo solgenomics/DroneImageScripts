@@ -5,6 +5,20 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import Conv2DTranspose
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Reshape
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import Input
+from tensorflow.keras import Model
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 class CNNProcessData:
     def __init__(self):
@@ -112,7 +126,7 @@ class CNNProcessData:
 
         return np.array(output)
 
-    def process_cnn_data(self, images, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size):
+    def process_cnn_data(self, images, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size, output_autoencoder_model_file_path):
         trainX = []
         testX = []
         trainY = []
@@ -171,12 +185,31 @@ class CNNProcessData:
         else:
             images = self.create_montages(images, montage_image_number, image_size, full_montage_image_size)
 
+            (encoder, decoder, autoencoder) = self.build_autoencoder(full_montage_image_size, full_montage_image_size, 3)
+            opt = Adam(lr=1e-3)
+            autoencoder.compile(loss="mse", optimizer=opt)
+
+            (train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
+
+            checkpoint = ModelCheckpoint(filepath=output_autoencoder_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
+            callbacks_list = [checkpoint]
+
+            # train the convolutional autoencoder
+            H = autoencoder.fit(
+                train_images, train_images,
+                validation_data=(test_images, test_images),
+                epochs=25,
+                batch_size=32,
+                callbacks=callbacks_list
+            )
+            decoded = autoencoder.predict(images)
+
             output_image_counter = 0
-            for image in images:
+            for image in decoded:
                 cv2.imwrite(output_image_file[output_image_counter], image*255)
                 output_image_counter += 1
 
-            (train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
+            (train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, decoded, test_size=0.2)
             # testY_length = len(testY)
 
             # (testX, testY) = self.generate_croppings(testX, testY, image_size, data_augmentation_test)
@@ -220,7 +253,7 @@ class CNNProcessData:
 
         return (test_images, testX, testY.to_numpy(), train_images, trainX, trainY.to_numpy())
 
-    def process_cnn_data_predictions(self, data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
+    def process_cnn_data_predictions(self, data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, input_autoencoder_model_file_path, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
         testX = []
         trainY = []
@@ -228,11 +261,14 @@ class CNNProcessData:
 
         datagen = self.get_imagedatagenerator()
         datagen.fit(training_data)
+        data = datagen.standardize(data)
 
         output_image_file = aux_data["output_image_file"].tolist()
 
         data = self.create_montages(data, montage_image_number, image_size, full_montage_image_size)
-        data = datagen.standardize(data)
+
+        autoencoder_model = load_model(input_autoencoder_model_file_path)
+        data = autoencoder_model.predict(data)
 
         #ret = self.generate_croppings(data, None, image_size, data_augmentation_test)
         #augmented_data = ret[0]
@@ -247,3 +283,54 @@ class CNNProcessData:
             output_image_counter += 1
 
         return data
+
+    def build_autoencoder(self, width, height, depth, filters=(32, 64), latentDim=16):
+        inputShape = (height, width, depth)
+        chanDim = -1
+
+        # define the input to the encoder
+        inputs = Input(shape=inputShape)
+        x = inputs
+
+        # loop over the number of filters
+        for f in filters:
+            # apply a CONV => RELU => BN operation
+            x = Conv2D(f, (3, 3), strides=2, padding="same")(x)
+            x = LeakyReLU(alpha=0.2)(x)
+            x = BatchNormalization(axis=chanDim)(x)
+
+        # flatten the network and then construct our latent vector
+        volumeSize = K.int_shape(x)
+        x = Flatten()(x)
+        latent = Dense(latentDim)(x)
+
+        # build the encoder model
+        encoder = Model(inputs, latent, name="encoder")
+
+        # start building the decoder model which will accept the
+        # output of the encoder as its inputs
+        latentInputs = Input(shape=(latentDim,))
+        x = Dense(np.prod(volumeSize[1:]))(latentInputs)
+        x = Reshape((volumeSize[1], volumeSize[2], volumeSize[3]))(x)
+
+        # loop over our number of filters again, but this time in
+        # reverse order
+        for f in filters[::-1]:
+            # apply a CONV_TRANSPOSE => RELU => BN operation
+            x = Conv2DTranspose(f, (3, 3), strides=2, padding="same")(x)
+            x = LeakyReLU(alpha=0.2)(x)
+            x = BatchNormalization(axis=chanDim)(x)
+
+        # apply a single CONV_TRANSPOSE layer used to recover the
+        # original depth of the image
+        x = Conv2DTranspose(depth, (3, 3), padding="same")(x)
+        outputs = Activation("sigmoid")(x)
+
+        # build the decoder model
+        decoder = Model(latentInputs, outputs, name="decoder")
+
+        # our autoencoder is the encoder + decoder
+        autoencoder = Model(inputs, decoder(encoder(inputs)), name="autoencoder")
+
+        # return a 3-tuple of the encoder, decoder, and autoencoder
+        return (encoder, decoder, autoencoder)

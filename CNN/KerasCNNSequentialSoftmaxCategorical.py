@@ -59,6 +59,7 @@ ap.add_argument("-l", "--log_file_path", required=False, help="file path to writ
 ap.add_argument("-i", "--input_image_label_file", required=True, help="file path for file holding image names and labels to be trained. It is assumed that the input_image_label_file is ordered by field trial, then by the drone runs in chronological ascending order, then by the plots, then by the image types. For LSTM models, it is assumed that the input_image_label_file is ordered by the field trial, then by plots, then image types, then drone runs in chronological ascending order. The number of time points (chronological order) is only actively useful when using time-series (LSTM) CNNs. Contains the following header: stock_id,image_path,image_type,day,drone_run_project_id,value")
 ap.add_argument("-a", "--input_aux_data_file", required=True, help="file path for aux data containing the following header: stock_id,value,trait_name,field_trial_id,accession_id,female_id,male_id")
 ap.add_argument("-m", "--output_model_file_path", required=True, help="file path for saving keras model, so that it can be loaded again in the future. it saves an hdf5 file as the model")
+ap.add_argument("-e", "--output_autoencoder_model_file_path", required=True, help="file path for saving keras autoencoder model for filtering images, so that it can be loaded again in the future. it saves an hdf5 file as the model")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path where the output will be saved")
 ap.add_argument("-f", "--output_loss_history", required=True, help="file path where the output for loss history during training will be saved")
 ap.add_argument("-k", "--keras_model_type", required=True, help="type of keras model to train: densenet121_lstm_imagenet, simple_1, inceptionresnetv2, inceptionresnetv2application, densenet121application, simple_1_tuner, simple_tuner")
@@ -72,6 +73,7 @@ log_file_path = args["log_file_path"]
 input_file = args["input_image_label_file"]
 input_aux_data_file = args["input_aux_data_file"]
 output_model_file_path = args["output_model_file_path"]
+output_autoencoder_model_file_path = args["output_autoencoder_model_file_path"]
 outfile_path = args["outfile_path"]
 output_loss_history = args["output_loss_history"]
 output_random_search_result_project = args["output_random_search_result_project"]
@@ -445,7 +447,7 @@ else:
     data_augmentation_test = 1
     montage_image_number = 4 # Implemented to combine 4 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
-    (testImages, testX, testY, trainImages, trainX, trainY) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size)
+    (testImages, testX, testY, trainImages, trainX, trainY) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size, output_autoencoder_model_file_path)
     print(testImages.shape)
     print(testX.shape)
     print(testY.shape)
