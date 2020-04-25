@@ -197,7 +197,7 @@ max_label = np.amax(trained_labels)
 trained_labels = trained_labels/max_label
 
 process_data = CNNProcessData.CNNProcessData()
-augmented_data = process_data.process_cnn_data_predictions(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, input_autoencoder_model_file_path, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
+(augmented_data, aux_data, fit_Y) = process_data.process_cnn_data_predictions(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, input_autoencoder_model_file_path, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
 
 lines = []
 evaluation_lines = []
@@ -216,6 +216,9 @@ else:
         print(layer.output_shape)
 
     #plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+
+    if keras_model_name == 'KerasCNNMLPExample':
+        augmented_data = [aux_data, augmented_data]
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = prob_predictions.flatten() 

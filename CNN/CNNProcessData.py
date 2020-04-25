@@ -282,7 +282,31 @@ class CNNProcessData:
             cv2.imwrite(output_image_file[output_image_counter], image*255)
             output_image_counter += 1
 
-        return data
+        stock_id_binarizer = LabelBinarizer().fit(aux_data["stock_id"])
+        stock_id_categorical = stock_id_binarizer.transform(aux_data["stock_id"])
+
+        accession_id_binarizer = LabelBinarizer().fit(aux_data["accession_id"])
+        accession_id_categorical = accession_id_binarizer.transform(aux_data["accession_id"])
+
+        female_id_binarizer = LabelBinarizer().fit(aux_data["female_id"])
+        female_id_categorical = female_id_binarizer.transform(aux_data["female_id"])
+
+        male_id_binarizer = LabelBinarizer().fit(aux_data["male_id"])
+        male_id_categorical = male_id_binarizer.transform(aux_data["male_id"])
+
+        continuous = [col for col in aux_data.columns if 'aux_trait_' in col]
+        cs = MinMaxScaler()
+        if len(continuous) > 0:
+            fitContinuous = cs.fit_transform(aux_data[continuous])
+
+            fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical, fitContinuous])
+        else:
+            fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical])
+
+        max_label = aux_data["value"].max()
+        fitY = aux_data["value"]/max_label
+
+        return (data, fitX, fitY.to_numpy())
 
     def build_autoencoder(self, width, height, depth, filters=(32, 64), latentDim=16):
         inputShape = (height, width, depth)
