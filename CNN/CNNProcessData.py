@@ -1,6 +1,7 @@
 # import the necessary packages
 import cv2
 import numpy as np
+import pandas as pd
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import MinMaxScaler
@@ -251,7 +252,21 @@ class CNNProcessData:
         trainY = train_aux_data["value"]/max_label
         testY = test_aux_data["value"]/max_label
 
-        return (test_images, testX, testY.to_numpy(), train_images, trainX, trainY.to_numpy())
+        train_genotype_files = train_aux_data["genotype_file"].tolist()
+        test_genotype_files = test_aux_data["genotype_file"].tolist()
+        train_genotype_data = []
+        for f in train_genotype_files:
+            geno_data = pd.read_csv(f, sep="\t")
+            train_genotype_data.append(geno_data.to_numpy()[0])
+        test_genotype_data = []
+        for f in test_genotype_files:
+            geno_data = pd.read_csv(f, sep="\t")
+            test_genotype_data.append(geno_data.to_numpy()[0])
+
+        train_genotype_data = np.array(train_genotype_data)
+        test_genotype_data = np.array(test_genotype_data)
+
+        return (test_images, testX, testY.to_numpy(), test_genotype_data, train_images, trainX, trainY.to_numpy(), train_genotype_data)
 
     def process_cnn_data_predictions(self, data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, input_autoencoder_model_file_path, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
@@ -306,7 +321,16 @@ class CNNProcessData:
         max_label = aux_data["value"].max()
         fitY = aux_data["value"]/max_label
 
-        return (data, fitX, fitY.to_numpy())
+        genotype_files = aux_data["genotype_file"].tolist()
+        genotype_data = []
+        for f in genotype_files:
+            geno_data = pd.read_csv(f, sep="\t")
+            print(geno_data)
+            genotype_data.append(geno_data.to_numpy()[0])
+
+        genotype_data = np.array(genotype_data)
+
+        return (data, fitX, genotype_data, fitY.to_numpy())
 
     def build_autoencoder(self, width, height, depth, filters=(32, 64), latentDim=16):
         inputShape = (height, width, depth)

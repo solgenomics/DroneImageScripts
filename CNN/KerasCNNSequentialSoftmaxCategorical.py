@@ -377,7 +377,7 @@ unique_time_days = csv_data.day.unique()
 unique_drone_run_project_ids = csv_data.drone_run_project_id.unique()
 unique_image_types = csv_data.image_type.unique()
 
-aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file"]
+aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file","genotype_file"]
 aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
 aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
 aux_data = pd.read_csv(input_aux_data_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
@@ -447,7 +447,7 @@ else:
     data_augmentation_test = 1
     montage_image_number = 4 # Implemented to combine 4 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
-    (testImages, testX, testY, trainImages, trainX, trainY) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size, output_autoencoder_model_file_path)
+    (testImages, testX, testY, testGenotypes, trainImages, trainX, trainY, trainGenotypes) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size, output_autoencoder_model_file_path)
     print(testImages.shape)
     print(testX.shape)
     print(testY.shape)
@@ -765,17 +765,18 @@ else:
         # model = tuner.get_best_models(num_models=1)[0]
 
     if keras_model_type == 'mlp_cnn_example':
-        mlp = create_mlp(trainX.shape[1], regress=False)
+        mlp = create_mlp(trainGenotypes.shape[1], regress=False)
+        mlp2 = create_mlp(trainX.shape[1], regress=False)
         cnn = create_cnn_example(montage_image_size, montage_image_size, 3, regress=False)
-        combinedInput = concatenate([mlp.output, cnn.output])
+        combinedInput = concatenate([mlp.output, mlp2.output, cnn.output])
         x = Dense(4, activation="relu")(combinedInput)
         x = Dense(1, activation="linear")(x)
-        model = Model(inputs=[mlp.input, cnn.input], outputs=x)
+        model = Model(inputs=[mlp.input, mlp2.input, cnn.input], outputs=x)
         opt = Adam(lr=1e-3, decay=1e-3 / 200)
         model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
 
-        trainImages = [trainX, trainImages]
-        testImages = [testX, testImages]
+        trainImages = [trainGenotypes, trainX, trainImages]
+        testImages = [testGenotypes, testX, testImages]
 
     for layer in model.layers:
         print(layer.output_shape)

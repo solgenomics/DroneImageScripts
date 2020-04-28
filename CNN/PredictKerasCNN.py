@@ -169,7 +169,7 @@ if keras_model_name == 'KerasCNNLSTMDenseNet121ImageNetWeights' and ( num_unique
     print(len(previous_labels))
     raise Exception('Number of rows in input file (images and labels) is not equal to the number of unique stocks times the number of unique time points times the number of unique image types. This means the input data in uneven for a LSTM model')
 
-aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file"]
+aux_data_cols = ["stock_id","value","trait_name","field_trial_id","accession_id","female_id","male_id","output_image_file","genotype_file"]
 aux_data_trait_cols = [col for col in csv_data.columns if 'aux_trait_' in col]
 aux_data_cols = aux_data_cols.extend(aux_data_trait_cols)
 aux_data = pd.read_csv(input_image_aux_file, sep=",", header=0, index_col=False, usecols=aux_data_cols)
@@ -197,7 +197,7 @@ max_label = np.amax(trained_labels)
 trained_labels = trained_labels/max_label
 
 process_data = CNNProcessData.CNNProcessData()
-(augmented_data, aux_data, fit_Y) = process_data.process_cnn_data_predictions(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, input_autoencoder_model_file_path, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
+(augmented_data, aux_data, genotype_data, fit_Y) = process_data.process_cnn_data_predictions(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_name, input_autoencoder_model_file_path, trained_image_data, data_augmentation, montage_image_number, montage_image_size)
 
 lines = []
 evaluation_lines = []
@@ -218,7 +218,7 @@ else:
     #plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
     if keras_model_name == 'KerasCNNMLPExample':
-        augmented_data = [aux_data, augmented_data]
+        augmented_data = [genotype_data, aux_data, augmented_data]
 
     prob_predictions = model.predict(augmented_data, batch_size=8)
     predictions = prob_predictions.flatten() 
