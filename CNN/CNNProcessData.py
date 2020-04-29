@@ -256,11 +256,11 @@ class CNNProcessData:
         test_genotype_files = test_aux_data["genotype_file"].tolist()
         train_genotype_data = []
         for f in train_genotype_files:
-            geno_data = pd.read_csv(f, sep="\t")
+            geno_data = pd.read_csv(f, sep="\t", na_values="NA")
             train_genotype_data.append(geno_data.to_numpy()[0])
         test_genotype_data = []
         for f in test_genotype_files:
-            geno_data = pd.read_csv(f, sep="\t")
+            geno_data = pd.read_csv(f, sep="\t", na_values="NA")
             test_genotype_data.append(geno_data.to_numpy()[0])
 
         train_genotype_data = np.array(train_genotype_data)
