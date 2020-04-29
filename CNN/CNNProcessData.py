@@ -1,4 +1,5 @@
 # import the necessary packages
+import sys
 import cv2
 import numpy as np
 import pandas as pd
@@ -127,7 +128,14 @@ class CNNProcessData:
 
         return np.array(output)
 
-    def process_cnn_data(self, images, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size, output_autoencoder_model_file_path):
+    def process_cnn_data(self, images, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, full_montage_image_size, output_autoencoder_model_file_path, log_file_path):
+
+        if log_file_path is not None:
+            sys.stderr = open(log_file_path, 'a')
+
+        def eprint(*args, **kwargs):
+            print(*args, file=sys.stderr, **kwargs)
+
         trainX = []
         testX = []
         trainY = []
@@ -256,7 +264,10 @@ class CNNProcessData:
         test_genotype_files = test_aux_data["genotype_file"].tolist()
         train_genotype_data = []
         for f in train_genotype_files:
+            eprint(f)
             geno_data = pd.read_csv(f, sep="\t", na_values="NA")
+            eprint(geno_data)
+            eprint(geno_data.info)
             train_genotype_data.append(geno_data.to_numpy()[0])
         test_genotype_data = []
         for f in test_genotype_files:
