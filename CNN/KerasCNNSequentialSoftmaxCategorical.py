@@ -779,7 +779,10 @@ else:
         testImages = [testGenotypes, testX, testImages]
 
     for layer in model.layers:
-        print(layer.output_shape)
+        if log_file_path is not None:
+            eprint(layer.output_shape)
+        else:
+            print(layer.output_shape)
 
     print("[INFO] training network...")
 
