@@ -266,12 +266,12 @@ class CNNProcessData:
         for f in train_genotype_files:
             eprint(f)
             geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            train_genotype_data.append(geno_data.to_numpy()[0])
+            train_genotype_data.append(np.array(geno_data.iloc[:,0]))
         test_genotype_data = []
         for f in test_genotype_files:
             eprint(f)
             geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            test_genotype_data.append(geno_data.to_numpy()[0])
+            test_genotype_data.append(np.array(geno_data.iloc[:,0]))
 
         train_genotype_data = np.array(train_genotype_data)
         test_genotype_data = np.array(test_genotype_data)
