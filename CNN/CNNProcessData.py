@@ -342,7 +342,7 @@ class CNNProcessData:
         genotype_data = []
         for f in genotype_files:
             geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            genotype_data.append(geno_data.iloc[:,0])
+            genotype_data.append(np.array(geno_data.iloc[:,0]))
 
         genotype_data = np.array(genotype_data)
 
