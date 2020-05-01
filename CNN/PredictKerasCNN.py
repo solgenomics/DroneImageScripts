@@ -213,7 +213,10 @@ else:
     model = load_model(input_model_file_path)
 
     for layer in model.layers:
-        print(layer.output_shape)
+        if log_file_path is not None:
+            eprint(layer.output_shape)
+        else:
+            print(layer.output_shape)
 
     #plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
