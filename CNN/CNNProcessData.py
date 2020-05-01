@@ -250,11 +250,15 @@ class CNNProcessData:
             trainContinuous = cs.fit_transform(train_aux_data[continuous])
             testContinuous = cs.transform(test_aux_data[continuous])
 
-            trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical, trainContinuous])
-            testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical, testContinuous])
+            #trainX = np.hstack((train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical, trainContinuous))
+            #testX = np.hstack((test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical, testContinuous))
+            trainX = trainContinuous
+            testX = testContinuous
         else:
-            trainX = np.hstack([train_stock_id_categorical, train_accession_id_categorical, train_female_id_categorical, train_male_id_categorical])
-            testX = np.hstack([test_stock_id_categorical, test_accession_id_categorical, test_female_id_categorical, test_male_id_categorical])
+            trainX = []
+            testX = []
+        trainx = np.array(trainX)
+        testx = np.array(testX)
 
         max_label = aux_data["value"].max()
         trainY = train_aux_data["value"]/max_label

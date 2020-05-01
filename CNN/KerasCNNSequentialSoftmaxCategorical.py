@@ -473,6 +473,7 @@ else:
     model = None
     opt = Adam(lr=1e-3, decay=1e-3 / 200)
     initial_epoch = 0
+    epochs = 100
 
     print(keras_model_type)
     if keras_model_type == 'inceptionresnetv2':
@@ -777,6 +778,7 @@ else:
 
         trainImages = [trainGenotypes, trainX, trainImages]
         testImages = [testGenotypes, testX, testImages]
+        epochs = 25
 
     for layer in model.layers:
         if log_file_path is not None:
@@ -791,7 +793,7 @@ else:
     history = LossHistory()
     callbacks_list = [history, es, checkpoint]
 
-    H = model.fit(trainImages, trainY, validation_data=(testImages, testY), epochs=100, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
+    H = model.fit(trainImages, trainY, validation_data=(testImages, testY), epochs=epochs, batch_size=16, initial_epoch=initial_epoch, callbacks=callbacks_list)
 
     for h in history.losses:
         history_loss_lines.append([h])
