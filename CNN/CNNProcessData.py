@@ -335,9 +335,12 @@ class CNNProcessData:
         if len(continuous) > 0:
             fitContinuous = cs.fit_transform(aux_data[continuous])
 
-            fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical, fitContinuous])
+            # fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical, fitContinuous])
+            fitX = fitContinuous
         else:
-            fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical])
+            # fitX = np.hstack([stock_id_categorical, accession_id_categorical, female_id_categorical, male_id_categorical])
+            fitX = []
+        fitX = np.array(fitX)
 
         max_label = aux_data["value"].max()
         fitY = aux_data["value"]/max_label
