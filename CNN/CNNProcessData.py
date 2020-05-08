@@ -272,16 +272,18 @@ class CNNProcessData:
                 eprint(f)
             else:
                 print(f)
-            geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            train_genotype_data.append(np.array(geno_data.iloc[:,0]))
+            if pd.isna(f) is False:
+                geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
+                train_genotype_data.append(np.array(geno_data.iloc[:,0]))
         test_genotype_data = []
         for f in test_genotype_files:
             if log_file_path is not None:
                 eprint(f)
             else:
                 print(f)
-            geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            test_genotype_data.append(np.array(geno_data.iloc[:,0]))
+            if pd.isna(f) is False:
+                geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
+                test_genotype_data.append(np.array(geno_data.iloc[:,0]))
 
         train_genotype_data = np.array(train_genotype_data)
         test_genotype_data = np.array(test_genotype_data)
@@ -348,8 +350,9 @@ class CNNProcessData:
         genotype_files = aux_data["genotype_file"].tolist()
         genotype_data = []
         for f in genotype_files:
-            geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
-            genotype_data.append(np.array(geno_data.iloc[:,0]))
+            if pd.isna(f) is False:
+                geno_data = pd.read_csv(f, sep="\t", header=None, na_values="NA")
+                genotype_data.append(np.array(geno_data.iloc[:,0]))
 
         genotype_data = np.array(genotype_data)
 
