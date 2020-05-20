@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeAutoEncoderVegetationIndices.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0 --plot_polygon_type observation_unit_polygon_vari_imagery --margin_percent 5
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeAutoEncoderVegetationIndices.py
 
 # import the necessary packages
 import sys
@@ -30,10 +30,14 @@ from tensorflow.keras import backend as K
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_image_file", required=True, help="file path with stock_id and image paths")
 ap.add_argument("-r", "--outfile_path", required=True, help="file path where results will be saved")
+ap.add_argument("-j", "--autoencoder_model_type", required=True, help="type of autoencoder model")
+ap.add_argument("-o", "--output_encoded_images_file", required=True, help="file path with file paths for encoded stock images")
 args = vars(ap.parse_args())
 
 input_images_file = args["input_image_file"]
+autoencoder_model_type = args["autoencoder_model_type"]
 results_outfile = args["outfile_path"]
+output_encoded_images_file = args["output_encoded_images_file"]
 
 result_file_lines = [
     ['stock_id', 'nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
@@ -107,6 +111,30 @@ for index, row in input_image_file_data.iterrows():
     nir_images.append(nir_images_array)
     red_images.append(red_images_array)
     rededge_images.append(rededge_images_array)
+
+(encoder, decoder, autoencoder) = self.build_autoencoder(full_montage_image_size, full_montage_image_size, 3)
+opt = Adam(lr=1e-3)
+autoencoder.compile(loss="mse", optimizer=opt)
+
+(train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
+
+checkpoint = ModelCheckpoint(filepath=output_autoencoder_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
+callbacks_list = [checkpoint]
+
+# train the convolutional autoencoder
+H = autoencoder.fit(
+    train_images, train_images,
+    validation_data=(test_images, test_images),
+    epochs=25,
+    batch_size=32,
+    callbacks=callbacks_list
+)
+decoded = autoencoder.predict(images)
+
+output_image_counter = 0
+for image in decoded:
+    cv2.imwrite(output_image_file[output_image_counter], image*255)
+    output_image_counter += 1
 
     non_zero_list = []
     total_pixel_sum_list = []
