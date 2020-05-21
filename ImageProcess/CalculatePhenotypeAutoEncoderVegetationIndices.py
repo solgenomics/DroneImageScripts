@@ -241,7 +241,9 @@ for stock_id in stock_ids:
     rededge_images = stock_rededge_images_data[stock_counter]
     rededge_decoded = rededge_autoencoder.predict(rededge_images)
 
-    #cv2.imwrite(output_image_file[output_image_counter], image*255)
+    cv2.imwrite(output_nir_images[stock_counter], nir_decoded[0][:,:,0]*255)
+    cv2.imwrite(output_red_images[stock_counter], red_decoded[0][:,:,0]*255)
+    cv2.imwrite(output_rededge_images[stock_counter], rededge_decoded[0][:,:,0]*255)
 
     stock_counter += 1
 
@@ -250,9 +252,9 @@ for stock_id in stock_ids:
 
     img_counter = 0
     for image in nir_images:
-        nir_img = nir_images[img_counter][:,:,0]
-        red_img = red_images[img_counter][:,:,0]
-        rededge_img = rededge_images[img_counter][:,:,0]
+        nir_img = nir_decoded[img_counter][:,:,0]
+        red_img = red_decoded[img_counter][:,:,0]
+        rededge_img = rededge_decoded[img_counter][:,:,0]
 
         img_counter += 1
 
