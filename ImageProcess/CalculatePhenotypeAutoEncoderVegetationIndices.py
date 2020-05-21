@@ -13,6 +13,7 @@ import statistics
 from collections import defaultdict
 import csv
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Conv2DTranspose
@@ -28,22 +29,35 @@ from tensorflow.keras import backend as K
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
 ap.add_argument("-i", "--input_image_file", required=True, help="file path with stock_id and image paths")
 ap.add_argument("-r", "--outfile_path", required=True, help="file path where results will be saved")
 ap.add_argument("-j", "--autoencoder_model_type", required=True, help="type of autoencoder model")
 ap.add_argument("-o", "--output_encoded_images_file", required=True, help="file path with file paths for encoded stock images")
 args = vars(ap.parse_args())
 
+log_file_path = args["log_file_path"]
 input_images_file = args["input_image_file"]
 autoencoder_model_type = args["autoencoder_model_type"]
 results_outfile = args["outfile_path"]
 output_encoded_images_file = args["output_encoded_images_file"]
 
+if sys.version_info[0] < 3:
+    raise Exception("Must use Python3. Use python3 in your command line.")
+
+if log_file_path is not None:
+    sys.stderr = open(log_file_path, 'a')
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
 result_file_lines = [
-    ['stock_id', 'nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
+    ['stock_id', 'ndvi', 'ndre']
 ]
 
-def build_autoencoder(self, width, height, depth, filters=(32, 64), latentDim=16):
+image_size = 96
+
+def build_autoencoder(width, height, depth, filters=(32, 64), latentDim=16):
     inputShape = (height, width, depth)
     chanDim = -1
 
@@ -94,193 +108,169 @@ def build_autoencoder(self, width, height, depth, filters=(32, 64), latentDim=16
     # return a 3-tuple of the encoder, decoder, and autoencoder
     return (encoder, decoder, autoencoder)
 
-input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=None)
+input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=0)
+output_encoded_images_file_data = pd.read_csv(output_encoded_images_file, sep="\t", header=0)
 
-nir_images = []
-red_images = []
-rededge_images = []
+output_nir_images = []
+output_red_images = []
+output_rededge_images = []
+for index, row in output_encoded_images_file_data.iterrows():
+    stock_id = row[0]
+    output_red_image = row[1]
+    output_rededge_image = row[2]
+    output_nir_image = row[3]
+    output_nir_images.append(output_nir_image)
+    output_red_images.append(output_red_image)
+    output_rededge_images.append(output_rededge_image)
+
+stock_ids = []
+nir_images_data = []
+stock_nir_images_data = []
+red_images_data = []
+stock_red_images_data = []
+rededge_images_data = []
+stock_rededge_images_data = []
 for index, row in input_image_file_data.iterrows():
     stock_id = row[0]
     red_images = row[1]
-    rededge_images = row[1]
-    nir_images = row[1]
+    rededge_images = row[2]
+    nir_images = row[3]
+
+    stock_ids.append(stock_id)
     red_images_array = red_images.split(',')
     rededge_images_array = rededge_images.split(',')
     nir_images_array = nir_images.split(',')
 
-    nir_images.append(nir_images_array)
-    red_images.append(red_images_array)
-    rededge_images.append(rededge_images_array)
+    stock_nir_images_array = []
+    for nir_img in nir_images_array:
+        image = cv2.imread(nir_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
 
-(encoder, decoder, autoencoder) = self.build_autoencoder(full_montage_image_size, full_montage_image_size, 3)
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        nir_images_data.append(image)
+        stock_nir_images_array.append(image)
+    stock_nir_images_data.append(np.array(stock_nir_images_array))
+
+    stock_red_images_array = []
+    for red_img in red_images_array:
+        image = cv2.imread(red_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        red_images_data.append(image)
+        stock_red_images_array.append(image)
+    stock_red_images_data.append(np.array(stock_red_images_array))
+
+    stock_rededge_images_array = []
+    for rededge_img in rededge_images_array:
+        image = cv2.imread(rededge_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        rededge_images_data.append(image)
+        stock_rededge_images_array.append(image)
+    stock_rededge_images_data.append(np.array(stock_rededge_images_array))
+
+nir_images_data = np.array(nir_images_data)
+red_images_data = np.array(red_images_data)
+rededge_images_data = np.array(rededge_images_data)
+stock_nir_images_data = np.array(stock_nir_images_data)
+stock_red_images_data = np.array(stock_red_images_data)
+stock_rededge_images_data = np.array(stock_rededge_images_data)
+
+(nir_encoder, nir_decoder, nir_autoencoder) = build_autoencoder(image_size, image_size, 3)
+(red_encoder, red_decoder, red_autoencoder) = build_autoencoder(image_size, image_size, 3)
+(rededge_encoder, rededge_decoder, rededge_autoencoder) = build_autoencoder(image_size, image_size, 3)
+
 opt = Adam(lr=1e-3)
-autoencoder.compile(loss="mse", optimizer=opt)
+nir_autoencoder.compile(loss="mse", optimizer=opt)
+red_autoencoder.compile(loss="mse", optimizer=opt)
+rededge_autoencoder.compile(loss="mse", optimizer=opt)
 
-(train_aux_data, test_aux_data, train_images, test_images) = train_test_split(aux_data, images, test_size=0.2)
+(nir_train_images, nir_test_images, nir_train_images, nir_test_images) = train_test_split(nir_images_data, nir_images_data, test_size=0.2)
+(red_train_images, red_test_images, red_train_images, red_test_images) = train_test_split(red_images_data, red_images_data, test_size=0.2)
+(rededge_train_images, rededge_test_images, rededge_train_images, rededge_test_images) = train_test_split(rededge_images_data, rededge_images_data, test_size=0.2)
 
-checkpoint = ModelCheckpoint(filepath=output_autoencoder_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
-callbacks_list = [checkpoint]
+#checkpoint = ModelCheckpoint(filepath=output_autoencoder_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
+#callbacks_list = [checkpoint]
 
-# train the convolutional autoencoder
-H = autoencoder.fit(
-    train_images, train_images,
-    validation_data=(test_images, test_images),
+H_nir = nir_autoencoder.fit(
+    nir_train_images, nir_train_images,
+    validation_data=(nir_test_images, nir_test_images),
     epochs=25,
     batch_size=32,
-    callbacks=callbacks_list
+    #callbacks=callbacks_list
 )
-decoded = autoencoder.predict(images)
+#nir_decoded = nir_autoencoder.predict(nir_images_data)
 
-output_image_counter = 0
-for image in decoded:
-    cv2.imwrite(output_image_file[output_image_counter], image*255)
-    output_image_counter += 1
+H_red = red_autoencoder.fit(
+    red_train_images, red_train_images,
+    validation_data=(red_test_images, red_test_images),
+    epochs=25,
+    batch_size=32,
+    #callbacks=callbacks_list
+)
+#red_decoded = red_autoencoder.predict(red_images_data)
 
-    non_zero_list = []
-    total_pixel_sum_list = []
-    mean_pixel_value_list = []
-    harmonic_mean_pixel_value_list = []
-    pixel_median_value_list = []
-    pixel_variance_list = []
-    pixel_standard_dev_list = []
-    pixel_pstandard_dev_list = []
-    min_pixel_list = []
-    max_pixel_list = []
-    minority_pixel_value_list = []
-    minority_pixel_count_list = []
-    majority_pixel_value_list = []
-    majority_pixel_count_list = []
-    pixel_group_count_list = []
+H_rededge = rededge_autoencoder.fit(
+    rededge_train_images, rededge_train_images,
+    validation_data=(rededge_test_images, rededge_test_images),
+    epochs=25,
+    batch_size=32,
+    #callbacks=callbacks_list
+)
+#rededge_decoded = rededge_autoencoder.predict(rededge_images_data)
 
-    for image in images_array:
-        img = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-        img_shape = img.shape
+stock_counter = 0
+for stock_id in stock_ids:
+    nir_images = stock_nir_images_data[stock_counter]
+    nir_decoded = nir_autoencoder.predict(nir_images)
 
-        if len(img_shape) == 3:
-            if img_shape[2] == 3:
-                b,g,r = cv2.split(img)
-                if image_band_index == 0:
-                    img = b
-                if image_band_index == 1:
-                    img = g
-                if image_band_index == 2:
-                    img = r
+    red_images = stock_red_images_data[stock_counter]
+    red_decoded = red_autoencoder.predict(red_images)
 
-        non_zero = cv2.countNonZero(img)
-        #print("Nonzero: %s" % non_zero)
+    rededge_images = stock_rededge_images_data[stock_counter]
+    rededge_decoded = rededge_autoencoder.predict(rededge_images)
 
-        original_height, original_width = img.shape
-        width_margin = margin_percent * original_width
-        height_margin = margin_percent * original_height
+    #cv2.imwrite(output_image_file[output_image_counter], image*255)
 
-        img = crop(img, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
+    stock_counter += 1
 
-        height, width = img.shape
+    ndvi_list = []
+    ndre_list = []
 
-        total_pixel_sum = 0
-        pixel_array = []
-        pixel_dict = defaultdict(int)
+    img_counter = 0
+    for image in nir_images:
+        nir_img = nir_images[img_counter][:,:,0]
+        red_img = red_images[img_counter][:,:,0]
+        rededge_img = rededge_images[img_counter][:,:,0]
 
-        for i in range(0, height):
-            for j in range(0, width):
-                px = int(img[i,j])
-                total_pixel_sum += px
-                pixel_array.append(px)
-                pixel_dict[px] += 1
+        img_counter += 1
 
-        #print("Total: %s" % total_pixel_sum)
+        nir_mean_pixel = nir_img.mean(axis=0).mean()
+        red_mean_pixel = red_img.mean(axis=0).mean()
+        rededge_mean_pixel = rededge_img.mean(axis=0).mean()
 
-        mean_pixel_value = statistics.mean(pixel_array)
-        #print("Mean: %s" % mean_pixel_value)
+        nir_mean_pixel = nir_mean_pixel / 255
+        red_mean_pixel = red_mean_pixel / 255
+        rededge_mean_pixel = rededge_mean_pixel / 255
 
-        if sys.version_info >= (3,6,0):
-            harmonic_mean_pixel_value = statistics.harmonic_mean(pixel_array) #required python >= 3.6
-        else:
-            harmonic_mean_pixel_value = 0
-        #print("Harmonic Mean: %s" % harmonic_mean_pixel_value)
-
-        pixel_array_np = np.array(pixel_array)
-        pixel_array_sort = np.sort(pixel_array_np)
-        pixel_median_value = statistics.median(pixel_array_sort)
-        #print("Median: %s" % pixel_median_value)
-
-        pixel_variance = statistics.variance(pixel_array)
-        #print("Variance: %s" % pixel_variance)
-
-        pixel_standard_dev = statistics.stdev(pixel_array)
-        #print("Stdev: %s" % pixel_standard_dev)
-
-        pixel_pstandard_dev = statistics.pstdev(pixel_array)
-        #print("Pstdev %s" % pixel_pstandard_dev)
-
-        min_pixel = pixel_array_sort[0]
-        max_pixel = pixel_array_sort[-1]
-        #print("Min: %s" % min_pixel)
-        #print("Max: %s" % max_pixel)
-
-        pixel_sorted_by_value = sorted(pixel_dict.items(), key=lambda kv: kv[1])
-        minority_pixel = pixel_sorted_by_value[0]
-        majority_pixel = pixel_sorted_by_value[-1]
-        minority_pixel_value = minority_pixel[0]
-        minority_pixel_count = minority_pixel[1]
-        majority_pixel_value = majority_pixel[0]
-        majority_pixel_count = majority_pixel[1]
-        #print("Minority: %s" % minority_pixel_value)
-        #print("Minority Count: %s" % minority_pixel_count)
-        #print("Majority: %s" % majority_pixel_value)
-        #print("Majority Count: %s" % majority_pixel_count)
-
-        pixel_group_count = len(pixel_dict)
-        #print("Variety: %s" % pixel_group_count)
-
-        #cv2.imshow('image'+str(count),kpsimage)
-        #cv2.imwrite(outfiles[count], kpsimage)
-
-        total_pixel_sum = total_pixel_sum / 255
-        mean_pixel_value = mean_pixel_value / 255
-        harmonic_mean_pixel_value = harmonic_mean_pixel_value / 255
-        pixel_median_value = pixel_median_value / 255
-        pixel_variance = pixel_variance / 255
-        pixel_standard_dev = pixel_standard_dev / 255
-        pixel_pstandard_dev = pixel_pstandard_dev / 255
-        min_pixel = min_pixel / 255
-        max_pixel = max_pixel / 255
-        minority_pixel_value = minority_pixel_value / 255
-        majority_pixel_value = majority_pixel_value / 255
-
-        non_zero_list.append(non_zero)
-        total_pixel_sum_list.append(total_pixel_sum)
-        mean_pixel_value_list.append(mean_pixel_value)
-        harmonic_mean_pixel_value_list.append(harmonic_mean_pixel_value)
-        pixel_median_value_list.append(pixel_median_value)
-        pixel_variance_list.append(pixel_variance)
-        pixel_standard_dev_list.append(pixel_standard_dev)
-        pixel_pstandard_dev_list.append(pixel_pstandard_dev)
-        min_pixel_list.append(min_pixel)
-        max_pixel_list.append(max_pixel)
-        minority_pixel_value_list.append(minority_pixel_value)
-        minority_pixel_count_list.append(minority_pixel_count)
-        majority_pixel_value_list.append(majority_pixel_value)
-        majority_pixel_count_list.append(majority_pixel_count)
-        pixel_group_count_list.append(pixel_group_count)
+        ndvi_list.append((nir_mean_pixel - red_mean_pixel)/(nir_mean_pixel + red_mean_pixel))
+        ndre_list.append((nir_mean_pixel - rededge_mean_pixel)/(nir_mean_pixel + rededge_mean_pixel))
 
     result_file_lines.append([
         stock_id,
-        statistics.mean(non_zero_list),
-        statistics.mean(total_pixel_sum_list),
-        statistics.mean(mean_pixel_value_list),
-        statistics.mean(harmonic_mean_pixel_value_list),
-        statistics.mean(pixel_median_value_list),
-        statistics.mean(pixel_variance_list),
-        statistics.mean(pixel_standard_dev_list),
-        statistics.mean(pixel_pstandard_dev_list),
-        statistics.mean(min_pixel_list),
-        statistics.mean(max_pixel_list),
-        statistics.mean(minority_pixel_value_list),
-        statistics.mean(minority_pixel_count_list),
-        statistics.mean(majority_pixel_value_list),
-        statistics.mean(majority_pixel_count_list),
-        statistics.mean(pixel_group_count_list)
+        statistics.mean(ndvi_list),
+        statistics.mean(ndre_list)
     ])
 
 with open(results_outfile, 'w') as writeFile:
