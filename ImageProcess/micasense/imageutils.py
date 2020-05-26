@@ -157,7 +157,7 @@ def align(pair):
                 plotutils.plotwithcolorbar(grad2, "match grad level {}".format(level))
                 print("Starting warp for level {} is:\n {}".format(level,warp_matrix))
 
-            if cv2.__version__ == '4.1.0-pre' or cv2.__version__ == '4.1.0':
+            if cv2.__version__ == '4.1.0-pre' or cv2.__version__ == '4.1.0' or cv2.__version__ == '4.2.0':
                 cc, warp_matrix = cv2.findTransformECC(grad1, grad2, warp_matrix, warp_mode, criteria, inputMask = None, gaussFiltSize = 5)
             else:
                 cc, warp_matrix = cv2.findTransformECC(grad1, grad2, warp_matrix, warp_mode, criteria)
