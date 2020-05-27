@@ -1,35 +1,37 @@
-#python3 /home/production/cxgn/DroneImageScripts/CNN/MaskRCNNBoundingBoxTrain.py --input_annotations_dir '/home/production/cxgn/sgn//static/documents/tempfiles/drone_imagery_keras_cnn_maskrcnn_dir'  --log_file_path '/var/log/sgn/error.log'
 
 import sys
 import argparse
+import cv2
+import csv
 from os import listdir
 from xml.etree import ElementTree
 from numpy import zeros
 from numpy import asarray
 from numpy import expand_dims
-from numpy import mean
+from matplotlib import pyplot
+from matplotlib.patches import Rectangle
 from mrcnn.config import Config
 from mrcnn.model import MaskRCNN
-from mrcnn.utils import Dataset
-from mrcnn.utils import compute_ap
-from mrcnn.model import load_image_gt
 from mrcnn.model import mold_image
-from mrcnn.visualize import display_instances
-from mrcnn.utils import extract_bboxes
-from matplotlib import pyplot
+from mrcnn.utils import Dataset
+import matplotlib.backends.backend_pdf
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
 ap.add_argument("-i", "--input_annotations_dir", required=True, help="file directory holding all annotation xml files")
-ap.add_argument("-p", "--output_model_dir", required=True, help="dir where to save checkpoints")
-ap.add_argument("-o", "--output_model_path", required=True, help="file where to save trained model")
+ap.add_argument("-p", "--model_dir", required=True, help="dir where to save checkpoints")
+ap.add_argument("-o", "--model_path", required=True, help="file where to save trained model")
+ap.add_argument("-e", "--outfile_annotated", required=True, help="file path where the annotated image pdf saved")
+ap.add_argument("-a", "--results_outfile", required=True, help="file path where the boxes are saved")
 
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
 input_annotations_dir = args["input_annotations_dir"]
-output_model_dir = args["output_model_dir"]
-output_model_path = args["output_model_path"]
+model_dir = args["model_dir"]
+model_path = args["model_path"]
+outfile_annotated = args["outfile_annotated"]
+results_outfile = args["results_outfile"]
 
 if sys.version_info[0] < 3:
     raise Exception("Must use Python3. Use python3 in your command line.")
@@ -122,33 +124,101 @@ class PlotImageDataset(Dataset):
         info = self.image_info[image_id]
         return info['path']
 
-# define a configuration for the model
-class PlotImageConfig(Config):
+# define the prediction configuration
+class PredictionConfig(Config):
     # define the name of the configuration
     NAME = "plotimage_cfg"
-    # number of classes (background + kangaroo)
+    # number of classes (background + plot image)
     NUM_CLASSES = 1 + 1
-    # number of training steps per epoch
-    STEPS_PER_EPOCH = 131
+    # simplify GPU config
+    GPU_COUNT = 1
+    IMAGES_PER_GPU = 1
 
-# prepare train set
-train_set = PlotImageDataset()
-train_set.load_dataset(input_annotations_dir, is_train=True)
-train_set.prepare()
-print('Train: %d' % len(train_set.image_ids))
-# prepare test/val set
+# plot a number of photos with ground truth and predictions
+def plot_actual_vs_predicted(dataset, model, cfg, n_images=5):
+    # load image and mask
+    for i in range(n_images):
+        # load the image and mask
+        image = dataset.load_image(i)
+        mask, _ = dataset.load_mask(i)
+        # convert pixel values (e.g. center)
+        scaled_image = mold_image(image, cfg)
+        # convert image into one sample
+        sample = expand_dims(scaled_image, 0)
+        # make prediction
+        yhat = model.detect(sample, verbose=0)[0]
+        # define subplot
+        pyplot.subplot(n_images, 2, i*2+1)
+        # plot raw pixel data
+        pyplot.imshow(image)
+        pyplot.title('Actual')
+        # plot masks
+        for j in range(mask.shape[2]):
+            pyplot.imshow(mask[:, :, j], cmap='gray', alpha=0.3)
+        # get the context for drawing boxes
+        pyplot.subplot(n_images, 2, i*2+2)
+        # plot raw pixel data
+        pyplot.imshow(image)
+        pyplot.title('Predicted')
+        ax = pyplot.gca()
+        # plot each box
+        for box in yhat['rois']:
+            # get coordinates
+            y1, x1, y2, x2 = box
+            # calculate width and height of the box
+            width, height = x2 - x1, y2 - y1
+            # create the shape
+            rect = Rectangle((x1, y1), width, height, fill=False, color='red')
+            # draw the box
+            ax.add_patch(rect)
+    # show the figure
+    pyplot.show()
+
 test_set = PlotImageDataset()
 test_set.load_dataset(input_annotations_dir, is_train=False)
 test_set.prepare()
 print('Test: %d' % len(test_set.image_ids))
-# prepare config
-config = PlotImageConfig()
-config.display()
+# create config
+cfg = PredictionConfig()
 # define the model
-model = MaskRCNN(mode='training', model_dir=output_model_dir, config=config)
-# load weights (mscoco) and exclude the output layers
-# model.load_weights('mask_rcnn_coco.h5', by_name=True, exclude=["mrcnn_class_logits", "mrcnn_bbox_fc",  "mrcnn_bbox", "mrcnn_mask"])
-model.load_weights(model.get_imagenet_weights(), by_name=True)
-# train weights (output layers or 'heads' or 'all')
-model.train(train_set, test_set, learning_rate=config.LEARNING_RATE, epochs=5, layers='heads')
-model.keras_model.save_weights(output_model_path)
+model = MaskRCNN(mode='inference', model_dir=model_dir, config=cfg)
+# load model weights
+model.load_weights(model_path, by_name=True)
+# plot predictions for test dataset
+# plot_actual_vs_predicted(test_set, model, cfg)
+
+out_figures = []
+
+i = 0
+image = test_set.load_image(i)
+# mask, _ = test_set.load_mask(i)
+# convert pixel values (e.g. center)
+scaled_image = mold_image(image, cfg)
+# convert image into one sample
+sample = expand_dims(scaled_image, 0)
+# make prediction
+yhat = model.detect(sample, verbose=0)[0]
+print(yhat)
+
+for box in yhat['rois']:
+    y1, x1, y2, x2 = box
+    width, height = x2 - x1, y2 - y1
+    image = cv2.rectangle(image, (x1, y1), (x2, y2), (255,0,0), 2)
+
+pyplot.figure()
+pyplot.imshow(image)
+pyplot.title('Predicted')
+fig = pyplot.gcf()
+
+# show the figure
+out_figures.append(fig)
+
+pdf = matplotlib.backends.backend_pdf.PdfPages(outfile_annotated)
+for fig in out_figures:
+    pdf.savefig(fig)
+pdf.close()
+
+with open(results_outfile, 'w') as writeFile:
+    writer = csv.writer(writeFile)
+    writer.writerows(yhat['rois'])
+writeFile.close()
