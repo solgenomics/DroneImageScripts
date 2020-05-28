@@ -1,5 +1,7 @@
 #python3 /home/production/cxgn/DroneImageScripts/CNN/MaskRCNNBoundingBoxTrain.py --input_annotations_dir '/home/production/cxgn/sgn//static/documents/tempfiles/drone_imagery_keras_cnn_maskrcnn_dir'  --log_file_path '/var/log/sgn/error.log'
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import sys
 import argparse
 from os import listdir
