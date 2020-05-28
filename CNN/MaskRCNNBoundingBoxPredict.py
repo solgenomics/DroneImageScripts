@@ -1,4 +1,6 @@
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import sys
 import argparse
 import cv2
