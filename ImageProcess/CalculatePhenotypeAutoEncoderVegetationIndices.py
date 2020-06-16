@@ -26,6 +26,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import Input
 from tensorflow.keras import Model
 from tensorflow.keras import backend as K
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -56,6 +57,19 @@ result_file_lines = [
 ]
 
 image_size = 96
+
+def get_imagedatagenerator():
+    datagen = ImageDataGenerator(
+        featurewise_center=True,
+        featurewise_std_normalization=True,
+        #rotation_range=20,
+        #width_shift_range=0.05,
+        #height_shift_range=0.05,
+        #horizontal_flip=True,
+        # vertical_flip=True,
+        #brightness_range=[0.8,1.2]
+    )
+    return datagen
 
 def build_autoencoder(width, height, depth, filters=(32, 64), latentDim=16):
     inputShape = (height, width, depth)
@@ -186,6 +200,18 @@ rededge_images_data = np.array(rededge_images_data)
 stock_nir_images_data = np.array(stock_nir_images_data)
 stock_red_images_data = np.array(stock_red_images_data)
 stock_rededge_images_data = np.array(stock_rededge_images_data)
+
+nir_datagen = self.get_imagedatagenerator()
+nir_datagen.fit(nir_images_data)
+nir_images_data = nir_datagen.standardize(nir_images_data)
+
+red_datagen = self.get_imagedatagenerator()
+red_datagen.fit(red_images_data)
+red_images_data = red_datagen.standardize(red_images_data)
+
+rededge_datagen = self.get_imagedatagenerator()
+rededge_datagen.fit(rededge_images_data)
+rededge_images_data = rededge_datagen.standardize(rededge_images_data)
 
 (nir_encoder, nir_decoder, nir_autoencoder) = build_autoencoder(image_size, image_size, 3)
 (red_encoder, red_decoder, red_autoencoder) = build_autoencoder(image_size, image_size, 3)
