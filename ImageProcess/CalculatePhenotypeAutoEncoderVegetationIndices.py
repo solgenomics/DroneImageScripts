@@ -201,15 +201,15 @@ stock_nir_images_data = np.array(stock_nir_images_data)
 stock_red_images_data = np.array(stock_red_images_data)
 stock_rededge_images_data = np.array(stock_rededge_images_data)
 
-nir_datagen = self.get_imagedatagenerator()
+nir_datagen = get_imagedatagenerator()
 nir_datagen.fit(nir_images_data)
 nir_images_data = nir_datagen.standardize(nir_images_data)
 
-red_datagen = self.get_imagedatagenerator()
+red_datagen = get_imagedatagenerator()
 red_datagen.fit(red_images_data)
 red_images_data = red_datagen.standardize(red_images_data)
 
-rededge_datagen = self.get_imagedatagenerator()
+rededge_datagen = get_imagedatagenerator()
 rededge_datagen.fit(rededge_images_data)
 rededge_images_data = rededge_datagen.standardize(rededge_images_data)
 
