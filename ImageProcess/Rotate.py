@@ -22,14 +22,36 @@ centered = args["centered"]
 angle = float(args["angle"])
 
 img = cv2.imread(input_image)
-rows,cols,d = img.shape
+height, width = img.shape[:2]
 
-center = (cols/2,rows/2)
+image_center = (width/2,height/2)
 if centered:
-    center = (0,0)
+    image_center = (0,0)
 
-M = cv2.getRotationMatrix2D(center,angle,1)
-dst = cv2.warpAffine(img,M,(cols,rows))
+rotation_mat = cv2.getRotationMatrix2D(image_center,angle,1)
+
+abs_cos = abs(rotation_mat[0,0]) 
+abs_sin = abs(rotation_mat[0,1])
+
+bound_w = int(height * abs_sin + width * abs_cos)
+bound_h = int(height * abs_cos + width * abs_sin)
+
+if centered:
+    rotation_mat[0, 2] += image_center[0]
+    rotation_mat[1, 2] += image_center[1]
+else:
+    rotation_mat[0, 2] += bound_w/2 - image_center[0]
+    rotation_mat[1, 2] += bound_h/2 - image_center[1]
+
+src = cv2.warpAffine(img, rotation_mat, (bound_w, bound_h))
+
+tmp = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+_,alpha = cv2.threshold(tmp,0,255,cv2.THRESH_BINARY)
+b, g, r = cv2.split(src)
+rgba = [b,g,r, alpha]
+dst = cv2.merge(rgba,4)
+print(dst.shape)
+print(dst.dtype)
 
 #cv2.imshow("Result", dst)
 #cv2.waitKey(0)
