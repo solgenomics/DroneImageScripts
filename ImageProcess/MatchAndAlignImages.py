@@ -32,16 +32,22 @@ GOOD_MATCH_PERCENT = 0.02 #0.15
 img1 = cv2.imread(input_image2, cv2.IMREAD_UNCHANGED)
 img2 = cv2.imread(input_image1, cv2.IMREAD_UNCHANGED)
 
-orb = cv2.ORB_create(MAX_FEATURES)
+# orb = cv2.ORB_create(MAX_FEATURES)
+orb = cv2.xfeatures2d.SIFT_create(MAX_FEATURES)
 keypoints1, descriptors1 = orb.detectAndCompute(img1, None)
 keypoints2, descriptors2 = orb.detectAndCompute(img2, None)
 
-matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
-matches = matcher.match(descriptors1, descriptors2, None)
+# matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
+# matches = matcher.match(descriptors1, descriptors2, None)
+# 
+# matches.sort(key=lambda x: x.distance, reverse=False)
+# numGoodMatches = int(len(matches) * GOOD_MATCH_PERCENT)
+# matches = matches[:numGoodMatches]
 
-matches.sort(key=lambda x: x.distance, reverse=False)
-numGoodMatches = int(len(matches) * GOOD_MATCH_PERCENT)
-matches = matches[:numGoodMatches]
+bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
+
+matches = bf.match(descriptors1,descriptors2)
+matches = sorted(matches, key = lambda x:x.distance)
 
 imMatches = cv2.drawMatches(img1, keypoints1, img2, keypoints2, matches, None)
 cv2.imwrite(outfile_match_path, imMatches)
@@ -57,8 +63,8 @@ for i, match in enumerate(matches):
     result_file_lines.append(keypoints2[match.trainIdx].pt)
     result_file_lines_2.append(keypoints1[match.queryIdx].pt)
 
-print(points1)
-print(points2)
+#print(points1)
+#print(points2)
 
 h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
 height, width = img2.shape
