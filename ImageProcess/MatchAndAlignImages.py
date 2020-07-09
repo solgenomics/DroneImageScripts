@@ -26,7 +26,7 @@ outfile_path = args["outfile_path"]
 results_outfile_path = args["results_outfile_path_src"]
 results_outfile_path_2 = args["results_outfile_path_dst"]
 
-MAX_FEATURES = 1000
+MAX_FEATURES = 100
 GOOD_MATCH_PERCENT = 0.02 #0.15
 
 img1 = cv2.imread(input_image2, cv2.IMREAD_UNCHANGED)
