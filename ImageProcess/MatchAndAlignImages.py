@@ -26,14 +26,14 @@ outfile_path = args["outfile_path"]
 results_outfile_path = args["results_outfile_path_src"]
 results_outfile_path_2 = args["results_outfile_path_dst"]
 
-MAX_FEATURES = 100
+MAX_FEATURES = 10000
 GOOD_MATCH_PERCENT = 0.02 #0.15
 
 img1 = cv2.imread(input_image2, cv2.IMREAD_UNCHANGED)
 img2 = cv2.imread(input_image1, cv2.IMREAD_UNCHANGED)
 
-orb = cv2.ORB_create(MAX_FEATURES)
-# orb = cv2.xfeatures2d.SIFT_create(MAX_FEATURES)
+# orb = cv2.ORB_create(MAX_FEATURES)
+orb = cv2.xfeatures2d.SIFT_create(MAX_FEATURES)
 keypoints1, descriptors1 = orb.detectAndCompute(img1, None)
 keypoints2, descriptors2 = orb.detectAndCompute(img2, None)
 
