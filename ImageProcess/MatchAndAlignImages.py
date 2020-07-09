@@ -17,6 +17,7 @@ ap.add_argument("-o", "--outfile_match_path", required=True, help="file path dir
 ap.add_argument("-p", "--outfile_path", required=True, help="file path directory where the output will be saved")
 ap.add_argument("-r", "--results_outfile_path_src", required=True, help="file path directory where the output match points will be saved")
 ap.add_argument("-q", "--results_outfile_path_dst", required=True, help="file path directory where the output match points will be saved")
+ap.add_argument("-m", "--max_features", required=True, help="maximum number of match points")
 args = vars(ap.parse_args())
 
 input_image1 = args["image_path1"]
@@ -25,8 +26,8 @@ outfile_match_path = args["outfile_match_path"]
 outfile_path = args["outfile_path"]
 results_outfile_path = args["results_outfile_path_src"]
 results_outfile_path_2 = args["results_outfile_path_dst"]
+MAX_FEATURES = int(args["max_features"])
 
-MAX_FEATURES = 50000
 GOOD_MATCH_PERCENT = 0.02 #0.15
 
 img1 = cv2.imread(input_image2, cv2.IMREAD_UNCHANGED)
