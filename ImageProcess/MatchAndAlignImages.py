@@ -67,11 +67,11 @@ for i, match in enumerate(matches):
 #print(points1)
 #print(points2)
 
-h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
-height, width = img2.shape
-im1Reg = cv2.warpPerspective(img1, h, (width, height))
-
-cv2.imwrite(outfile_path, im1Reg)
+# h, mask = cv2.findHomography(points1, points2, cv2.RANSAC, 4)
+# height, width = img2.shape
+# im1Reg = cv2.warpPerspective(img1, h, (width, height))
+# 
+# cv2.imwrite(outfile_path, im1Reg)
 
 with open(results_outfile_path, 'w') as writeFile:
     writer = csv.writer(writeFile)
