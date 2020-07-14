@@ -139,37 +139,68 @@ def run():
     rotated_imgs = []
     output_lines = []
     counter = 0
+    warp_matrices2 = []
+
     for x in captures:
-        im_aligned = x.create_aligned_capture(
-            irradiance_list = panel_irradiance,
-            warp_matrices = warp_matrices,
-            match_index = match_index,
-            warp_mode = warp_mode
-        )
+        print(counter)
+        if len(warp_matrices) == len(x.images):
+            im_aligned = x.create_aligned_capture(
+                irradiance_list = panel_irradiance,
+                warp_matrices = warp_matrices,
+                match_index = match_index,
+                warp_mode = warp_mode
+            )
+        elif len(warp_matrices2) == len(x.images):
+            im_aligned = x.create_aligned_capture(
+                irradiance_list = panel_irradiance,
+                warp_matrices = warp_matrices2,
+                match_index = match_index,
+                warp_mode = warp_mode
+            )
+        else:
+            warp_matrices2, alignment_pairs2 = imageutils.align_capture(
+                x,
+                ref_index = match_index,
+                max_iterations = max_alignment_iterations,
+                warp_mode = warp_mode,
+                pyramid_levels = pyramid_levels,
+                multithreaded = True
+            )
+            im_aligned = x.create_aligned_capture(
+                irradiance_list = panel_irradiance,
+                warp_matrices = warp_matrices2,
+                match_index = match_index,
+                warp_mode = warp_mode
+            )
+        im_aligned_bands = im_aligned.shape[2];
 
         blue_img_file = imageTempNamesBlue[counter]
         green_img_file = imageTempNamesGreen[counter]
         red_img_file = imageTempNamesRed[counter]
         nir_img_file = imageTempNamesNIR[counter]
-        red_edge_img_file = imageTempNamesRedEdge[counter]
 
         plt.imsave(basePath+blue_img_file, im_aligned[:,:,0], cmap='gray')
         plt.imsave(basePath+green_img_file, im_aligned[:,:,1], cmap='gray')
         plt.imsave(basePath+red_img_file, im_aligned[:,:,2], cmap='gray')
         plt.imsave(basePath+nir_img_file, im_aligned[:,:,3], cmap='gray')
-        plt.imsave(basePath+red_edge_img_file, im_aligned[:,:,4], cmap='gray')
 
         gps_location_blue = x.images[0].location;
         gps_location_green = x.images[1].location;
         gps_location_red = x.images[2].location;
         gps_location_nir = x.images[3].location;
-        gps_location_red_edge = x.images[4].location;
 
         output_lines.append([basePath+blue_img_file, gps_location_blue[0], gps_location_blue[1], gps_location_blue[2]])
         output_lines.append([basePath+green_img_file, gps_location_green[0], gps_location_green[1], gps_location_green[2]])
         output_lines.append([basePath+red_img_file, gps_location_red[0], gps_location_red[1], gps_location_red[2]])
         output_lines.append([basePath+nir_img_file, gps_location_nir[0], gps_location_nir[1], gps_location_nir[2]])
-        output_lines.append([basePath+red_edge_img_file, gps_location_red_edge[0], gps_location_red_edge[1], gps_location_red_edge[2]])
+
+        if im_aligned_bands == 5 and len(x.images) == 5:
+            red_edge_img_file = imageTempNamesRedEdge[counter]
+            plt.imsave(basePath+red_edge_img_file, im_aligned[:,:,4], cmap='gray')
+            gps_location_red_edge = x.images[4].location;
+            output_lines.append([basePath+red_edge_img_file, gps_location_red_edge[0], gps_location_red_edge[1], gps_location_red_edge[2]])
+        else:
+            output_lines.append(['NA', 'NA', 'NA', 'NA'])
 
         counter += 1
 
