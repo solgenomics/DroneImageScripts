@@ -28,6 +28,8 @@ def run():
     ap.add_argument("-d", "--file_with_panel_image_paths", required=False, help="file path to file that has all image file names in it, separated by a newline. useful for using from the web interface. e.g. /home/nmorales/myfilewithnames.txt")
     ap.add_argument("-o", "--output_path", required=True, help="output path to directory in which all resulting files will be placed. useful for using from the command line")
     ap.add_argument("-y", "--temporary_development_path", required=False, help="output file path for stitched RGB image")
+    ap.add_argument("-a", "--outfile_alignment_file", required=False, help="output file path for alignment matrices")
+    ap.add_argument("-i", "--infile_alignment_file", required=False, help="input file path for alignment matrices")
     args = vars(ap.parse_args())
 
     log_file_path = args["log_file_path"]
@@ -35,6 +37,8 @@ def run():
     file_with_panel_image_paths = args["file_with_panel_image_paths"]
     output_path = args["output_path"]
     temporary_development_path = args["temporary_development_path"]
+    infile_alignment_file = args["infile_alignment_file"]
+    outfile_alignment_file = args["outfile_alignment_file"]
 
     if sys.version_info[0] < 3:
         raise Exception("Must use Python3. Use python3 in your command line.")
@@ -116,6 +120,9 @@ def run():
         if os.path.exists(os.path.join(temporary_development_path,'capturealignment.pkl')):
             with open(os.path.join(temporary_development_path,'capturealignment.pkl'), 'rb') as f:
                 warp_matrices, alignment_pairs = pickle.load(f)
+    if infile_alignment_file is not None:
+        with open(infile_alignment_file, 'rb') as f:
+            warp_matrices, alignment_pairs = pickle.load(f)
 
     if warp_matrices is None:
         warp_matrices, alignment_pairs = imageutils.align_capture(
@@ -129,6 +136,9 @@ def run():
 
     if temporary_development_path is not None:
         with open(os.path.join(temporary_development_path,'capturealignment.pkl'), 'wb') as f:
+            pickle.dump([warp_matrices, alignment_pairs], f)
+    if outfile_alignment_file is not None:
+        with open(outfile_alignment_file, 'wb') as f:
             pickle.dump([warp_matrices, alignment_pairs], f)
 
     if log_file_path is not None:
