@@ -35,7 +35,7 @@ for index, row in input_image_file_data.iterrows():
     if len(img_shape) == 3:
         if img_shape[2] == 3:
             b,g,r = cv2.split(img)
-            if image_band_index is not None:
+            if image_band_index is not None and not np.isnan(image_band_index):
                 image_band_index = int(image_band_index)
                 if image_band_index == 0:
                     img = b
