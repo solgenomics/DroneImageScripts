@@ -447,6 +447,8 @@ else:
     data_augmentation_test = 1
     montage_image_number = 4 # Implemented to combine 4 different image types of the same plot into a single montage image
     process_data = CNNProcessData.CNNProcessData()
+    print(aux_data.shape)
+    print(data.shape)
     (testImages, testX, testY, testGenotypes, trainImages, trainX, trainY, trainGenotypes) = process_data.process_cnn_data(data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, data_augmentation, data_augmentation_test, montage_image_number, montage_image_size, output_autoencoder_model_file_path, log_file_path)
     print(testImages.shape)
     print(testX.shape)

@@ -288,8 +288,10 @@ class CNNProcessData:
         train_genotype_data = np.array(train_genotype_data)
         test_genotype_data = np.array(test_genotype_data)
         eprint(train_genotype_data)
+        eprint(testX)
+        eprint(trainX)
 
-        return (test_images, testX, testY.to_numpy(), test_genotype_data, train_images, trainX, trainY.to_numpy(), train_genotype_data)
+        return (test_images, np.array(testX), testY.to_numpy(), test_genotype_data, train_images, np.array(trainX), trainY.to_numpy(), train_genotype_data)
 
     def process_cnn_data_predictions(self, data, aux_data, num_unique_stock_ids, num_unique_image_types, num_unique_time_days, image_size, keras_model_type, input_autoencoder_model_file_path, training_data, data_augmentation_test, montage_image_number, full_montage_image_size):
         trainX = []
