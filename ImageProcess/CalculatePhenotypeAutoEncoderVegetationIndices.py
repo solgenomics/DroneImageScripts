@@ -31,6 +31,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-l", "--log_file_path", required=False, help="file path to write log to. useful for using from the web interface")
+ap.add_argument("-k", "--input_training_image_file", required=True, help="file path with stock_id and image paths for training autoencoder")
 ap.add_argument("-i", "--input_image_file", required=True, help="file path with stock_id and image paths")
 ap.add_argument("-r", "--outfile_path", required=True, help="file path where results will be saved")
 ap.add_argument("-j", "--autoencoder_model_type", required=True, help="type of autoencoder model")
@@ -38,6 +39,7 @@ ap.add_argument("-o", "--output_encoded_images_file", required=True, help="file 
 args = vars(ap.parse_args())
 
 log_file_path = args["log_file_path"]
+input_training_images_file = args["input_training_image_file"]
 input_images_file = args["input_image_file"]
 autoencoder_model_type = args["autoencoder_model_type"]
 results_outfile = args["outfile_path"]
@@ -122,6 +124,7 @@ def build_autoencoder(width, height, depth, filters=(32, 64), latentDim=16):
     # return a 3-tuple of the encoder, decoder, and autoencoder
     return (encoder, decoder, autoencoder)
 
+input_training_image_file_data = pd.read_csv(input_training_images_file, sep="\t", header=0)
 input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=0)
 output_encoded_images_file_data = pd.read_csv(output_encoded_images_file, sep="\t", header=0)
 
@@ -201,16 +204,83 @@ stock_nir_images_data = np.array(stock_nir_images_data)
 stock_red_images_data = np.array(stock_red_images_data)
 stock_rededge_images_data = np.array(stock_rededge_images_data)
 
+training_stock_ids = []
+training_nir_images_data = []
+training_stock_nir_images_data = []
+training_red_images_data = []
+training_stock_red_images_data = []
+training_rededge_images_data = []
+training_stock_rededge_images_data = []
+for index, row in input_training_image_file_data.iterrows():
+    stock_id = row[0]
+    red_images = row[1]
+    rededge_images = row[2]
+    nir_images = row[3]
+
+    training_stock_ids.append(stock_id)
+    training_red_images_array = red_images.split(',')
+    training_rededge_images_array = rededge_images.split(',')
+    training_nir_images_array = nir_images.split(',')
+
+    training_stock_nir_images_array = []
+    for nir_img in training_nir_images_array:
+        image = cv2.imread(nir_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        training_nir_images_data.append(image)
+        training_stock_nir_images_array.append(image)
+    training_stock_nir_images_data.append(np.array(training_stock_nir_images_array))
+
+    training_stock_red_images_array = []
+    for red_img in training_red_images_array:
+        image = cv2.imread(red_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        training_red_images_data.append(image)
+        training_stock_red_images_array.append(image)
+    training_stock_red_images_data.append(np.array(training_stock_red_images_array))
+
+    training_stock_rededge_images_array = []
+    for rededge_img in training_rededge_images_array:
+        image = cv2.imread(rededge_img, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image, (image_size, image_size)) / 255.0
+
+        if (len(image.shape) == 2):
+            empty_mat = np.ones(image.shape, dtype=image.dtype) * 0
+            image = cv2.merge((image, empty_mat, empty_mat))
+
+        training_rededge_images_data.append(image)
+        training_stock_rededge_images_array.append(image)
+    training_stock_rededge_images_data.append(np.array(training_stock_rededge_images_array))
+
+training_nir_images_data = np.array(training_nir_images_data)
+training_red_images_data = np.array(training_red_images_data)
+training_rededge_images_data = np.array(training_rededge_images_data)
+training_stock_nir_images_data = np.array(training_stock_nir_images_data)
+training_stock_red_images_data = np.array(training_stock_red_images_data)
+training_stock_rededge_images_data = np.array(training_stock_rededge_images_data)
+
 nir_datagen = get_imagedatagenerator()
-nir_datagen.fit(nir_images_data)
+nir_datagen.fit(training_nir_images_data)
+training_nir_images_data = nir_datagen.standardize(training_nir_images_data)
 nir_images_data = nir_datagen.standardize(nir_images_data)
 
 red_datagen = get_imagedatagenerator()
-red_datagen.fit(red_images_data)
+red_datagen.fit(training_red_images_data)
+training_red_images_data = red_datagen.standardize(training_red_images_data)
 red_images_data = red_datagen.standardize(red_images_data)
 
 rededge_datagen = get_imagedatagenerator()
-rededge_datagen.fit(rededge_images_data)
+rededge_datagen.fit(training_rededge_images_data)
+training_rededge_images_data = rededge_datagen.standardize(training_rededge_images_data)
 rededge_images_data = rededge_datagen.standardize(rededge_images_data)
 
 (nir_encoder, nir_decoder, nir_autoencoder) = build_autoencoder(image_size, image_size, 3)
@@ -222,16 +292,19 @@ nir_autoencoder.compile(loss="mse", optimizer=opt)
 red_autoencoder.compile(loss="mse", optimizer=opt)
 rededge_autoencoder.compile(loss="mse", optimizer=opt)
 
+(training_nir_train_images, training_nir_test_images, training_nir_train_images, training_nir_test_images) = train_test_split(training_nir_images_data, training_nir_images_data, test_size=0.2)
 (nir_train_images, nir_test_images, nir_train_images, nir_test_images) = train_test_split(nir_images_data, nir_images_data, test_size=0.2)
+(training_red_train_images, training_red_test_images, training_red_train_images, training_red_test_images) = train_test_split(training_red_images_data, training_red_images_data, test_size=0.2)
 (red_train_images, red_test_images, red_train_images, red_test_images) = train_test_split(red_images_data, red_images_data, test_size=0.2)
+(training_rededge_train_images, training_rededge_test_images, training_rededge_train_images, training_rededge_test_images) = train_test_split(training_rededge_images_data, training_rededge_images_data, test_size=0.2)
 (rededge_train_images, rededge_test_images, rededge_train_images, rededge_test_images) = train_test_split(rededge_images_data, rededge_images_data, test_size=0.2)
 
 #checkpoint = ModelCheckpoint(filepath=output_autoencoder_model_file_path, monitor='loss', verbose=1, save_best_only=True, mode='min', save_frequency=1, save_weights_only=False)
 #callbacks_list = [checkpoint]
 
 H_nir = nir_autoencoder.fit(
-    nir_train_images, nir_train_images,
-    validation_data=(nir_test_images, nir_test_images),
+    training_nir_train_images, training_nir_train_images,
+    validation_data=(training_nir_test_images, training_nir_test_images),
     epochs=25,
     batch_size=32,
     #callbacks=callbacks_list
@@ -239,8 +312,8 @@ H_nir = nir_autoencoder.fit(
 #nir_decoded = nir_autoencoder.predict(nir_images_data)
 
 H_red = red_autoencoder.fit(
-    red_train_images, red_train_images,
-    validation_data=(red_test_images, red_test_images),
+    training_red_train_images, training_red_train_images,
+    validation_data=(training_red_test_images, training_red_test_images),
     epochs=25,
     batch_size=32,
     #callbacks=callbacks_list
@@ -248,8 +321,8 @@ H_red = red_autoencoder.fit(
 #red_decoded = red_autoencoder.predict(red_images_data)
 
 H_rededge = rededge_autoencoder.fit(
-    rededge_train_images, rededge_train_images,
-    validation_data=(rededge_test_images, rededge_test_images),
+    training_rededge_train_images, training_rededge_train_images,
+    validation_data=(training_rededge_test_images, training_rededge_test_images),
     epochs=25,
     batch_size=32,
     #callbacks=callbacks_list
