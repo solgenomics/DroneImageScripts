@@ -124,9 +124,9 @@ def build_autoencoder(width, height, depth, filters=(32, 64), latentDim=16):
     # return a 3-tuple of the encoder, decoder, and autoencoder
     return (encoder, decoder, autoencoder)
 
-input_training_image_file_data = pd.read_csv(input_training_images_file, sep="\t", header=0)
-input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=0)
-output_encoded_images_file_data = pd.read_csv(output_encoded_images_file, sep="\t", header=0)
+input_training_image_file_data = pd.read_csv(input_training_images_file, sep="\t", header=0, index_col=False, usecols=['stock_id','red_image_string','red_edge_image_string','nir_image_string'])
+input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=0, index_col=False, usecols=['stock_id','red_image_string','red_edge_image_string','nir_image_string'])
+output_encoded_images_file_data = pd.read_csv(output_encoded_images_file, sep="\t", header=0, index_col=False, usecols=['stock_id','red_image_encoded','red_edge_image_encoded','nir_image_encoded'])
 
 output_nir_images = []
 output_red_images = []
