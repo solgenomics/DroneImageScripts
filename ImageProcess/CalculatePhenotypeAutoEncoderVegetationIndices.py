@@ -216,10 +216,7 @@ for index, row in input_training_image_file_data.iterrows():
     red_images = row[1]
     rededge_images = row[2]
     nir_images = row[3]
-    eprint(stock_id)
-    eprint(red_images)
-    eprint(rededge_images)
-    eprint(nir_images)
+
     if pd.isnull(red_images):
         continue
 
