@@ -220,6 +220,8 @@ for index, row in input_training_image_file_data.iterrows():
     eprint(red_images)
     eprint(rededge_images)
     eprint(nir_images)
+    if math.isnan(red_images):
+        continue
 
     training_stock_ids.append(stock_id)
     training_red_images_array = red_images.split(',')
