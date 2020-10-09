@@ -128,17 +128,14 @@ input_training_image_file_data = pd.read_csv(input_training_images_file, sep="\t
 input_image_file_data = pd.read_csv(input_images_file, sep="\t", header=0)
 output_encoded_images_file_data = pd.read_csv(output_encoded_images_file, sep="\t", header=0)
 
-output_nir_images = []
-output_red_images = []
-output_rededge_images = []
+output_ndvi_images = []
+output_ndre_images = []
 for index, row in output_encoded_images_file_data.iterrows():
     stock_id = row[0]
-    output_red_image = row[1]
-    output_rededge_image = row[2]
-    output_nir_image = row[3]
-    output_nir_images.append(output_nir_image)
-    output_red_images.append(output_red_image)
-    output_rededge_images.append(output_rededge_image)
+    output_ndvi_image = row[1]
+    output_ndre_image = row[2]
+    output_ndvi_images.append(output_ndvi_image)
+    output_ndre_images.append(output_ndre_image)
 
 stock_ids = []
 nir_images_data = []
@@ -343,9 +340,18 @@ for stock_id in stock_ids:
     rededge_images = stock_rededge_images_data[stock_counter]
     rededge_decoded = rededge_autoencoder.predict(rededge_images)
 
-    cv2.imwrite(output_nir_images[stock_counter], nir_decoded[0][:,:,0]*255)
-    cv2.imwrite(output_red_images[stock_counter], red_decoded[0][:,:,0]*255)
-    cv2.imwrite(output_rededge_images[stock_counter], rededge_decoded[0][:,:,0]*255)
+    ndvi = np.divide(nir_decoded[0][:,:,0] - red_decoded[0][:,:,0], nir_decoded[0][:,:,0] + red_decoded[0][:,:,0])
+    ndvi[np.isnan(ndvi)] = 0
+    ndvi = ndvi * 255
+    ndvi = ndvi.astype(np.uint8)
+
+    ndre = np.divide(nir_decoded[0][:,:,0] - rededge_decoded[0][:,:,0], nir_decoded[0][:,:,0] + rededge_decoded[0][:,:,0])
+    ndre[np.isnan(ndre)] = 0
+    ndre = ndre * 255
+    ndre = ndre.astype(np.uint8)
+
+    cv2.imwrite(output_ndvi_images[stock_counter], ndvi)
+    cv2.imwrite(output_ndre_images[stock_counter], ndre)
 
     stock_counter += 1
 
