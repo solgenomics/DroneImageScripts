@@ -23,9 +23,6 @@ outfile_path = args["outfile_path"]
 width = conv(args["width"])
 height = conv(args["height"])
 
-print(width)
-print(height)
-
 if width is not None:
     width = int(width)
 
