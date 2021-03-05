@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/CropToPolygon.py --inputfile_path /export/archive/mystitchedimage.png --outputfile_path /export/mychoppedimages/polygon.png --polygon_json '[{x:10, y:10}, {x:15, y:20}, {x:1, y:10}, {x:1, y:25}]' --polygon_type rectangular_polygon
+# python /home/nmorales/cxgn/DroneImageScripts/CropToPolygon.py --inputfile_path /export/archive/mystitchedimage.png --outputfile_path /export/mychoppedimages/polygon.png --polygon_json '[ [{x:10, y:10}, {x:15, y:20}, {x:1, y:10}, {x:1, y:25}] ]' --polygon_type rectangular_polygon
 
 # import the necessary packages
 import argparse
