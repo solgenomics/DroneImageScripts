@@ -25,13 +25,13 @@ angle = float(args["angle"])
 
 img = cv2.imread(input_image)
 height, width = img.shape[:2]
-print(img.shape)
+#print(img.shape)
 
 image_center = (width/2,height/2)
 if centered:
     image_center = (0,0)
 
-print(image_center)
+#print(image_center)
 rotation_mat = cv2.getRotationMatrix2D(image_center,angle,1)
 
 abs_cos = abs(rotation_mat[0,0])
@@ -48,8 +48,8 @@ else:
     rotation_mat[1, 2] += bound_h/2 - image_center[1]
 
 bounding = (bound_w, bound_h)
-print(rotation_mat)
-print(bounding)
+#print(rotation_mat)
+#print(bounding)
 src = cv2.warpAffine(img, rotation_mat, bounding)
 
 if original_size:
