@@ -5,6 +5,7 @@
 import argparse
 import numpy as np
 import gdal
+import osr
 import cv2
 import csv
 
@@ -28,7 +29,9 @@ outfile_path_geo_params = args["outfile_path_geo_params"]
 driver = gdal.GetDriverByName('GTiff')
 dataset = gdal.Open(input_image)
 transform = dataset.GetGeoTransform()
+projection = dataset.GetProjection()
 print(transform)
+print(projection)
 
 with open(outfile_path_geo_params, 'w') as writeFile:
     writer = csv.writer(writeFile)
