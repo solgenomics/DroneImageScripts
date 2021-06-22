@@ -111,4 +111,3 @@ merged = cv2.merge((band1, band2, band3))
 #cv2.imshow("Result", dst)
 #cv2.waitKey(0)
 cv2.imwrite(outfile_path, merged)
-
