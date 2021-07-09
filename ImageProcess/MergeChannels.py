@@ -69,6 +69,7 @@ ap.add_argument("-b", "--image_path_band_2", required=True, help="image path ban
 ap.add_argument("-c", "--image_path_band_3", required=True, help="image path band 3")
 ap.add_argument("-o", "--outfile_path", required=True, help="file path directory where the output will be saved")
 ap.add_argument("-d", "--alignment_needed", default=False, help="if alignment is needed")
+ap.add_argument("-e", "--is_tiff", default=False, help="if alignment is needed")
 args = vars(ap.parse_args())
 
 input_image_band_1 = args["image_path_band_1"]
@@ -76,6 +77,7 @@ input_image_band_2 = args["image_path_band_2"]
 input_image_band_3 = args["image_path_band_3"]
 outfile_path = args["outfile_path"]
 alignment_needed = args["alignment_needed"]
+is_tiff = args["is_tiff"]
 
 band1 = cv2.imread(input_image_band_1, cv2.IMREAD_UNCHANGED)
 band_1_shape = band1.shape
@@ -106,7 +108,10 @@ else:
 #cv2.imshow("Band3", band3)
 #cv2.waitKey(0)
 
-merged = cv2.merge((band1, band2, band3))
+if is_tiff:
+    merged = cv2.merge((band1*255, band2*255, band3*255))
+else:
+    merged = cv2.merge((band1, band2, band3))
 
 #cv2.imshow("Result", dst)
 #cv2.waitKey(0)
