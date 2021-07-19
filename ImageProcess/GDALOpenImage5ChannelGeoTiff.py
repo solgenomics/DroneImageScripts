@@ -12,10 +12,11 @@ import csv
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image_path", required=True, help="image path DSM")
-ap.add_argument("-p", "--outfile_path_image_1", required=True, help="R image")
+ap.add_argument("-i", "--image_path", required=True, help="image path of GeoTIFF")
+ap.add_argument("-i", "--image_path", required=True, help="image path")
+ap.add_argument("-p", "--outfile_path_image_1", required=True, help="B image")
 ap.add_argument("-q", "--outfile_path_image_2", required=True, help="G image")
-ap.add_argument("-r", "--outfile_path_image_3", required=True, help="B image")
+ap.add_argument("-r", "--outfile_path_image_3", required=True, help="R image")
 ap.add_argument("-s", "--outfile_path_image_4", required=True, help="NIR image")
 ap.add_argument("-u", "--outfile_path_image_5", required=True, help="RE image")
 ap.add_argument("-g", "--outfile_path_geo_params", required=True, help="where output Geo params will be saved")
