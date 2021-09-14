@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0 --plot_polygon_type observation_unit_polygon_vari_imagery --margin_percent 5
+# python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/CalculatePhenotypeZonalStats.py --image_paths /folder/mypic1.png,/folder/mypic2.png --results_outfile_path /folder/myresults.csv --image_band_index 0 --plot_polygon_type observation_unit_polygon_vari_imagery --margin_percent_top_bottom 5 --margin_percent_left_right 5
 
 # import the necessary packages
 import sys
@@ -20,14 +20,16 @@ ap.add_argument("-i", "--image_paths_input_file", required=True, help="file path
 ap.add_argument("-r", "--results_outfile_path", required=True, help="file path where results will be saved")
 ap.add_argument("-j", "--image_band_index", required=True, help="channel index 0, 1, or 2 to use in image")
 ap.add_argument("-t", "--plot_polygon_type", required=True, help="if the image is NDVI, TGI, VARI, NDRE, or original")
-ap.add_argument("-m", "--margin_percent", required=True, help="the margin to remove from each plot image as a percent of width and height. generally 5 is used.")
+ap.add_argument("-m", "--margin_percent_top_bottom", required=True, help="the top/bottom margin to remove from each plot image as a percent of width and height. generally 5 is used.")
+ap.add_argument("-o", "--margin_percent_left_right", required=True, help="the left/right margin to remove from each plot image as a percent of width and height. generally 5 is used.")
 args = vars(ap.parse_args())
 
 input_images_file = args["image_paths_input_file"]
 results_outfile = args["results_outfile_path"]
 image_band_index = int(args["image_band_index"])
 plot_polygon_type = args["plot_polygon_type"]
-margin_percent = int(args["margin_percent"])/100
+margin_percent_top_bottom = int(args["margin_percent_top_bottom"])/100
+margin_percent_left_right = int(args["margin_percent_left_right"])/100
 
 result_file_lines = [
     ['stock_id', 'nonzero_pixel_count', 'total_pixel_sum', 'mean_pixel_value', 'harmonic_mean_value', 'median_pixel_value', 'variance_pixel_value', 'stdev_pixel_value', 'pstdev_pixel_value', 'min_pixel_value', 'max_pixel_value', 'minority_pixel_value', 'minority_pixel_count', 'majority_pixel_value', 'majority_pixel_count', 'pixel_variety_count']
@@ -122,10 +124,11 @@ for index, row in input_image_file_data.iterrows():
         #print("Nonzero: %s" % non_zero)
 
         original_height, original_width = img.shape
-        width_margin = margin_percent * original_width
-        height_margin = margin_percent * original_height
+        width_margin = margin_percent_left_right * original_width
+        height_margin = margin_percent_top_bottom * original_height
 
-        img = crop(img, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
+        if margin_percent_left_right > 0 or margin_percent_top_bottom > 0:
+            img = crop(img, [[{'x':width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':height_margin}, {'x':original_width-width_margin, 'y':original_height-height_margin}, {'x':width_margin, 'y':original_height-height_margin}]])
 
         height, width = img.shape
 
