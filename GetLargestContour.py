@@ -51,23 +51,27 @@ else:
 ratio = 1
 sd = ShapeDetector()
 
-c = max(contours, key = cv2.contourArea)
-
-x,y,w,h = cv2.boundingRect(c)
-hull = [cv2.convexHull(c)]
-cv2.drawContours(output, hull, -1, (0,255,0), 2)
-largestcontourarea = cv2.contourArea(hull[0])
-
 polygon = []
-for p in hull[0]:
-    polygon.append({'x':p[0][0], 'y':p[0][1]})
-#cv2.rectangle(output,(x,y),(x+w,y+h),(0,255,0),2)
+largestcontourarea = image.shape[0]*image.shape[1]
+finalImage = output
+if len(contours) > 0:
+    c = max(contours, key = cv2.contourArea)
 
-sd = CropPolygonsToSingleImage()
-finalImage = sd.crop(output, [polygon])
+    x,y,w,h = cv2.boundingRect(c)
+    hull = [cv2.convexHull(c)]
+    cv2.drawContours(output, hull, -1, (0,255,0), 2)
+    largestcontourarea = cv2.contourArea(hull[0])
+
+    for p in hull[0]:
+        polygon.append({'x':p[0][0], 'y':p[0][1]})
+    #cv2.rectangle(output,(x,y),(x+w,y+h),(0,255,0),2)
+
+    sd = CropPolygonsToSingleImage()
+    finalImage = sd.crop(output, [polygon])
+
 grayimage = cv2.cvtColor(finalImage,cv2.COLOR_BGR2GRAY)
 nonzeropixelcount = cv2.countNonZero(grayimage)
-print(nonzeropixelcount)
+#print(nonzeropixelcount)
 
 for i in range(len(contours)):
     c = contours[i]
