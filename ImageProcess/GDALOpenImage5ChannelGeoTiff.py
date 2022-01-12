@@ -1,6 +1,17 @@
 # USAGE
 # python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/GDALOpenImage5ChannelGeoTiff.py --image_path $file --outfile_path_image $outfile_image --outfile_path_image_1 $outfile_image_r --outfile_path_image_2 $outfile_image_g --outfile_path_image_3 $outfile_image_b --outfile_path_image_4 $outfile_image_n --outfile_path_image_5 $outfile_image_re --outfile_path_geo_params $outfile_geoparams --outfile_path_geo_projection $outfile_path_geo_projection
 
+#import gdal
+#tif = gdal.Open(my_tiff)
+#gt = tif.GetGeotransform()
+#x_min = gt[0]
+#x_size = gt[1]
+#y_min = gt[3]
+#y_size = gt[5]
+#mx, my = 500, 600  #coord in map units, as in question
+#px = mx * x_size + x_min #x pixel
+#py = my * y_size + y_min #y pixel
+
 # import the necessary packages
 import argparse
 import numpy as np
