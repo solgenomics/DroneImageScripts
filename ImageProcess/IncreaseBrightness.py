@@ -20,8 +20,29 @@ outfile_path = args["outfile_path"]
 
 print(input_image)
 img = cv2.imread(input_image, cv2.IMREAD_UNCHANGED)
+img_shape = img.shape
 
-img = img
-img = img.astype(np.uint8)
+#img = img
+#img = img.astype(np.uint8)
+
+is_single_channel = 1
+if len(img_shape) == 3:
+    if img_shape[2] == 3:
+        is_single_channel = 0
+
+max_pixel_limit = 20
+mean_pixel_limit = 85
+fixed_pixel_average = 150
+
+if is_single_channel == 1:
+    smallest = np.amin(img)
+    biggest = np.amax(img)
+    avg = np.mean(img)
+    pix_range = biggest - smallest
+    print([smallest, biggest, avg, pix_range])
+
+    if avg < mean_pixel_limit:
+        diff = fixed_pixel_average - avg
+        img = img+diff
 
 cv2.imwrite(outfile_path, img)
