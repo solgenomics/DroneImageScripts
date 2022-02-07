@@ -18,7 +18,7 @@ args = vars(ap.parse_args())
 input_image = args["image_path"]
 outfile_path = args["outfile_path"]
 
-print(input_image)
+#print(input_image)
 img = cv2.imread(input_image, cv2.IMREAD_UNCHANGED)
 img_shape = img.shape
 
@@ -44,5 +44,7 @@ if is_single_channel == 1:
     if avg < mean_pixel_limit:
         diff = fixed_pixel_average - avg
         img = img+diff
+        img[img<0] = 0
+        img[img>255] = 255
 
 cv2.imwrite(outfile_path, img)
