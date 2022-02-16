@@ -4,7 +4,7 @@
 # import the necessary packages
 import argparse
 import numpy as np
-import gdal
+from osgeo import gdal
 import cv2
 
 # construct the argument parse and parse the arguments
@@ -32,7 +32,7 @@ options_list = [
 ]
 
 options_string = " ".join(options_list)
-    
+
 gdal.Translate(
     outfile_path_dsm,
     input_image_dsm,

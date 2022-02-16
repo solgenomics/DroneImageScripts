@@ -1,7 +1,6 @@
 # USAGE
 # python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/GDALOpenImage5ChannelGeoTiff.py --image_path $file --outfile_path_image $outfile_image --outfile_path_image_1 $outfile_image_r --outfile_path_image_2 $outfile_image_g --outfile_path_image_3 $outfile_image_b --outfile_path_image_4 $outfile_image_n --outfile_path_image_5 $outfile_image_re --outfile_path_geo_params $outfile_geoparams --outfile_path_geo_projection $outfile_path_geo_projection
 
-#import gdal
 #tif = gdal.Open(my_tiff)
 #gt = tif.GetGeotransform()
 #x_min = gt[0]
@@ -15,8 +14,8 @@
 # import the necessary packages
 import argparse
 import numpy as np
-import gdal
-import osr
+from osgeo import gdal
+from osgeo import osr
 import osgeo
 import cv2
 import csv

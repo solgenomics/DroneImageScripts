@@ -1,7 +1,6 @@
 # USAGE
 # python /home/nmorales/cxgn/DroneImageScripts/ImageProcess/GDALOpenSingleChannelImageGeoTiff.py --image_path $file --outfile_path_image $outfile_image --outfile_path_geo_params $outfile_geoparams
 
-#import gdal
 #tif = gdal.Open(my_tiff)
 #gt = tif.GetGeotransform()
 #x_min = gt[0]
@@ -15,9 +14,9 @@
 # import the necessary packages
 import argparse
 import numpy as np
-import gdal
+from osgeo import gdal
 import cv2
-import osr
+from osgeo import osr
 import osgeo
 import csv
 
