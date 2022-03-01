@@ -12,7 +12,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_ply_path", required=True, help="point cloud (.ply) input file")
 ap.add_argument("-o", "--output_obj_path", required=True, help="output file (.obj) for point cloud")
 ap.add_argument("-p", "--output_pcd_path", required=True, help="output file (.pcd) for point cloud")
-ap.add_argument("-p", "--output_gltf_path", required=True, help="output file (.gltf) for point cloud")
+ap.add_argument("-q", "--output_gltf_path", required=True, help="output file (.gltf) for point cloud")
 args = vars(ap.parse_args())
 
 input_ply_path = args["input_ply_path"]
