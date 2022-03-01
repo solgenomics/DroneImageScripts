@@ -12,14 +12,17 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_ply_path", required=True, help="point cloud (.ply) input file")
 ap.add_argument("-o", "--output_obj_path", required=True, help="output file (.obj) for point cloud")
 ap.add_argument("-p", "--output_pcd_path", required=True, help="output file (.pcd) for point cloud")
+ap.add_argument("-p", "--output_gltf_path", required=True, help="output file (.gltf) for point cloud")
 args = vars(ap.parse_args())
 
 input_ply_path = args["input_ply_path"]
 output_obj_path = args["output_obj_path"]
 output_pcd_path = args["output_pcd_path"]
+output_gltf_path = args["output_gltf_path"]
 
 pcd = o3d.io.read_point_cloud(input_ply_path)
 o3d.io.write_point_cloud(output_pcd_path, pcd)
 
 mesh = o3d.io.read_triangle_mesh(input_ply_path)
 o3d.io.write_triangle_mesh(output_obj_path, mesh)
+o3d.io.write_triangle_mesh(output_gltf_path, mesh)
