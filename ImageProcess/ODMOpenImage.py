@@ -37,6 +37,9 @@ band3 = dataset.read(3)
 band4 = dataset.read(4)
 band5 = dataset.read(5)
 
+if np.max(band4) < 1:
+    odm_radiocalibrated = 'True'
+
 if odm_radiocalibrated == 'True':
     band1 = band1*255
     band2 = band2*255
