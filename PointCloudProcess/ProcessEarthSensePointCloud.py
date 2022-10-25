@@ -1,5 +1,5 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/PointCloudProcess/ProcessEarthSensePointCloud.py --earthesense_capture_image_path /0239391-asdh-djak-jgj9/
+# python /home/nmorales/cxgn/DroneImageScripts/PointCloudProcess/ProcessEarthSensePointCloud.py --earthesense_capture_image_path /0239391-asdh-djak-jgj9/ --voxel_size 0.001 --outlier_nb_neighbors 15 outlier_std_ratio 0.05 --mask_infinite True --side_mask_distance 0.8
 
 # import the necessary packages
 import argparse
@@ -20,9 +20,21 @@ import pandas as pd
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--earthesense_capture_image_path", required=True, help="image path DSM")
+ap.add_argument("-j", "--voxel_size", required=False, default=0.001, help="voxel size for downsampling")
+ap.add_argument("-k", "--outlier_nb_neighbors", required=False, default=15, help="statistical outlier removal number of neighbors")
+ap.add_argument("-l", "--outlier_std_ratio", required=False, default=0.05, help="statistical outlier removal std")
+ap.add_argument("-m", "--mask_infinite", required=False, default=True, help="mask points greater than 65m")
+ap.add_argument("-n", "--side_mask_distance", required=False, default=0.8, help="side distance to mask points in meters")
+ap.add_argument("-o", "--height_mask_distance", required=False, default=0.00001, help="height distance to mask points in meters")
 args = vars(ap.parse_args())
 
 directory = args["earthesense_capture_image_path"]
+voxel_size = args["voxel_size"]
+outlier_nb_neighbors = args["outlier_nb_neighbors"]
+outlier_std_ratio = args["outlier_std_ratio"]
+mask_infinite = args["mask_infinite"]
+side_mask_distance = args["side_mask_distance"]
+height_mask_distance = args["height_mask_distance"]
 print(directory)
 
 def d_cos(angles):
@@ -90,12 +102,10 @@ xyz[:, :, 1] = ext_plot_distances # forward
 xyz[:, :, 2] = plot_heights # vertical
 
 point_cloud_output = os.path.join(directory,"point_cloud.txt")
-point_cloud_filtered_output = os.path.join(directory,"point_cloud_filtered.xyz")
+point_cloud_side_filtered_output = os.path.join(directory,"point_cloud_side_filtered.xyz")
 
 q=np.reshape(xyz, (length*sample_size,3))
 np.savetxt(point_cloud_output, q, delimiter=' ', fmt="%10.5f")
-
-voxel_size = 0.001 #was 0.05 for 5cm for the test dataset
 
 pcd = o3d.io.read_point_cloud(point_cloud_output, format='xyz')
 print(pcd)
@@ -104,18 +114,24 @@ print(pcd_down)
 
 #pcd_down, pcd_down_ind = pcd_down.remove_radius_outlier(nb_points=16, radius=radius_feature)
 pcd_down_filtered, pcd_down_filtered_ind = pcd_down.remove_statistical_outlier(
-    nb_neighbors=15, #was 20
-    std_ratio=0.05 #lower is more aggressive, was 2.0
+    nb_neighbors=outlier_nb_neighbors, #was 20
+    std_ratio=outlier_std_ratio #lower is more aggressive, was 2.0
 )
 print(pcd_down_filtered)
-
 xyz_filtered = np.asarray(pcd_down_filtered.points)
-xyz_filtered_height_mask = xyz_filtered[:,2] > 0.00001
+
+xyz_filtered_height_mask = xyz_filtered[:,2] > height_mask_distance
 xyz_filtered_height = xyz_filtered[xyz_filtered_height_mask]
+
 pcd_down_filtered.points = o3d.utility.Vector3dVector(xyz_filtered_height) # normals and colors are unchanged
 print(pcd_down_filtered)
 
-o3d.io.write_point_cloud(point_cloud_filtered_output, pcd_down_filtered)
+xyz_filtered_side_mask = np.abs(xyz_filtered_height[:,0]) < side_mask_distance
+xyz_filtered_height = xyz_filtered_height[xyz_filtered_side_mask]
+
+pcd_down_filtered.points = o3d.utility.Vector3dVector(xyz_filtered_height) # normals and colors are unchanged
+print(pcd_down_filtered)
+o3d.io.write_point_cloud(point_cloud_side_filtered_output, pcd_down_filtered)
 
 fig = plt.figure(figsize=(200, 50))
 plt.scatter(xyz_filtered_height[:,1], xyz_filtered_height[:,2])
