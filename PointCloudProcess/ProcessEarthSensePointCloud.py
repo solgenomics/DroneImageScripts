@@ -1,13 +1,11 @@
 # USAGE
-# python /home/nmorales/cxgn/DroneImageScripts/PointCloudProcess/ProcessEarthSensePointCloud.py --earthesense_capture_image_path /0239391-asdh-djak-jgj9/ --voxel_size 0.001 --outlier_nb_neighbors 15 outlier_std_ratio 0.05 --mask_infinite True --side_mask_distance 0.8
+# python /home/nmorales/cxgn/DroneImageScripts/PointCloudProcess/ProcessEarthSensePointCloud.py --earthesense_capture_image_path /0239391-asdh-djak-jgj9/ --voxel_size 0.001 --outlier_nb_neighbors 15 outlier_std_ratio 0.05 --mask_infinite True --side_mask_distance 2 --height_mask_distance 0.00001 --height_mask_max_distance 30
 
 # import the necessary packages
 import argparse
 import os
-import torch
 import math
 import numpy as np
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from scipy import interpolate
@@ -16,6 +14,7 @@ import copy
 import time
 import open3d as o3d
 import pandas as pd
+import json
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -24,17 +23,20 @@ ap.add_argument("-j", "--voxel_size", required=False, default=0.001, help="voxel
 ap.add_argument("-k", "--outlier_nb_neighbors", required=False, default=15, help="statistical outlier removal number of neighbors")
 ap.add_argument("-l", "--outlier_std_ratio", required=False, default=0.05, help="statistical outlier removal std")
 ap.add_argument("-m", "--mask_infinite", required=False, default=True, help="mask points greater than 65m")
-ap.add_argument("-n", "--side_mask_distance", required=False, default=0.8, help="side distance to mask points in meters")
-ap.add_argument("-o", "--height_mask_distance", required=False, default=0.00001, help="height distance to mask points in meters")
+ap.add_argument("-n", "--side_mask_distance", required=False, default=2, help="side distance to mask points in meters")
+ap.add_argument("-o", "--height_mask_distance", required=False, default=0.00001, help="height distance below which to mask points in meters")
+ap.add_argument("-p", "--height_mask_max_distance", required=False, default=20, help="height distance above which to mask points in meters")
 args = vars(ap.parse_args())
 
 directory = args["earthesense_capture_image_path"]
-voxel_size = args["voxel_size"]
-outlier_nb_neighbors = args["outlier_nb_neighbors"]
-outlier_std_ratio = args["outlier_std_ratio"]
+voxel_size = float(args["voxel_size"])
+outlier_nb_neighbors = int(args["outlier_nb_neighbors"])
+outlier_std_ratio = float(args["outlier_std_ratio"])
 mask_infinite = args["mask_infinite"]
-side_mask_distance = args["side_mask_distance"]
-height_mask_distance = args["height_mask_distance"]
+side_mask_distance = float(args["side_mask_distance"])
+height_mask_distance = float(args["height_mask_distance"])
+height_mask_max_distance = float(args["height_mask_max_distance"])
+figure_size = (100,30)
 print(directory)
 
 def d_cos(angles):
@@ -86,13 +88,22 @@ plot_sides = sides #sides[(uptimes >= min_uptime) & (uptimes <= max_uptime),:]
 plot_distances = distances #distances[(uptimes >= min_uptime) & (uptimes <= max_uptime)]
 plot_heights = heights #heights[(uptimes >= min_uptime) & (uptimes <= max_uptime),:]
 
-fig = plt.figure(figsize=(200, 50))
+points_original_image_file = os.path.join(directory, "points_original.png")
+point_cloud_output = os.path.join(directory,"point_cloud.txt")
+point_cloud_side_filtered_output = os.path.join(directory,"point_cloud_side_filtered.xyz")
+points_filtered_height_image_file = os.path.join(directory, "points_filtered_height.png")
+points_filtered_side_span_image_file = os.path.join(directory, "points_filtered_side_span.png")
+points_filtered_side_height_image_file = os.path.join(directory, "points_filtered_side_height.png")
+output_json_file = os.path.join(directory, "output_log.json")
+
+fig = plt.figure(figsize=figure_size)
 plt.pcolormesh(plot_distances, np.arange(plot_sides.shape[1]), np.abs(plot_sides.T), vmin=0, vmax=1, shading="auto")
 plt.xticks(np.arange(min(plot_distances), max(plot_distances)+1, 1.0))
 plt.gca().set_axis_off()
 plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
 plt.margins(0,0)
-plt.savefig(os.path.join(directory, "points_original.png"))
+plt.savefig(points_original_image_file)
+print("::Saved points_original.png")
 
 ext_plot_distances= np.tile(plot_distances, (sample_size,1)).T
 length=plot_distances.shape[0]
@@ -101,16 +112,17 @@ xyz[:, :, 0] = plot_sides # horizontal
 xyz[:, :, 1] = ext_plot_distances # forward
 xyz[:, :, 2] = plot_heights # vertical
 
-point_cloud_output = os.path.join(directory,"point_cloud.txt")
-point_cloud_side_filtered_output = os.path.join(directory,"point_cloud_side_filtered.xyz")
-
 q=np.reshape(xyz, (length*sample_size,3))
 np.savetxt(point_cloud_output, q, delimiter=' ', fmt="%10.5f")
+print("::Saved point_cloud.txt")
 
 pcd = o3d.io.read_point_cloud(point_cloud_output, format='xyz')
 print(pcd)
+pcd_original_num_points = len(pcd.points)
+
 pcd_down = pcd.voxel_down_sample(voxel_size)
 print(pcd_down)
+pcd_down_num_points = len(pcd_down.points)
 
 #pcd_down, pcd_down_ind = pcd_down.remove_radius_outlier(nb_points=16, radius=radius_feature)
 pcd_down_filtered, pcd_down_filtered_ind = pcd_down.remove_statistical_outlier(
@@ -118,24 +130,75 @@ pcd_down_filtered, pcd_down_filtered_ind = pcd_down.remove_statistical_outlier(
     std_ratio=outlier_std_ratio #lower is more aggressive, was 2.0
 )
 print(pcd_down_filtered)
+pcd_down_filtered_num_points = len(pcd_down_filtered.points)
+
 xyz_filtered = np.asarray(pcd_down_filtered.points)
 
 xyz_filtered_height_mask = xyz_filtered[:,2] > height_mask_distance
 xyz_filtered_height = xyz_filtered[xyz_filtered_height_mask]
 
+xyz_filtered_height_mask = xyz_filtered_height[:,2] < height_mask_max_distance
+xyz_filtered_height = xyz_filtered_height[xyz_filtered_height_mask]
+
 pcd_down_filtered.points = o3d.utility.Vector3dVector(xyz_filtered_height) # normals and colors are unchanged
 print(pcd_down_filtered)
+pcd_down_filtered_height_points = len(pcd_down_filtered.points)
 
 xyz_filtered_side_mask = np.abs(xyz_filtered_height[:,0]) < side_mask_distance
 xyz_filtered_height = xyz_filtered_height[xyz_filtered_side_mask]
 
 pcd_down_filtered.points = o3d.utility.Vector3dVector(xyz_filtered_height) # normals and colors are unchanged
 print(pcd_down_filtered)
-o3d.io.write_point_cloud(point_cloud_side_filtered_output, pcd_down_filtered)
+pcd_down_filtered_height_side_points = len(pcd_down_filtered.points)
 
-fig = plt.figure(figsize=(200, 50))
+o3d.io.write_point_cloud(point_cloud_side_filtered_output, pcd_down_filtered)
+print("::Saved point_cloud_side_filtered.xyz")
+
+fig = plt.figure(figsize=figure_size)
 plt.scatter(xyz_filtered_height[:,1], xyz_filtered_height[:,2])
 plt.gca().set_axis_off()
 plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
 plt.margins(0,0)
-plt.savefig(os.path.join(directory, "points_filtered.png"))
+plt.savefig(points_filtered_height_image_file)
+print("::Saved points_filtered_height.png")
+
+fig = plt.figure(figsize=figure_size)
+plt.scatter(xyz_filtered_height[:,1], xyz_filtered_height[:,0])
+plt.gca().set_axis_off()
+plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+plt.margins(0,0)
+plt.savefig(points_filtered_side_span_image_file)
+print("::Saved points_filtered_side_span.png")
+
+fig = plt.figure(figsize=figure_size)
+plt.scatter(xyz_filtered_height[:,0], xyz_filtered_height[:,2])
+plt.gca().set_axis_off()
+plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+plt.margins(0,0)
+plt.savefig(points_filtered_side_height_image_file)
+print("::Saved points_filtered_side_height.png")
+
+output_dictionary = {
+    "voxel_size" : voxel_size,
+    "outlier_nb_neighbors" : outlier_nb_neighbors,
+    "outlier_std_ratio" : outlier_std_ratio,
+    "mask_infinite" : mask_infinite,
+    "side_mask_distance" : side_mask_distance,
+    "height_mask_distance" : height_mask_distance,
+    "height_mask_max_distance" : height_mask_max_distance,
+    "figure_size" : figure_size,
+    "points_original_image_file" : points_original_image_file,
+    "point_cloud_output" : point_cloud_output,
+    "point_cloud_side_filtered_output" : point_cloud_side_filtered_output,
+    "points_filtered_height_image_file" : points_filtered_height_image_file,
+    "points_filtered_side_span_image_file" : points_filtered_side_span_image_file,
+    "points_filtered_side_height_image_file" : points_filtered_side_height_image_file,
+    "pcd_original_num_points" : pcd_original_num_points,
+    "pcd_down_num_points" : pcd_down_num_points,
+    "pcd_down_filtered_num_points" : pcd_down_filtered_num_points,
+    "pcd_down_filtered_height_points" : pcd_down_filtered_height_points,
+    "pcd_down_filtered_height_side_points" : pcd_down_filtered_height_side_points
+}
+
+with open(output_json_file, "w") as outfile:
+    json.dump(output_dictionary, outfile)
