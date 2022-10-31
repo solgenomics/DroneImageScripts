@@ -36,7 +36,7 @@ mask_infinite = args["mask_infinite"]
 side_mask_distance = float(args["side_mask_distance"])
 height_mask_distance = float(args["height_mask_distance"])
 height_mask_max_distance = float(args["height_mask_max_distance"])
-figure_size = (12,3)
+figure_size = (16,4)
 print(directory)
 
 def d_cos(angles):
