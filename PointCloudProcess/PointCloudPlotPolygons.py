@@ -56,6 +56,7 @@ for index, row in input_plot_polygons_ratio_file.iterrows():
     x_indexes = np.where((xyz[:, 1] > x1) & (xyz[:, 1] < x2))
     y_indexes = np.where((xyz[:, 0] > z1) & (xyz[:, 0] < z2))
     plot_indices = np.intersect1d(x_indexes, y_indexes)
+    print(plot_indices.shape)
     plot_values = xyz[plot_indices]
 
     np.savetxt(temp_file, plot_values, delimiter=' ', fmt="%10.5f")
