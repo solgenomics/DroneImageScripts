@@ -43,6 +43,7 @@ input_plot_polygons_ratio_file = pd.read_csv(plot_polygons_ratio_file, sep="\t",
 for index, row in input_plot_polygons_ratio_file.iterrows():
     stock_id = row[0]
     temp_file = row[1]
+    transposed_temp_file = row[1]
     x1_ratio = row[2]
     z1_ratio = row[3]
     x2_ratio = row[4]
@@ -60,3 +61,4 @@ for index, row in input_plot_polygons_ratio_file.iterrows():
     plot_values = xyz[plot_indices]
 
     np.savetxt(temp_file, plot_values, delimiter=' ', fmt="%10.5f")
+    np.savetxt(transposed_temp_file, plot_values.T, delimiter=' ', fmt="%10.5f")
