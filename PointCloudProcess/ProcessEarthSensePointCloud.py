@@ -51,36 +51,36 @@ def d_hav(angles):
 
 R = 6373.0*1000 # Earth Radius in meters
 
-temp=np.genfromtxt(os.path.join(directory, "secondary_lidar_log.csv"), delimiter=",")
+temp = np.genfromtxt(os.path.join(directory, "secondary_lidar_log.csv"), delimiter=",")
 
-uptimes=temp[:,0]
-data=temp[:,1:]/1000
+uptimes = temp[:,0]
+data = temp[:,1:]/1000
 
 if mask_infinite == True:
     data_mask = data < 65
-    data=data*data_mask
+    data = data*data_mask
 
-sample_size=data.shape[1]
-angles=(225-np.arange(sample_size)*270/sample_size)*np.pi/180
-cos=-np.cos(angles)
-sin=np.sin(angles)
-sides=cos*data
-heights=sin*data
+sample_size = data.shape[1]
+angles = (225-np.arange(sample_size)*270/sample_size)*np.pi/180
+cos = -np.cos(angles)
+sin = np.sin(angles)
+sides = cos*data
+heights = sin*data
 
-sl_temp=np.genfromtxt(os.path.join(directory, "system_log.csv"), delimiter=",", skip_header=2)
-sl_uptimes=sl_temp[:,1]
-lats=sl_temp[:,22]
-lons=sl_temp[:,23]
-origin_lat=lats[0]
-origin_lon=lons[0]
+sl_temp = np.genfromtxt(os.path.join(directory, "system_log.csv"), delimiter=",", skip_header=2)
+sl_uptimes = sl_temp[:,1]
+lats = sl_temp[:,22]
+lons = sl_temp[:,23]
+origin_lat = lats[0]
+origin_lon = lons[0]
 
-relative_lats=lats-origin_lat
-relative_lons=lons-origin_lon
+relative_lats = lats-origin_lat
+relative_lons = lons-origin_lon
 a = d_hav(relative_lats) + d_cos(origin_lat)*d_cos(lats)*d_hav(relative_lons)
 sl_distances = 2*R*np.arctan2(np.sqrt(a), np.sqrt(1-a))
 
-uptime_distance_interp=interpolate.interp1d(sl_uptimes, sl_distances, bounds_error=False, fill_value=(sl_distances[0], sl_distances[-1]))
-distances=uptime_distance_interp(uptimes)
+uptime_distance_interp = interpolate.interp1d(sl_uptimes, sl_distances, bounds_error=False, fill_value=(sl_distances[0], sl_distances[-1]))
+distances = uptime_distance_interp(uptimes)
 
 min_uptime = min(uptimes)
 max_uptime = max(uptimes)
@@ -105,14 +105,14 @@ plt.margins(0,0)
 plt.savefig(points_original_image_file)
 print("::Saved points_original.png")
 
-ext_plot_distances= np.tile(plot_distances, (sample_size,1)).T
-length=plot_distances.shape[0]
+ext_plot_distances = np.tile(plot_distances, (sample_size,1)).T
+length = plot_distances.shape[0]
 xyz = np.zeros((length, sample_size, 3))
 xyz[:, :, 0] = plot_sides # horizontal
 xyz[:, :, 1] = ext_plot_distances # forward
 xyz[:, :, 2] = plot_heights # vertical
 
-q=np.reshape(xyz, (length*sample_size,3))
+q = np.reshape(xyz, (length*sample_size,3))
 np.savetxt(point_cloud_output, q, delimiter=' ', fmt="%10.5f")
 print("::Saved point_cloud.txt")
 
@@ -126,8 +126,8 @@ pcd_down_num_points = len(pcd_down.points)
 
 #pcd_down, pcd_down_ind = pcd_down.remove_radius_outlier(nb_points=16, radius=radius_feature)
 pcd_down_filtered, pcd_down_filtered_ind = pcd_down.remove_statistical_outlier(
-    nb_neighbors=outlier_nb_neighbors, #was 20
-    std_ratio=outlier_std_ratio #lower is more aggressive, was 2.0
+    nb_neighbors = outlier_nb_neighbors, #was 20
+    std_ratio = outlier_std_ratio #lower is more aggressive, was 2.0
 )
 print(pcd_down_filtered)
 pcd_down_filtered_num_points = len(pcd_down_filtered.points)
