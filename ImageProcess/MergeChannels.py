@@ -21,7 +21,7 @@ def align_images(moving, fixed_im):
             moving_im = b
 
     # Initiate SIFT detector
-    sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.SIFT_create()
     print("GET SIFT")
 
     # find the keypoints and descriptors with SIFT

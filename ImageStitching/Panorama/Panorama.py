@@ -82,7 +82,7 @@ class Stitcher:
 
         # Only works in OpenCV 3.X
         # detect and extract features from the image
-        descriptor = cv2.xfeatures2d.SIFT_create()
+        descriptor = cv2.SIFT_create()
         (kps, features) = descriptor.detectAndCompute(image, None)
 
         # convert the keypoints from KeyPoint objects to NumPy arrays

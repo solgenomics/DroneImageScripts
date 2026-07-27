@@ -29,6 +29,9 @@ img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 img_shape = img.shape
 
 if len(img_shape) == 3:
+    if img_shape[2] == 4:
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR) # drop the alpha channel so it is not thresholded along with the color channels
+        img_shape = img.shape
     if img_shape[2] == 3:
         b,g,r = cv2.split(img)
         if image_band_index is not None:
@@ -41,7 +44,7 @@ if len(img_shape) == 3:
                 img = r
 
 
-hist = cv2.calcHist([img],[0],None,histSize,[0,255])
+hist = cv2.calcHist([img],[0],None,histSize,[0,256]).flatten()
 
 #print(hist)
 #print(img.shape)
@@ -51,7 +54,7 @@ summing = 0
 drone_imagery_remove_background_lower_percentage_threshold = 0
 drone_imagery_remove_background_upper_percentage_threshold = 0
 for i in range(0, histSize[0]):
-    binVal = hist[i][0]
+    binVal = hist[i]
     summing = summing + binVal
     percentage = summing / total_pixels
     if percentage >= lower_percentage:
@@ -60,7 +63,7 @@ for i in range(0, histSize[0]):
 
 summing = 0;
 for i in range(0, histSize[0]):
-    binVal = hist[i][0]
+    binVal = hist[i]
     summing = summing + binVal
     percentage = summing / total_pixels
     if percentage >= 1-upper_percentage:
@@ -69,7 +72,8 @@ for i in range(0, histSize[0]):
 
 lower_thresh = int(float(drone_imagery_remove_background_lower_percentage_threshold))
 upper_thresh = int(float(drone_imagery_remove_background_upper_percentage_threshold))
-th, dst = cv2.threshold(img, lower_thresh, upper_thresh, cv2.THRESH_TOZERO)
+th, dst = cv2.threshold(img, lower_thresh, 0, cv2.THRESH_TOZERO) # zero out the darkest lower_percentage of pixels
+th, dst = cv2.threshold(dst, upper_thresh, 0, cv2.THRESH_TOZERO_INV) # zero out the brightest upper_percentage of pixels
 
 cv2.imwrite(outfile_path, dst)
 #cv2.waitKey(0)

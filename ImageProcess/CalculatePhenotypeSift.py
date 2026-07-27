@@ -27,7 +27,7 @@ count = 0
 result_file_lines = []
 for image in images:
     img = cv2.imread(image)
-    descriptor = cv2.xfeatures2d.SIFT_create()
+    descriptor = cv2.SIFT_create()
     (kps, features) = descriptor.detectAndCompute(img, None)
     print(features)
     result_file_lines.append([len(kps)])
