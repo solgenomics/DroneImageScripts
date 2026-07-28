@@ -61,7 +61,7 @@ for i in range(0, histSize[0]):
         drone_imagery_remove_background_lower_percentage_threshold = i
         break
 
-summing = 0;
+summing = 0
 for i in range(0, histSize[0]):
     binVal = hist[i]
     summing = summing + binVal
