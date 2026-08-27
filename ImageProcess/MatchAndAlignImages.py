@@ -34,7 +34,7 @@ img1 = cv2.imread(input_image2, cv2.IMREAD_UNCHANGED)
 img2 = cv2.imread(input_image1, cv2.IMREAD_UNCHANGED)
 
 # orb = cv2.ORB_create(MAX_FEATURES)
-orb = cv2.xfeatures2d.SIFT_create(MAX_FEATURES)
+orb = cv2.SIFT_create(MAX_FEATURES)
 keypoints1, descriptors1 = orb.detectAndCompute(img1, None)
 keypoints2, descriptors2 = orb.detectAndCompute(img2, None)
 

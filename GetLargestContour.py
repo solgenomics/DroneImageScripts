@@ -62,8 +62,8 @@ if len(contours) > 0:
     cv2.drawContours(output, hull, -1, (0,255,0), 2)
     largestcontourarea = cv2.contourArea(hull[0])
 
-    for p in hull[0]:
-        polygon.append({'x':p[0][0], 'y':p[0][1]})
+    for p in np.atleast_2d(np.squeeze(hull[0])):
+        polygon.append({'x':p[0], 'y':p[1]})
     #cv2.rectangle(output,(x,y),(x+w,y+h),(0,255,0),2)
 
     sd = CropPolygonsToSingleImage()

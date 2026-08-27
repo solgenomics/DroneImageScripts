@@ -23,7 +23,8 @@ lower_thresh = args["lower_threshold"]
 
 src = cv2.imread(input_image, cv2.IMREAD_GRAYSCALE)
 
-th, dst = cv2.threshold(src, int(float(lower_thresh)), int(float(upper_thresh)), cv2.THRESH_TOZERO)
+th, dst = cv2.threshold(src, int(float(lower_thresh)), 0, cv2.THRESH_TOZERO) # zero out pixels darker than lower_thresh
+th, dst = cv2.threshold(dst, int(float(upper_thresh)), 0, cv2.THRESH_TOZERO_INV) # zero out pixels brighter than upper_thresh
 
 #cv2.imshow("Result", dst)
 cv2.imwrite(outfile_path, dst)
